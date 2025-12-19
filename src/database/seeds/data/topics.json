@@ -1,0 +1,398 @@
+[
+  {
+    "name": "Array",
+    "slug": "array",
+    "description": "Problems involving array manipulation, traversal, and operations",
+    "orderIndex": 1
+  },
+  {
+    "name": "String",
+    "slug": "string",
+    "description": "String processing, manipulation, and pattern matching",
+    "orderIndex": 2
+  },
+  {
+    "name": "Hash Table",
+    "slug": "hash-table",
+    "description": "Using hash maps and sets for efficient lookups and storage",
+    "orderIndex": 3
+  },
+  {
+    "name": "Dynamic Programming",
+    "slug": "dynamic-programming",
+    "description": "Optimization problems using memoization and tabulation techniques",
+    "orderIndex": 4
+  },
+  {
+    "name": "Math",
+    "slug": "math",
+    "description": "Mathematical concepts, number theory, and calculations",
+    "orderIndex": 5
+  },
+  {
+    "name": "Sorting",
+    "slug": "sorting",
+    "description": "Sorting algorithms and related problems",
+    "orderIndex": 6
+  },
+  {
+    "name": "Greedy",
+    "slug": "greedy",
+    "description": "Making locally optimal choices for global optimization",
+    "orderIndex": 7
+  },
+  {
+    "name": "Depth-First Search",
+    "slug": "depth-first-search",
+    "description": "DFS traversal for graphs and trees",
+    "orderIndex": 8
+  },
+  {
+    "name": "Binary Search",
+    "slug": "binary-search",
+    "description": "Efficient searching in sorted data structures",
+    "orderIndex": 9
+  },
+  {
+    "name": "Breadth-First Search",
+    "slug": "breadth-first-search",
+    "description": "BFS traversal for graphs and trees",
+    "orderIndex": 10
+  },
+  {
+    "name": "Tree",
+    "slug": "tree",
+    "description": "Tree data structure problems and traversals",
+    "orderIndex": 11
+  },
+  {
+    "name": "Binary Tree",
+    "slug": "binary-tree",
+    "description": "Binary tree specific problems and operations",
+    "orderIndex": 12
+  },
+  {
+    "name": "Binary Search Tree",
+    "slug": "binary-search-tree",
+    "description": "BST properties and operations",
+    "orderIndex": 13
+  },
+  {
+    "name": "Graph",
+    "slug": "graph",
+    "description": "Graph theory, traversal, and algorithms",
+    "orderIndex": 14
+  },
+  {
+    "name": "Two Pointers",
+    "slug": "two-pointers",
+    "description": "Using two pointers for efficient array/string traversal",
+    "orderIndex": 15
+  },
+  {
+    "name": "Sliding Window",
+    "slug": "sliding-window",
+    "description": "Window technique for subarray/substring problems",
+    "orderIndex": 16
+  },
+  {
+    "name": "Backtracking",
+    "slug": "backtracking",
+    "description": "Exploring all possible solutions with pruning",
+    "orderIndex": 17
+  },
+  {
+    "name": "Divide and Conquer",
+    "slug": "divide-and-conquer",
+    "description": "Breaking problems into smaller subproblems",
+    "orderIndex": 18
+  },
+  {
+    "name": "Bit Manipulation",
+    "slug": "bit-manipulation",
+    "description": "Bitwise operations and binary representations",
+    "orderIndex": 19
+  },
+  {
+    "name": "Prefix Sum",
+    "slug": "prefix-sum",
+    "description": "Cumulative sum technique for range queries",
+    "orderIndex": 20
+  },
+  {
+    "name": "Stack",
+    "slug": "stack",
+    "description": "LIFO data structure and monotonic stack problems",
+    "orderIndex": 21
+  },
+  {
+    "name": "Queue",
+    "slug": "queue",
+    "description": "FIFO data structure and related problems",
+    "orderIndex": 22
+  },
+  {
+    "name": "Heap (Priority Queue)",
+    "slug": "heap",
+    "description": "Priority queue implementation and heap operations",
+    "orderIndex": 23
+  },
+  {
+    "name": "Linked List",
+    "slug": "linked-list",
+    "description": "Linked list manipulation and traversal",
+    "orderIndex": 24
+  },
+  {
+    "name": "Trie",
+    "slug": "trie",
+    "description": "Prefix tree for efficient string operations",
+    "orderIndex": 25
+  },
+  {
+    "name": "Matrix",
+    "slug": "matrix",
+    "description": "2D array problems and matrix operations",
+    "orderIndex": 26
+  },
+  {
+    "name": "Union Find",
+    "slug": "union-find",
+    "description": "Disjoint set union for connectivity problems",
+    "orderIndex": 27
+  },
+  {
+    "name": "Segment Tree",
+    "slug": "segment-tree",
+    "description": "Tree for range queries and updates",
+    "orderIndex": 28
+  },
+  {
+    "name": "Binary Indexed Tree",
+    "slug": "binary-indexed-tree",
+    "description": "Fenwick tree for efficient prefix operations",
+    "orderIndex": 29
+  },
+  {
+    "name": "Topological Sort",
+    "slug": "topological-sort",
+    "description": "Ordering vertices in directed acyclic graphs",
+    "orderIndex": 30
+  },
+  {
+    "name": "Shortest Path",
+    "slug": "shortest-path",
+    "description": "Finding minimum distance paths in graphs",
+    "orderIndex": 31
+  },
+  {
+    "name": "Minimum Spanning Tree",
+    "slug": "minimum-spanning-tree",
+    "description": "Finding MST using Kruskal or Prim algorithms",
+    "orderIndex": 32
+  },
+  {
+    "name": "String Matching",
+    "slug": "string-matching",
+    "description": "Pattern matching algorithms like KMP, Rabin-Karp",
+    "orderIndex": 33
+  },
+  {
+    "name": "Rolling Hash",
+    "slug": "rolling-hash",
+    "description": "Hash function for efficient string comparison",
+    "orderIndex": 34
+  },
+  {
+    "name": "Suffix Array",
+    "slug": "suffix-array",
+    "description": "Sorted array of all suffixes for string problems",
+    "orderIndex": 35
+  },
+  {
+    "name": "Number Theory",
+    "slug": "number-theory",
+    "description": "Prime numbers, GCD, LCM, and modular arithmetic",
+    "orderIndex": 36
+  },
+  {
+    "name": "Geometry",
+    "slug": "geometry",
+    "description": "Computational geometry and coordinate problems",
+    "orderIndex": 37
+  },
+  {
+    "name": "Combinatorics",
+    "slug": "combinatorics",
+    "description": "Counting, permutations, and combinations",
+    "orderIndex": 38
+  },
+  {
+    "name": "Probability",
+    "slug": "probability",
+    "description": "Probability theory and statistical problems",
+    "orderIndex": 39
+  },
+  {
+    "name": "Design",
+    "slug": "design",
+    "description": "System design and data structure design problems",
+    "orderIndex": 40
+  },
+  {
+    "name": "Simulation",
+    "slug": "simulation",
+    "description": "Simulating processes and game mechanics",
+    "orderIndex": 41
+  },
+  {
+    "name": "Implementation",
+    "slug": "implementation",
+    "description": "Straightforward implementation problems",
+    "orderIndex": 42
+  },
+  {
+    "name": "Recursion",
+    "slug": "recursion",
+    "description": "Recursive problem solving and function calls",
+    "orderIndex": 43
+  },
+  {
+    "name": "Memoization",
+    "slug": "memoization",
+    "description": "Caching results for optimization",
+    "orderIndex": 44
+  },
+  {
+    "name": "Monotonic Stack",
+    "slug": "monotonic-stack",
+    "description": "Stack maintaining monotonic property",
+    "orderIndex": 45
+  },
+  {
+    "name": "Monotonic Queue",
+    "slug": "monotonic-queue",
+    "description": "Queue maintaining monotonic property",
+    "orderIndex": 46
+  },
+  {
+    "name": "Game Theory",
+    "slug": "game-theory",
+    "description": "Strategic decision making and game problems",
+    "orderIndex": 47
+  },
+  {
+    "name": "Brainteaser",
+    "slug": "brainteaser",
+    "description": "Logic puzzles and creative thinking",
+    "orderIndex": 48
+  },
+  {
+    "name": "Database",
+    "slug": "database",
+    "description": "SQL queries and database operations",
+    "orderIndex": 49
+  },
+  {
+    "name": "Concurrency",
+    "slug": "concurrency",
+    "description": "Multi-threading and parallel execution",
+    "orderIndex": 50
+  },
+  {
+    "name": "Interactive",
+    "slug": "interactive",
+    "description": "Interactive problems requiring multiple queries",
+    "orderIndex": 51
+  },
+  {
+    "name": "Counting",
+    "slug": "counting",
+    "description": "Counting techniques and enumeration",
+    "orderIndex": 52
+  },
+  {
+    "name": "Enumeration",
+    "slug": "enumeration",
+    "description": "Systematic listing of all possibilities",
+    "orderIndex": 53
+  },
+  {
+    "name": "Randomized",
+    "slug": "randomized",
+    "description": "Randomized algorithms and probabilistic methods",
+    "orderIndex": 54
+  },
+  {
+    "name": "Iterator",
+    "slug": "iterator",
+    "description": "Iterator design pattern and traversal",
+    "orderIndex": 55
+  },
+  {
+    "name": "Data Stream",
+    "slug": "data-stream",
+    "description": "Processing continuous data streams",
+    "orderIndex": 56
+  },
+  {
+    "name": "Reservoir Sampling",
+    "slug": "reservoir-sampling",
+    "description": "Random sampling from data streams",
+    "orderIndex": 57
+  },
+  {
+    "name": "Rejection Sampling",
+    "slug": "rejection-sampling",
+    "description": "Generating random samples with constraints",
+    "orderIndex": 58
+  },
+  {
+    "name": "Quickselect",
+    "slug": "quickselect",
+    "description": "Selection algorithm for finding kth element",
+    "orderIndex": 59
+  },
+  {
+    "name": "Bucket Sort",
+    "slug": "bucket-sort",
+    "description": "Distribution-based sorting algorithm",
+    "orderIndex": 60
+  },
+  {
+    "name": "Radix Sort",
+    "slug": "radix-sort",
+    "description": "Non-comparative integer sorting",
+    "orderIndex": 61
+  },
+  {
+    "name": "Counting Sort",
+    "slug": "counting-sort",
+    "description": "Integer sorting using counting array",
+    "orderIndex": 62
+  },
+  {
+    "name": "Merge Sort",
+    "slug": "merge-sort",
+    "description": "Divide and conquer sorting algorithm",
+    "orderIndex": 63
+  },
+  {
+    "name": "Eulerian Circuit",
+    "slug": "eulerian-circuit",
+    "description": "Path visiting every edge exactly once",
+    "orderIndex": 64
+  },
+  {
+    "name": "Strongly Connected Component",
+    "slug": "strongly-connected-component",
+    "description": "Maximal strongly connected subgraphs",
+    "orderIndex": 65
+  },
+  {
+    "name": "Biconnected Component",
+    "slug": "biconnected-component",
+    "description": "Maximal biconnected subgraphs",
+    "orderIndex": 66
+  }
+]

@@ -1,0 +1,394 @@
+[
+  {
+    "name": "Array",
+    "slug": "array",
+    "type": "data-structure",
+    "description": "Linear data structure for storing elements",
+    "color": "#3B82F6"
+  },
+  {
+    "name": "String",
+    "slug": "string",
+    "type": "data-structure",
+    "description": "Sequence of characters",
+    "color": "#10B981"
+  },
+  {
+    "name": "Linked List",
+    "slug": "linked-list",
+    "type": "data-structure",
+    "description": "Linear collection of nodes",
+    "color": "#8B5CF6"
+  },
+  {
+    "name": "Stack",
+    "slug": "stack",
+    "type": "data-structure",
+    "description": "LIFO data structure",
+    "color": "#F59E0B"
+  },
+  {
+    "name": "Queue",
+    "slug": "queue",
+    "type": "data-structure",
+    "description": "FIFO data structure",
+    "color": "#EF4444"
+  },
+  {
+    "name": "Hash Table",
+    "slug": "hash-table",
+    "type": "data-structure",
+    "description": "Key-value pair storage",
+    "color": "#06B6D4"
+  },
+  {
+    "name": "Tree",
+    "slug": "tree",
+    "type": "data-structure",
+    "description": "Hierarchical data structure",
+    "color": "#84CC16"
+  },
+  {
+    "name": "Binary Tree",
+    "slug": "binary-tree",
+    "type": "data-structure",
+    "description": "Tree with at most two children per node",
+    "color": "#22C55E"
+  },
+  {
+    "name": "Binary Search Tree",
+    "slug": "binary-search-tree",
+    "type": "data-structure",
+    "description": "Ordered binary tree",
+    "color": "#14B8A6"
+  },
+  {
+    "name": "Heap",
+    "slug": "heap",
+    "type": "data-structure",
+    "description": "Priority queue implementation",
+    "color": "#F97316"
+  },
+  {
+    "name": "Graph",
+    "slug": "graph",
+    "type": "data-structure",
+    "description": "Network of nodes and edges",
+    "color": "#EC4899"
+  },
+  {
+    "name": "Trie",
+    "slug": "trie",
+    "type": "data-structure",
+    "description": "Prefix tree for string storage",
+    "color": "#A855F7"
+  },
+  {
+    "name": "Matrix",
+    "slug": "matrix",
+    "type": "data-structure",
+    "description": "2D array structure",
+    "color": "#6366F1"
+  },
+  {
+    "name": "Set",
+    "slug": "set",
+    "type": "data-structure",
+    "description": "Collection of unique elements",
+    "color": "#0EA5E9"
+  },
+  {
+    "name": "Map",
+    "slug": "map",
+    "type": "data-structure",
+    "description": "Key-value mapping structure",
+    "color": "#14B8A6"
+  },
+  {
+    "name": "Two Pointers",
+    "slug": "two-pointers",
+    "type": "technique",
+    "description": "Using two pointers to traverse data",
+    "color": "#3B82F6"
+  },
+  {
+    "name": "Sliding Window",
+    "slug": "sliding-window",
+    "type": "technique",
+    "description": "Window technique for subarrays",
+    "color": "#8B5CF6"
+  },
+  {
+    "name": "Binary Search",
+    "slug": "binary-search",
+    "type": "algorithm",
+    "description": "Divide and conquer search",
+    "color": "#10B981"
+  },
+  {
+    "name": "Depth-First Search",
+    "slug": "depth-first-search",
+    "type": "algorithm",
+    "description": "DFS graph traversal",
+    "color": "#F59E0B"
+  },
+  {
+    "name": "Breadth-First Search",
+    "slug": "breadth-first-search",
+    "type": "algorithm",
+    "description": "BFS graph traversal",
+    "color": "#EF4444"
+  },
+  {
+    "name": "Dynamic Programming",
+    "slug": "dynamic-programming",
+    "type": "technique",
+    "description": "Optimization using subproblems",
+    "color": "#EC4899"
+  },
+  {
+    "name": "Greedy",
+    "slug": "greedy",
+    "type": "technique",
+    "description": "Local optimal choices",
+    "color": "#84CC16"
+  },
+  {
+    "name": "Backtracking",
+    "slug": "backtracking",
+    "type": "technique",
+    "description": "Incremental solution building",
+    "color": "#F97316"
+  },
+  {
+    "name": "Divide and Conquer",
+    "slug": "divide-and-conquer",
+    "type": "technique",
+    "description": "Breaking problems into subproblems",
+    "color": "#06B6D4"
+  },
+  {
+    "name": "Recursion",
+    "slug": "recursion",
+    "type": "technique",
+    "description": "Self-referential function calls",
+    "color": "#A855F7"
+  },
+  {
+    "name": "Sorting",
+    "slug": "sorting",
+    "type": "algorithm",
+    "description": "Ordering elements",
+    "color": "#22C55E"
+  },
+  {
+    "name": "Searching",
+    "slug": "searching",
+    "type": "algorithm",
+    "description": "Finding elements",
+    "color": "#14B8A6"
+  },
+  {
+    "name": "Bit Manipulation",
+    "slug": "bit-manipulation",
+    "type": "technique",
+    "description": "Bitwise operations",
+    "color": "#6366F1"
+  },
+  {
+    "name": "Prefix Sum",
+    "slug": "prefix-sum",
+    "type": "technique",
+    "description": "Cumulative sum technique",
+    "color": "#0EA5E9"
+  },
+  {
+    "name": "Union Find",
+    "slug": "union-find",
+    "type": "algorithm",
+    "description": "Disjoint set operations",
+    "color": "#8B5CF6"
+  },
+  {
+    "name": "Topological Sort",
+    "slug": "topological-sort",
+    "type": "algorithm",
+    "description": "DAG ordering",
+    "color": "#F59E0B"
+  },
+  {
+    "name": "Shortest Path",
+    "slug": "shortest-path",
+    "type": "algorithm",
+    "description": "Finding minimum distance paths",
+    "color": "#EF4444"
+  },
+  {
+    "name": "Minimum Spanning Tree",
+    "slug": "minimum-spanning-tree",
+    "type": "algorithm",
+    "description": "MST algorithms",
+    "color": "#EC4899"
+  },
+  {
+    "name": "Memoization",
+    "slug": "memoization",
+    "type": "technique",
+    "description": "Caching computed results",
+    "color": "#84CC16"
+  },
+  {
+    "name": "Monotonic Stack",
+    "slug": "monotonic-stack",
+    "type": "technique",
+    "description": "Stack with ordering property",
+    "color": "#F97316"
+  },
+  {
+    "name": "Monotonic Queue",
+    "slug": "monotonic-queue",
+    "type": "technique",
+    "description": "Queue with ordering property",
+    "color": "#06B6D4"
+  },
+  {
+    "name": "Math",
+    "slug": "math",
+    "type": "concept",
+    "description": "Mathematical problems",
+    "color": "#3B82F6"
+  },
+  {
+    "name": "Number Theory",
+    "slug": "number-theory",
+    "type": "concept",
+    "description": "Properties of numbers",
+    "color": "#A855F7"
+  },
+  {
+    "name": "Geometry",
+    "slug": "geometry",
+    "type": "concept",
+    "description": "Geometric problems",
+    "color": "#22C55E"
+  },
+  {
+    "name": "Combinatorics",
+    "slug": "combinatorics",
+    "type": "concept",
+    "description": "Counting and arrangements",
+    "color": "#14B8A6"
+  },
+  {
+    "name": "Probability",
+    "slug": "probability",
+    "type": "concept",
+    "description": "Probability theory",
+    "color": "#6366F1"
+  },
+  {
+    "name": "Design",
+    "slug": "design",
+    "type": "concept",
+    "description": "System and data structure design",
+    "color": "#0EA5E9"
+  },
+  {
+    "name": "Simulation",
+    "slug": "simulation",
+    "type": "concept",
+    "description": "Simulating processes",
+    "color": "#8B5CF6"
+  },
+  {
+    "name": "Implementation",
+    "slug": "implementation",
+    "type": "concept",
+    "description": "Straightforward implementation",
+    "color": "#F59E0B"
+  },
+  {
+    "name": "Interactive",
+    "slug": "interactive",
+    "type": "concept",
+    "description": "Interactive problems",
+    "color": "#EF4444"
+  },
+  {
+    "name": "String Matching",
+    "slug": "string-matching",
+    "type": "algorithm",
+    "description": "Pattern matching in strings",
+    "color": "#EC4899"
+  },
+  {
+    "name": "Rolling Hash",
+    "slug": "rolling-hash",
+    "type": "technique",
+    "description": "Hash function for strings",
+    "color": "#84CC16"
+  },
+  {
+    "name": "Suffix Array",
+    "slug": "suffix-array",
+    "type": "data-structure",
+    "description": "Sorted array of suffixes",
+    "color": "#F97316"
+  },
+  {
+    "name": "Game Theory",
+    "slug": "game-theory",
+    "type": "concept",
+    "description": "Strategic decision making",
+    "color": "#06B6D4"
+  },
+  {
+    "name": "Brainteaser",
+    "slug": "brainteaser",
+    "type": "concept",
+    "description": "Logic puzzles",
+    "color": "#3B82F6"
+  },
+  {
+    "name": "Database",
+    "slug": "database",
+    "type": "concept",
+    "description": "SQL and database queries",
+    "color": "#A855F7"
+  },
+  {
+    "name": "Concurrency",
+    "slug": "concurrency",
+    "type": "concept",
+    "description": "Parallel execution",
+    "color": "#22C55E"
+  },
+  {
+    "name": "Segment Tree",
+    "slug": "segment-tree",
+    "type": "data-structure",
+    "description": "Range query tree",
+    "color": "#14B8A6"
+  },
+  {
+    "name": "Binary Indexed Tree",
+    "slug": "binary-indexed-tree",
+    "type": "data-structure",
+    "description": "Fenwick tree for prefix sums",
+    "color": "#6366F1"
+  },
+  {
+    "name": "Doubly Linked List",
+    "slug": "doubly-linked-list",
+    "type": "data-structure",
+    "description": "Bidirectional linked list",
+    "color": "#0EA5E9"
+  },
+  {
+    "name": "Deque",
+    "slug": "deque",
+    "type": "data-structure",
+    "description": "Double-ended queue",
+    "color": "#8B5CF6"
+  }
+]

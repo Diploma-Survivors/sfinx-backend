@@ -1,0 +1,182 @@
+[
+  {
+    "resource": "problem",
+    "action": "create",
+    "description": "Create new problems"
+  },
+  {
+    "resource": "problem",
+    "action": "read",
+    "description": "View problems (active and publish)"
+  },
+  {
+    "resource": "problem",
+    "action": "update",
+    "description": "Edit problems"
+  },
+  {
+    "resource": "problem",
+    "action": "delete",
+    "description": "Delete problems"
+  },
+  {
+    "resource": "problem",
+    "action": "read_all",
+    "description": "View all problems"
+  },
+  {
+    "resource": "submission",
+    "action": "create",
+    "description": "Submit solutions"
+  },
+  {
+    "resource": "submission",
+    "action": "read",
+    "description": "View own submissions"
+  },
+  {
+    "resource": "submission",
+    "action": "read_all",
+    "description": "View all submissions"
+  },
+  {
+    "resource": "contest",
+    "action": "create",
+    "description": "Create contests"
+  },
+  {
+    "resource": "contest",
+    "action": "read",
+    "description": "View contests"
+  },
+  {
+    "resource": "contest",
+    "action": "update",
+    "description": "Edit contests"
+  },
+  {
+    "resource": "contest",
+    "action": "delete",
+    "description": "Delete contests"
+  },
+  {
+    "resource": "contest",
+    "action": "join",
+    "description": "Join contests"
+  },
+  {
+    "resource": "contest",
+    "action": "join_premium",
+    "description": "Join premium contests"
+  },
+  {
+    "resource": "user",
+    "action": "read",
+    "description": "View user profiles"
+  },
+  {
+    "resource": "user",
+    "action": "update",
+    "description": "Edit user profiles"
+  },
+  {
+    "resource": "user",
+    "action": "ban",
+    "description": "Ban users"
+  },
+  {
+    "resource": "user",
+    "action": "delete",
+    "description": "Delete users"
+  },
+  {
+    "resource": "admin",
+    "action": "access",
+    "description": "Access admin panel"
+  },
+  {
+    "resource": "admin",
+    "action": "roles",
+    "description": "Manage roles and permissions"
+  },
+  {
+    "resource": "admin",
+    "action": "statistics",
+    "description": "View system statistics"
+  },
+  {
+    "resource": "ai",
+    "action": "interview",
+    "description": "Use AI interview feature"
+  },
+  {
+    "resource": "ai",
+    "action": "hint",
+    "description": "Get AI hints"
+  },
+  {
+    "resource": "ai",
+    "action": "unlimited",
+    "description": "Unlimited AI usage"
+  },
+  {
+    "resource": "post",
+    "action": "create",
+    "description": "Create posts/solutions"
+  },
+  {
+    "resource": "post",
+    "action": "update",
+    "description": "Edit posts"
+  },
+  {
+    "resource": "post",
+    "action": "delete",
+    "description": "Delete posts"
+  },
+  {
+    "resource": "comment",
+    "action": "create",
+    "description": "Comment on posts"
+  },
+  {
+    "resource": "comment",
+    "action": "delete",
+    "description": "Delete comments"
+  },
+  {
+    "resource": "payment",
+    "action": "create",
+    "description": "Make payments"
+  },
+  {
+    "resource": "language",
+    "action": "create",
+    "description": "Create programming languages"
+  },
+  {
+    "resource": "language",
+    "action": "read",
+    "description": "View programming languages"
+  },
+  {
+    "resource": "language",
+    "action": "update",
+    "description": "Update programming languages"
+  },
+  {
+    "resource": "language",
+    "action": "delete",
+    "description": "Delete programming languages"
+  },
+  {
+    "resource": "language",
+    "action": "activate",
+    "description": "Activate programming languages"
+  },
+  {
+    "resource": "language",
+    "action": "deactivate",
+    "description": "Deactivate programming languages"
+  }
+]
