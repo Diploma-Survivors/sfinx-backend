@@ -13,6 +13,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -23,6 +24,8 @@ import { Throttle } from '@nestjs/throttler';
 
 import { plainToInstance } from 'class-transformer';
 
+import { AppConfig } from '../../config/app.config';
+
 import { GetUser } from '../../common';
 import { AuthService } from './auth.service';
 import { AuthResponseDto } from './dto/auth-response.dto';
@@ -30,7 +33,7 @@ import { GoogleAuthDto } from './dto/google-auth.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
-import { UserResponseDto } from './dto/user-response.dto';
+import { UserProfileResponseDto } from './dto/user-profile-response.dto';
 import { User } from './entities/user.entity';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -42,7 +45,112 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly googleOAuthService: GoogleOAuthService,
+    private readonly configService: ConfigService,
   ) {}
+
+  private generateOAuthRedirectHtml(authResponse: AuthResponseDto): string {
+    const appConfig = this.configService.get<AppConfig>('app');
+    const frontendUrl = appConfig?.frontendUrl || 'http://localhost:3001';
+    const handshakeUrl = `${frontendUrl}/api/auth/handshake`;
+
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirecting...</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            text-align: center; 
+            padding-top: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        h3 { 
+            margin: 0 0 16px 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        p { 
+            margin: 0;
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        .spinner {
+            margin: 24px auto;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .btn { 
+            padding: 12px 24px;
+            background: white;
+            color: #667eea;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            margin-top: 16px;
+            transition: transform 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h3>Đang chuyển hướng về ứng dụng...</h3>
+        <div class="spinner"></div>
+        <p>Vui lòng không tắt trình duyệt.</p>
+
+        <form id="postRedirectForm" action="${handshakeUrl}" method="POST">
+            <input type="hidden" name="accessToken" value="${authResponse.accessToken}" />
+            <input type="hidden" name="refreshToken" value="${authResponse.refreshToken}" />
+            <input type="hidden" name="userId" value="${authResponse.user.id}" />
+            <input type="hidden" name="expiresIn" value="${authResponse.expiresInSeconds}" />
+            
+            <noscript>
+                <p style="margin-top: 24px;">Nếu trình duyệt không tự chuyển, vui lòng nhấn nút bên dưới:</p>
+                <button type="submit" class="btn">Tiếp tục</button>
+            </noscript>
+        </form>
+    </div>
+
+    <script type="text/javascript">
+        (function() {
+            var form = document.getElementById('postRedirectForm');
+            if (form) {
+                form.submit();
+            }
+        })();
+    </script>
+</body>
+</html>
+    `;
+  }
 
   @Throttle({
     default: {
@@ -156,15 +264,15 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Current user profile',
-    type: UserResponseDto,
+    type: UserProfileResponseDto,
   })
   @ApiResponse({
     status: 401,
     description: 'Unauthorized',
   })
   // eslint-disable-next-line @typescript-eslint/require-await
-  async getCurrentUser(@GetUser() user: User): Promise<UserResponseDto> {
-    return plainToInstance(UserResponseDto, user);
+  async getCurrentUser(@GetUser() user: User): Promise<UserProfileResponseDto> {
+    return plainToInstance(UserProfileResponseDto, user);
   }
 
   @Throttle({
@@ -197,8 +305,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Google OAuth callback' })
   @ApiResponse({
     status: 200,
-    description: 'Successfully authenticated with Google',
-    type: AuthResponseDto,
+    description: 'Successfully authenticated with Google - returns HTML form',
   })
   @ApiResponse({
     status: 401,
@@ -208,12 +315,17 @@ export class AuthController {
     @Body() googleAuthDto: GoogleAuthDto,
     @Ip() ipAddress: string,
     @Headers('user-agent') userAgent: string,
-  ): Promise<AuthResponseDto> {
-    return this.googleOAuthService.handleGoogleCallback(
+    @Res() res: Response,
+  ): Promise<void> {
+    const authResponse = await this.googleOAuthService.handleGoogleCallback(
       googleAuthDto.code,
       ipAddress,
       userAgent,
     );
+
+    const html = this.generateOAuthRedirectHtml(authResponse);
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
   }
 
   @Throttle({
@@ -227,18 +339,22 @@ export class AuthController {
   @ApiOperation({ summary: 'Google OAuth callback (GET)' })
   @ApiResponse({
     status: 200,
-    description: 'Successfully authenticated with Google',
-    type: AuthResponseDto,
+    description: 'Successfully authenticated with Google - returns HTML form',
   })
   async googleCallbackGet(
     @Query('code') code: string,
     @Ip() ipAddress: string,
     @Headers('user-agent') userAgent: string,
-  ): Promise<AuthResponseDto> {
-    return this.googleOAuthService.handleGoogleCallback(
+    @Res() res: Response,
+  ): Promise<void> {
+    const authResponse = await this.googleOAuthService.handleGoogleCallback(
       code,
       ipAddress,
       userAgent,
     );
+
+    const html = this.generateOAuthRedirectHtml(authResponse);
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
   }
 }

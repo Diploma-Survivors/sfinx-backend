@@ -1,8 +1,8 @@
 import { OmitType } from '@nestjs/swagger';
-import { User } from '../entities/user.entity';
 import { Exclude } from 'class-transformer';
+import { User } from '../entities/user.entity';
 
-export class UserResponseDto extends OmitType(User, [
+export class UserProfileResponseDto extends OmitType(User, [
   'isBanned',
   'bannedAt',
   'banReason',

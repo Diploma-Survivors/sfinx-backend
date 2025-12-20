@@ -17,7 +17,7 @@ import { TESTCASE_FILE_FIELD_NAME } from 'src/common';
 import { ProblemHint } from '../entities/problem.entity';
 import { ProblemDifficulty } from '../enums/problem-difficulty.enum';
 
-export class CreateSampleTestcaseDto {
+export class SampleTestcaseDto {
   @ApiProperty({ description: 'Input', example: '1 2 3' })
   @IsString()
   input: string;
@@ -99,13 +99,13 @@ export class CreateProblemDto {
 
   @ApiPropertyOptional({
     description: 'Sample testcases',
-    type: () => [CreateSampleTestcaseDto],
+    type: () => [SampleTestcaseDto],
   })
   @IsOptional()
-  @Type(() => CreateSampleTestcaseDto)
+  @Type(() => SampleTestcaseDto)
   @IsArray()
   @ValidateNested({ each: true })
-  sampleTestcases?: CreateSampleTestcaseDto[];
+  sampleTestcases?: SampleTestcaseDto[];
 
   @ApiPropertyOptional({
     description: 'Hints array',
