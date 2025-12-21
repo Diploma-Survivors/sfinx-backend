@@ -176,13 +176,13 @@ export class User {
     description: 'Creation timestamp',
     example: '2025-12-19T11:22:11.000Z',
   })
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
   @ApiProperty({
     description: 'Last update timestamp',
     example: '2025-12-19T11:22:11.000Z',
   })
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 }

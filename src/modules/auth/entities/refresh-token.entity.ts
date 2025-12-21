@@ -51,6 +51,6 @@ export class RefreshToken {
   userAgent: string;
 
   @ApiProperty({ description: 'Creation timestamp' })
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 }

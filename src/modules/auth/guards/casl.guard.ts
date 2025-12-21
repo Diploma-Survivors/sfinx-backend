@@ -1,4 +1,8 @@
-import { ExecutionContext, ForbiddenException } from '@nestjs/common';
+import {
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import {
@@ -11,6 +15,7 @@ import { PolicyHandler } from '../../rbac/casl/policy-handler.interface';
 import { User } from '../entities/user.entity';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
+@Injectable()
 export class CaslGuard extends JwtAuthGuard {
   constructor(
     private reflector: Reflector,
@@ -81,8 +86,14 @@ export class CaslGuard extends JwtAuthGuard {
       }
 
       if (!allowed) {
+        const subjectName =
+          typeof subject === 'string'
+            ? subject
+            : typeof subject === 'function'
+              ? subject.name
+              : subject?.constructor?.name || 'unknown';
         throw new ForbiddenException(
-          `You do not have permission to ${action.toString()} ${JSON.stringify(subject)}`,
+          `You do not have permission to ${action.toString()} ${subjectName}`,
         );
       }
     }

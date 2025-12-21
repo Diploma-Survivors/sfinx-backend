@@ -29,11 +29,15 @@ import { AppConfig } from '../../config/app.config';
 import { GetUser } from '../../common';
 import { AuthService } from './auth.service';
 import { AuthResponseDto } from './dto/auth-response.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { GoogleAuthDto } from './dto/google-auth.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UserProfileResponseDto } from './dto/user-profile-response.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
 import { User } from './entities/user.entity';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -51,100 +55,133 @@ export class AuthController {
   private generateOAuthRedirectHtml(authResponse: AuthResponseDto): string {
     const appConfig = this.configService.get<AppConfig>('app');
     const frontendUrl = appConfig?.frontendUrl || 'http://localhost:3001';
-    const handshakeUrl = `${frontendUrl}/api/auth/handshake`;
+    const handshakeUrl = `${frontendUrl}/api/proxy/signin`;
 
     return `
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Redirecting...</title>
+    <title>Đang chuyển hướng...</title>
     <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            text-align: center; 
-            padding-top: 50px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            margin: 0;
-            min-height: 100vh;
+        body {
+            font-family: 'Geist Sans', Arial, sans-serif;
             display: flex;
-            flex-direction: column;
-            align-items: center;
             justify-content: center;
-        }
-        .container {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 16px;
-            padding: 40px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        }
-        h3 { 
-            margin: 0 0 16px 0;
-            font-size: 24px;
-            font-weight: 600;
-        }
-        p { 
+            align-items: center;
+            height: 100vh;
             margin: 0;
-            opacity: 0.9;
-            font-size: 16px;
+            background: linear-gradient(
+                to bottom right,
+                rgb(248, 250, 252),
+                rgb(241, 245, 249),
+                rgb(248, 250, 252)
+            );
+            background-attachment: fixed;
+        }
+        .loading {
+            text-align: center;
+            padding: 24px;
+            background: white;
+            border-radius: 0.625rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 1px solid rgba(226, 232, 240, 1);
+            max-width: 90%;
+            width: 400px;
         }
         .spinner {
-            margin: 24px auto;
+            border: 4px solid rgba(241, 245, 249, 1);
+            border-top: 4px solid rgb(22, 163, 74);
+            border-radius: 50%;
             width: 40px;
             height: 40px;
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top-color: white;
-            border-radius: 50%;
             animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
         }
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
-        .btn { 
-            padding: 12px 24px;
-            background: white;
-            color: #667eea;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
+        h2 {
+            color: rgb(15, 23, 42);
             font-weight: 600;
-            margin-top: 16px;
-            transition: transform 0.2s;
+            margin-bottom: 12px;
         }
-        .btn:hover {
-            transform: translateY(-2px);
+        p {
+            color: rgb(71, 85, 105);
+            margin-bottom: 12px;
+        }
+        small {
+            color: rgb(100, 116, 139);
+        }
+        button {
+            padding: 10px 20px;
+            background: rgb(22, 163, 74);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        button:hover {
+            background: rgb(21, 128, 61);
+            box-shadow: 0 2px 10px rgba(22, 163, 74, 0.2);
+        }
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: linear-gradient(
+                    to bottom right,
+                    rgb(15, 23, 42),
+                    rgb(30, 41, 59),
+                    rgb(15, 23, 42)
+                );
+            }
+            .loading {
+                background: rgb(30, 41, 59);
+                border-color: rgb(51, 65, 85);
+            }
+            h2 {
+                color: rgb(241, 245, 249);
+            }
+            p {
+                color: rgb(148, 163, 184);
+            }
+            small {
+                color: rgb(100, 116, 139);
+            }
+            .spinner {
+                border-color: rgb(51, 65, 85);
+                border-top-color: rgb(34, 197, 94);
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h3>Đang chuyển hướng về ứng dụng...</h3>
+    <div class="loading">
         <div class="spinner"></div>
-        <p>Vui lòng không tắt trình duyệt.</p>
-
-        <form id="postRedirectForm" action="${handshakeUrl}" method="POST">
+        <h2>Đang chuyển hướng...</h2>
+        <p>Vui lòng đợi trong khi chúng tôi xử lý xác thực của bạn...</p>
+        <p><small>Nếu trang này không tự động chuyển hướng, vui lòng nhấn nút bên dưới.</small></p>
+        
+        <form id="postRedirectForm" action="${handshakeUrl}" method="POST" style="margin-top: 20px;">
             <input type="hidden" name="accessToken" value="${authResponse.accessToken}" />
             <input type="hidden" name="refreshToken" value="${authResponse.refreshToken}" />
             <input type="hidden" name="userId" value="${authResponse.user.id}" />
             <input type="hidden" name="expiresIn" value="${authResponse.expiresInSeconds}" />
-            
-            <noscript>
-                <p style="margin-top: 24px;">Nếu trình duyệt không tự chuyển, vui lòng nhấn nút bên dưới:</p>
-                <button type="submit" class="btn">Tiếp tục</button>
-            </noscript>
+            <button type="submit">
+                Tiếp tục
+            </button>
         </form>
     </div>
-
+    
     <script type="text/javascript">
         (function() {
             var form = document.getElementById('postRedirectForm');
             if (form) {
                 form.submit();
-            }
+                }
         })();
     </script>
 </body>
@@ -356,5 +393,138 @@ export class AuthController {
     const html = this.generateOAuthRedirectHtml(authResponse);
     res.setHeader('Content-Type', 'text/html');
     res.send(html);
+  }
+
+  // ==================== EMAIL VERIFICATION ====================
+
+  @Throttle({
+    default: {
+      limit: 3,
+      ttl: 60000,
+    },
+  })
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify email with token' })
+  @ApiResponse({
+    status: 200,
+    description: 'Email verified successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Invalid verification token',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Token already used or expired',
+  })
+  async verifyEmail(
+    @Body() verifyEmailDto: VerifyEmailDto,
+  ): Promise<{ message: string }> {
+    return this.authService.verifyEmail(verifyEmailDto.token);
+  }
+
+  @Throttle({
+    default: {
+      limit: 3,
+      ttl: 60000,
+    },
+  })
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Resend verification email' })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification email sent',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Email already verified',
+  })
+  async resendVerification(
+    @Body() forgotPasswordDto: ForgotPasswordDto,
+  ): Promise<{ message: string }> {
+    return this.authService.resendVerificationEmail(forgotPasswordDto.email);
+  }
+
+  // ==================== PASSWORD RESET ====================
+
+  @Throttle({
+    default: {
+      limit: 3,
+      ttl: 60000,
+    },
+  })
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Request password reset' })
+  @ApiResponse({
+    status: 200,
+    description: 'Password reset email sent if email exists',
+  })
+  async forgotPassword(
+    @Body() forgotPasswordDto: ForgotPasswordDto,
+  ): Promise<{ message: string }> {
+    return this.authService.forgotPassword(forgotPasswordDto.email);
+  }
+
+  @Throttle({
+    default: {
+      limit: 3,
+      ttl: 60000,
+    },
+  })
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reset password with token' })
+  @ApiResponse({
+    status: 200,
+    description: 'Password reset successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Invalid reset token',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Token already used or expired',
+  })
+  async resetPassword(
+    @Body() resetPasswordDto: ResetPasswordDto,
+  ): Promise<{ message: string }> {
+    return this.authService.resetPassword(
+      resetPasswordDto.token,
+      resetPasswordDto.newPassword,
+    );
+  }
+
+  @Throttle({
+    default: {
+      limit: 3,
+      ttl: 60000,
+    },
+  })
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Change password (authenticated)' })
+  @ApiBearerAuth('JWT-auth')
+  @ApiResponse({
+    status: 200,
+    description: 'Password changed successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Current password incorrect or unauthorized',
+  })
+  async changePassword(
+    @GetUser() user: User,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ): Promise<{ message: string }> {
+    return this.authService.changePassword(
+      user.id,
+      changePasswordDto.currentPassword,
+      changePasswordDto.newPassword,
+    );
   }
 }

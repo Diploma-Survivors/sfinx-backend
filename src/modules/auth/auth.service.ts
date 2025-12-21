@@ -17,12 +17,15 @@ import { v4 as uuidV4 } from 'uuid';
 import { plainToInstance } from 'class-transformer';
 import { AppConfig, JwtConfig } from 'src/config';
 import { Transactional } from 'typeorm-transactional';
+import { MailService } from '../mail/mail.service';
 import { Role } from '../rbac/entities/role.entity';
 import { AuthResponseDto, UserResponseDto } from './dto/auth-response.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { User } from './entities/user.entity';
+import { EmailVerificationTokenService } from './services/email-verification-token.service';
+import { PasswordResetTokenService } from './services/password-reset-token.service';
 import { JwtPayload } from './strategies/jwt.strategy';
 
 @Injectable()
@@ -40,6 +43,9 @@ export class AuthService {
     private readonly roleRepository: Repository<Role>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly mailService: MailService,
+    private readonly passwordResetTokenService: PasswordResetTokenService,
+    private readonly emailVerificationTokenService: EmailVerificationTokenService,
   ) {
     this.appConfig = this.configService.getOrThrow<AppConfig>('app');
     this.jwtConfig = this.configService.getOrThrow<JwtConfig>('jwt');
@@ -89,6 +95,9 @@ export class AuthService {
     });
 
     const savedUser = await this.userRepository.save(user);
+
+    // Send verification email
+    await this.sendVerificationEmail(savedUser);
 
     // Generate tokens
     return this.generateAuthResponse(savedUser);
@@ -294,6 +303,203 @@ export class AuthService {
       user: plainToInstance(UserResponseDto, user),
       expiresInSeconds: Math.floor(accessExpiresInMs / 1000),
     };
+  }
+
+  // ==================== EMAIL VERIFICATION ====================
+
+  /**
+   * Send email verification token
+   */
+  @Transactional()
+  async sendVerificationEmail(user: User): Promise<void> {
+    // Create verification token (24 hours)
+    const token = await this.emailVerificationTokenService.createToken(
+      user,
+      24 * 60 * 60 * 1000,
+    );
+
+    // Send verification email
+    const verificationUrl = `${this.appConfig.frontendUrl}/verify-email?token=${token}`;
+    await this.mailService.sendVerificationEmail(
+      user.email,
+      user.fullName || user.username,
+      verificationUrl,
+    );
+  }
+
+  /**
+   * Verify email with token
+   */
+  @Transactional()
+  async verifyEmail(token: string): Promise<{ message: string }> {
+    try {
+      const verificationToken =
+        await this.emailVerificationTokenService.findAndValidateToken(token);
+
+      // Mark email as verified
+      verificationToken.user.emailVerified = true;
+      await this.userRepository.save(verificationToken.user);
+
+      // Mark token as used
+      await this.emailVerificationTokenService.markAsUsed(verificationToken);
+
+      this.logger.log(
+        `Email verified for user ${verificationToken.user.email}`,
+      );
+
+      return { message: 'Email verified successfully' };
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes('Invalid')) {
+          throw new NotFoundException(error.message);
+        }
+        throw new ConflictException(error.message);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Resend verification email
+   */
+  @Transactional()
+  async resendVerificationEmail(email: string): Promise<{ message: string }> {
+    const user = await this.userRepository.findOne({ where: { email } });
+
+    if (!user) {
+      // Don't reveal if email exists
+      return {
+        message: 'If the email exists, a verification link has been sent',
+      };
+    }
+
+    if (user.emailVerified) {
+      throw new ConflictException('Email is already verified');
+    }
+
+    await this.sendVerificationEmail(user);
+
+    return { message: 'Verification email sent' };
+  }
+
+  // ==================== PASSWORD RESET ====================
+
+  /**
+   * Request password reset
+   */
+  @Transactional()
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    const user = await this.userRepository.findOne({ where: { email } });
+
+    if (!user) {
+      // Don't reveal if email exists (security best practice)
+      return {
+        message: 'If the email exists, a password reset link has been sent',
+      };
+    }
+
+    // Create reset token (1 hour)
+    const token = await this.passwordResetTokenService.createToken(
+      user,
+      60 * 60 * 1000,
+    );
+
+    // Send reset email
+    const resetUrl = `${this.appConfig.frontendUrl}/reset-password?token=${token}`;
+    await this.mailService.sendPasswordResetEmail(
+      user.email,
+      user.fullName || user.username,
+      resetUrl,
+    );
+
+    return { message: 'Password reset email sent' };
+  }
+
+  /**
+   * Reset password with token
+   */
+  @Transactional()
+  async resetPassword(
+    token: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
+    try {
+      const resetToken =
+        await this.passwordResetTokenService.findAndValidateToken(token);
+
+      // Hash new password
+      const saltRounds = this.appConfig.bcryptSaltRounds;
+      const passwordHash = await hash(newPassword, saltRounds);
+
+      // Update password
+      resetToken.user.passwordHash = passwordHash;
+      await this.userRepository.save(resetToken.user);
+
+      // Mark token as used
+      await this.passwordResetTokenService.markAsUsed(resetToken);
+
+      // Send confirmation email
+      await this.mailService.sendPasswordChangedEmail(
+        resetToken.user.email,
+        resetToken.user.fullName || resetToken.user.username,
+      );
+
+      this.logger.log(`Password reset for user ${resetToken.user.email}`);
+
+      return { message: 'Password reset successfully' };
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes('Invalid')) {
+          throw new NotFoundException(error.message);
+        }
+        throw new ConflictException(error.message);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Change password (authenticated user)
+   */
+  @Transactional()
+  async changePassword(
+    userId: number,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (!user.passwordHash) {
+      throw new UnauthorizedException('User has no password set');
+    }
+
+    // Verify current password
+    const isPasswordValid = await compare(currentPassword, user.passwordHash);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    // Hash new password
+    const saltRounds = this.appConfig.bcryptSaltRounds;
+    const passwordHash = await hash(newPassword, saltRounds);
+
+    // Update password
+    user.passwordHash = passwordHash;
+    await this.userRepository.save(user);
+
+    // Send confirmation email
+    await this.mailService.sendPasswordChangedEmail(
+      user.email,
+      user.fullName || user.username,
+    );
+
+    this.logger.log(`Password changed for user ${user.email}`);
+
+    return { message: 'Password changed successfully' };
   }
 
   @Cron('0 2 * * *') // Run daily at 2:00 AM
