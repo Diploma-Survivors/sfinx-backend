@@ -1,0 +1,94 @@
+<html lang='vi'>
+  <head>
+    <meta charset='UTF-8' />
+    <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+    <title>{{subject}}</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f4f4f4;
+      }
+      .email-container {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+      }
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 30px 20px;
+        text-align: center;
+      }
+      .header h1 {
+        color: #ffffff;
+        margin: 0;
+        font-size: 28px;
+      }
+      .content {
+        padding: 40px 30px;
+        color: #333333;
+        line-height: 1.6;
+      }
+      .footer {
+        background-color: #f8f9fa;
+        padding: 20px 30px;
+        text-align: center;
+        color: #6c757d;
+        font-size: 14px;
+      }
+      .button {
+        display: inline-block;
+        padding: 12px 30px;
+        background-color: #667eea;
+        color: #ffffff !important;
+        text-decoration: none;
+        border-radius: 5px;
+        margin: 20px 0;
+        font-weight: 600;
+      }
+      .button:hover {
+        background-color: #5568d3;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background-color: #1a1a1a;
+        }
+        .email-container {
+          background-color: #2d2d2d;
+        }
+        .content {
+          color: #e0e0e0;
+        }
+        .footer {
+          background-color: #1f1f1f;
+          color: #a0a0a0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class='email-container'>
+      <div class='header'>
+        <h1>sFinx Platform</h1>
+      </div>
+      <div class='content'>
+        {{{body}}}
+      </div>
+      <div class='footer'>
+        <p>&copy; 2025 sFinx Platform. All rights reserved.</p>
+        <p>
+          <a
+            href='https://sfinx.com'
+            style='color: #667eea; text-decoration: none;'
+          >Website</a>
+          |
+          <a
+            href='https://sfinx.com/support'
+            style='color: #667eea; text-decoration: none;'
+          >Support</a>
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

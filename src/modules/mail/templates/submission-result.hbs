@@ -1,0 +1,47 @@
+<h2>Submission Result: {{problemTitle}}</h2>
+
+<p>Hi {{userName}},</p>
+
+<p>Your submission for <strong>{{problemTitle}}</strong> has been evaluated.</p>
+
+<div style="background-color: {{#eq status 'Accepted'}}#d4edda{{else}}#f8d7da{{/eq}}; border-left: 4px solid {{#eq status 'Accepted'}}#28a745{{else}}#dc3545{{/eq}}; padding: 15px; margin: 20px 0;">
+    <h3 style="margin: 0 0 10px 0;">Status: {{status}}</h3>
+    {{#if score}}
+    <p style="margin: 0; font-size: 18px;"><strong>Score: {{score}}/100</strong></p>
+    {{/if}}
+</div>
+
+<h3>Submission Details:</h3>
+<table style="width: 100%; border-collapse: collapse;">
+    <tr>
+        <td style="padding: 10px; border-bottom: 1px solid #dee2e6;"><strong>Problem:</strong></td>
+        <td style="padding: 10px; border-bottom: 1px solid #dee2e6;">{{problemTitle}}</td>
+    </tr>
+    <tr>
+        <td style="padding: 10px; border-bottom: 1px solid #dee2e6;"><strong>Submitted At:</strong></td>
+        <td style="padding: 10px; border-bottom: 1px solid #dee2e6;">{{formatDate submittedAt}} at {{formatTime submittedAt}}</td>
+    </tr>
+    <tr>
+        <td style="padding: 10px; border-bottom: 1px solid #dee2e6;"><strong>Status:</strong></td>
+        <td style="padding: 10px; border-bottom: 1px solid #dee2e6;">{{status}}</td>
+    </tr>
+    {{#if score}}
+    <tr>
+        <td style="padding: 10px; border-bottom: 1px solid #dee2e6;"><strong>Score:</strong></td>
+        <td style="padding: 10px; border-bottom: 1px solid #dee2e6;">{{score}}/100</td>
+    </tr>
+    {{/if}}
+</table>
+
+<p style="text-align: center; margin-top: 30px;">
+    <a href="https://sfinx.com/submissions" class="button">View Detailed Results</a>
+</p>
+
+{{#eq status 'Accepted'}}
+<p>Congratulations on solving this problem! Keep up the great work!</p>
+{{else}}
+<p>Don't give up! Review your solution and try again. Every attempt is a learning opportunity.</p>
+{{/eq}}
+
+<p>Happy coding!<br>
+The Diploma Survivors Team</p>

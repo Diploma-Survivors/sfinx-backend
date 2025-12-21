@@ -1,0 +1,27 @@
+<h2>Welcome to sFinx Platform, {{name}}!</h2>
+
+<p>We're excited to have you join our competitive programming community. Get ready to sharpen your coding skills and tackle challenging problems!</p>
+
+<h3>What's Next?</h3>
+<ul>
+    <li><strong>Explore Problems:</strong> Browse our extensive collection of coding challenges</li>
+    <li><strong>Submit Solutions:</strong> Test your code against our automated judge system</li>
+    <li><strong>Track Progress:</strong> Monitor your performance and improvement over time</li>
+    <li><strong>Compete:</strong> Participate in contests and climb the leaderboard</li>
+</ul>
+
+{{#if verificationUrl}}
+<p>To get started, please verify your email address:</p>
+<p style="text-align: center;">
+    <a href="{{verificationUrl}}" class="button">Verify Email Address</a>
+</p>
+{{else}}
+<p style="text-align: center;">
+    <a href="https://sfinx.com/problems" class="button">Start Coding Now</a>
+</p>
+{{/if}}
+
+<p>If you have any questions, feel free to reach out to our support team.</p>
+
+<p>Happy coding!<br>
+The Diploma Survivors Team</p>
