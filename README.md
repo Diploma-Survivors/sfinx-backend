@@ -1,4 +1,4 @@
-# VibMatch Backend - LeetCode Clone API
+# sFinx Backend - LeetCode Clone API
 
 A production-ready NestJS backend for a LeetCode-style coding platform with comprehensive features including authentication, problem management, code submission with Judge0 integration, and more.
 
