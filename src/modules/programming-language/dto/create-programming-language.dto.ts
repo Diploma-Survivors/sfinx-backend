@@ -5,39 +5,20 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  Matches,
   MaxLength,
   Min,
-  MinLength,
 } from 'class-validator';
 
 export class CreateProgrammingLanguageDto {
   @ApiProperty({
     description: 'Language name',
     example: 'Python 3',
-    minLength: 1,
     maxLength: 50,
   })
   @IsString()
   @IsNotEmpty()
-  @MinLength(1)
   @MaxLength(50)
   name: string;
-
-  @ApiProperty({
-    description: 'URL-friendly slug (lowercase, alphanumeric, hyphens only)',
-    example: 'python3',
-    minLength: 1,
-    maxLength: 50,
-  })
-  @IsString()
-  @IsNotEmpty()
-  @MinLength(1)
-  @MaxLength(50)
-  @Matches(/^[a-z0-9-]+$/, {
-    message: 'Slug must be lowercase alphanumeric with hyphens only',
-  })
-  slug: string;
 
   @ApiPropertyOptional({
     description: 'Judge0 language ID for code execution',
@@ -76,4 +57,13 @@ export class CreateProgrammingLanguageDto {
   @IsOptional()
   @IsInt()
   orderIndex?: number;
+
+  @ApiProperty({
+    description: 'Starter code template for this language',
+    example: 'print("Hello, World!")',
+    maxLength: 1000,
+  })
+  @IsString()
+  @MaxLength(1000)
+  starterCode: string;
 }

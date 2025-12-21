@@ -20,7 +20,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import { RequirePermissions } from 'src/common';
+import { ApiPaginatedResponse, RequirePermissions } from 'src/common';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 
 import {
@@ -44,14 +44,12 @@ export class ProgrammingLanguageController {
     description:
       'Retrieve all programming languages with optional filtering and pagination',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Programming languages retrieved successfully',
-    type: [ProgrammingLanguage],
-  })
+  @ApiPaginatedResponse(
+    ProgrammingLanguage,
+    'Programming languages retrieved successfully',
+  )
   async findAll(@Query() query: QueryProgrammingLanguageDto) {
-    const result = await this.programmingLanguageService.findAll(query);
-    return result;
+    return this.programmingLanguageService.findAll(query);
   }
 
   @Get('active')

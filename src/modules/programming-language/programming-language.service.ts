@@ -1,10 +1,15 @@
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import {
   ConflictException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+
+import type { Cache } from 'cache-manager';
+import slugify from 'slugify';
 import { FindOperator, ILike, Repository } from 'typeorm';
 
 import { CACHE_KEYS, CACHE_TTL } from 'src/common/constants/cache.constant';
@@ -12,6 +17,7 @@ import {
   Cacheable,
   CacheInvalidate,
 } from 'src/common/decorators/cacheable.decorator';
+import { PaginatedResultDto } from 'src/common/dto/paginated-result.dto';
 
 import {
   CreateProgrammingLanguageDto,
@@ -19,6 +25,7 @@ import {
   UpdateProgrammingLanguageDto,
 } from './dto';
 import { ProgrammingLanguage } from './entities/programming-language.entity';
+import { Transactional } from 'typeorm-transactional';
 
 @Injectable()
 export class ProgrammingLanguageService {
@@ -27,6 +34,8 @@ export class ProgrammingLanguageService {
   constructor(
     @InjectRepository(ProgrammingLanguage)
     private readonly languageRepository: Repository<ProgrammingLanguage>,
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
   ) {}
 
   @Cacheable({
@@ -39,14 +48,10 @@ export class ProgrammingLanguageService {
       ),
     ttl: CACHE_TTL.ONE_DAY,
   })
-  async findAll(query: QueryProgrammingLanguageDto): Promise<{
-    data: ProgrammingLanguage[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  }> {
-    const { isActive, search, page = 1, limit = 20 } = query;
+  async findAll(
+    query: QueryProgrammingLanguageDto,
+  ): Promise<PaginatedResultDto<ProgrammingLanguage>> {
+    const { isActive, search } = query;
 
     // Build query conditions (KISS - simple and clear)
     const where: {
@@ -63,20 +68,17 @@ export class ProgrammingLanguageService {
     }
 
     // Execute query with pagination
-    const [data, total] = await this.languageRepository.findAndCount({
+    const result = await this.languageRepository.findAndCount({
       where,
       order: { orderIndex: 'ASC', name: 'ASC' },
-      skip: (page - 1) * limit,
-      take: limit,
+      skip: query.skip,
+      take: query.take,
     });
 
-    return {
-      data,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
+    return PaginatedResultDto.fromFindAndCount(result, {
+      page: query.page ?? 1,
+      limit: query.limit ?? 20,
+    });
   }
 
   /**
@@ -145,9 +147,17 @@ export class ProgrammingLanguageService {
   @CacheInvalidate({
     keys: [CACHE_KEYS.PROGRAMMING_LANGUAGES.ALL_ACTIVE],
   })
+  @Transactional()
   async create(
     dto: CreateProgrammingLanguageDto,
   ): Promise<ProgrammingLanguage> {
+    // Auto-generate slug from name
+    const slug = slugify(dto.name, {
+      lower: true,
+      strict: true,
+      trim: true,
+    });
+
     // Check for duplicate name
     const existingByName = await this.languageRepository.findOne({
       where: { name: dto.name },
@@ -161,17 +171,20 @@ export class ProgrammingLanguageService {
 
     // Check for duplicate slug
     const existingBySlug = await this.languageRepository.findOne({
-      where: { slug: dto.slug },
+      where: { slug },
     });
 
     if (existingBySlug) {
       throw new ConflictException(
-        `Programming language with slug "${dto.slug}" already exists`,
+        `Programming language with name "${dto.name}" already exists (slug: "${slug}")`,
       );
     }
 
     // Create and save
-    const language = this.languageRepository.create(dto);
+    const language = this.languageRepository.create({
+      ...dto,
+      slug,
+    });
     const saved = await this.languageRepository.save(language);
 
     this.logger.log(
@@ -191,6 +204,7 @@ export class ProgrammingLanguageService {
       CACHE_KEYS.PROGRAMMING_LANGUAGES.ALL_ACTIVE,
     ],
   })
+  @Transactional()
   async update(
     id: number,
     dto: UpdateProgrammingLanguageDto,
@@ -198,8 +212,16 @@ export class ProgrammingLanguageService {
     // Verify language exists
     const language = await this.findById(id);
 
-    // Check for duplicate name if name is being updated
+    // Auto-generate slug if name is being updated
+    let slug = language.slug;
     if (dto.name && dto.name !== language.name) {
+      slug = slugify(dto.name, {
+        lower: true,
+        strict: true,
+        trim: true,
+      });
+
+      // Check for duplicate name
       const existingByName = await this.languageRepository.findOne({
         where: { name: dto.name },
       });
@@ -209,26 +231,24 @@ export class ProgrammingLanguageService {
           `Programming language with name "${dto.name}" already exists`,
         );
       }
-    }
 
-    // Check for duplicate slug if slug is being updated
-    if (dto.slug && dto.slug !== language.slug) {
+      // Check for duplicate slug
       const existingBySlug = await this.languageRepository.findOne({
-        where: { slug: dto.slug },
+        where: { slug },
       });
 
-      if (existingBySlug) {
+      if (existingBySlug && existingBySlug.id !== id) {
         throw new ConflictException(
-          `Programming language with slug "${dto.slug}" already exists`,
+          `Programming language with name "${dto.name}" already exists (slug: "${slug}")`,
         );
       }
 
-      // Also invalidate old slug cache
-      this.invalidateSlugCache(language.slug);
+      // Invalidate old slug cache
+      await this.invalidateSlugCache(language.slug);
     }
 
     // Update and save
-    Object.assign(language, dto);
+    Object.assign(language, { ...dto, slug });
     const updated = await this.languageRepository.save(language);
 
     this.logger.log(
@@ -248,6 +268,7 @@ export class ProgrammingLanguageService {
       CACHE_KEYS.PROGRAMMING_LANGUAGES.ALL_ACTIVE,
     ],
   })
+  @Transactional()
   async delete(id: number): Promise<void> {
     const language = await this.findById(id);
 
@@ -256,7 +277,7 @@ export class ProgrammingLanguageService {
     await this.languageRepository.save(language);
 
     // Also invalidate slug cache
-    this.invalidateSlugCache(language.slug);
+    await this.invalidateSlugCache(language.slug);
 
     this.logger.log(
       `Deleted programming language: ${language.name} (ID: ${id})`,
@@ -273,6 +294,7 @@ export class ProgrammingLanguageService {
       CACHE_KEYS.PROGRAMMING_LANGUAGES.ALL_ACTIVE,
     ],
   })
+  @Transactional()
   async activate(id: number): Promise<ProgrammingLanguage> {
     const language = await this.findById(id);
 
@@ -284,7 +306,7 @@ export class ProgrammingLanguageService {
     const updated = await this.languageRepository.save(language);
 
     // Also invalidate slug cache
-    this.invalidateSlugCache(language.slug);
+    await this.invalidateSlugCache(language.slug);
 
     this.logger.log(
       `Activated programming language: ${language.name} (ID: ${id})`,
@@ -303,6 +325,7 @@ export class ProgrammingLanguageService {
       CACHE_KEYS.PROGRAMMING_LANGUAGES.ALL_ACTIVE,
     ],
   })
+  @Transactional()
   async deactivate(id: number): Promise<ProgrammingLanguage> {
     const language = await this.findById(id);
 
@@ -314,7 +337,7 @@ export class ProgrammingLanguageService {
     const updated = await this.languageRepository.save(language);
 
     // Also invalidate slug cache
-    this.invalidateSlugCache(language.slug);
+    await this.invalidateSlugCache(language.slug);
 
     this.logger.log(
       `Deactivated programming language: ${language.name} (ID: ${id})`,
@@ -327,10 +350,23 @@ export class ProgrammingLanguageService {
    * Helper method to invalidate slug cache
    * Private method following KISS principle
    */
-  private invalidateSlugCache(slug: string): void {
-    // This is a helper to manually invalidate slug cache when needed
-    // The @CacheInvalidate decorator doesn't handle dynamic slug keys
-    // In a real scenario, you might inject CacheManager here
-    this.logger.debug(`Should invalidate cache for slug: ${slug}`);
+  private async invalidateSlugCache(slug: string): Promise<void> {
+    // Generate the cache key for the slug
+    const cacheKey = CACHE_KEYS.PROGRAMMING_LANGUAGES.BY_SLUG(slug);
+
+    try {
+      // Delete the cache entry
+      await this.cacheManager.del(cacheKey);
+
+      this.logger.debug(
+        `🗑️ Cache invalidated for slug: "${slug}" (key: "${cacheKey}")`,
+      );
+    } catch (error) {
+      // Log error but don't throw - cache invalidation failure shouldn't break the operation
+      this.logger.error(
+        `Failed to invalidate cache for slug: "${slug}" (key: "${cacheKey}")`,
+        (error as Error).stack,
+      );
+    }
   }
 }

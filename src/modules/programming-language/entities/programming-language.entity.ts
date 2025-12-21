@@ -3,6 +3,7 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -44,7 +45,18 @@ export class ProgrammingLanguage {
   @Column({ name: 'order_index', default: 0 })
   orderIndex: number;
 
+  @ApiProperty({
+    description: 'Starter code template for this language',
+    required: false,
+  })
+  @Column({ name: 'starter_code', type: 'text', nullable: true })
+  starterCode: string;
+
   @ApiProperty({ description: 'Creation timestamp' })
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
+
+  @ApiProperty({ description: 'Last update timestamp' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
+  updatedAt: Date;
 }
