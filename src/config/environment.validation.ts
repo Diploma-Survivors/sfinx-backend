@@ -74,7 +74,9 @@ export const environmentValidation = Joi.object({
   SMTP_SECURE: Joi.boolean().default(false),
   SMTP_USER: Joi.string().required(),
   SMTP_PASSWORD: Joi.string().required(),
-  EMAIL_FROM: Joi.string().email().required(),
+  SMTP_FROM: Joi.string().email().required(),
+  SMTP_FROM_NAME: Joi.string().required(),
+  MAIL_QUEUE_ENABLED: Joi.boolean().default(false),
 
   // Admin User
   ADMIN_EMAIL: Joi.string().email().required(),

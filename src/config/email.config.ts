@@ -1,4 +1,5 @@
 import { registerAs } from '@nestjs/config';
+import * as path from 'path';
 
 export interface EmailConfig {
   host: string;
@@ -8,7 +9,19 @@ export interface EmailConfig {
     user: string;
     pass: string;
   };
-  from: string;
+  from: {
+    name: string;
+    address: string;
+  };
+  templatesDir: string;
+  queue: {
+    enabled: boolean;
+    attempts: number;
+    backoff: {
+      type: 'exponential';
+      delay: number;
+    };
+  };
 }
 
 export const emailConfig = registerAs(
@@ -21,6 +34,18 @@ export const emailConfig = registerAs(
       user: process.env.SMTP_USER!,
       pass: process.env.SMTP_PASSWORD!,
     },
-    from: process.env.SMTP_FROM!,
+    from: {
+      name: process.env.SMTP_FROM_NAME || 'sFinx Platform',
+      address: process.env.SMTP_FROM!,
+    },
+    templatesDir: path.join(__dirname, '..', 'modules', 'mail', 'templates'),
+    queue: {
+      enabled: process.env.MAIL_QUEUE_ENABLED !== 'false',
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 2000,
+      },
+    },
   }),
 );
