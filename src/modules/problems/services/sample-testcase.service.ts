@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { Transactional } from 'typeorm-transactional';
 import { CreateSampleTestcaseDto } from '../dto/create-sample-testcase.dto';
 import { Problem } from '../entities/problem.entity';
 import { SampleTestcase } from '../entities/sample-testcase.entity';
@@ -22,6 +23,7 @@ export class SampleTestcaseService {
   /**
    * Create a sample testcase
    */
+  @Transactional()
   async createSampleTestcase(
     createSampleDto: CreateSampleTestcaseDto,
   ): Promise<SampleTestcase> {
@@ -70,6 +72,7 @@ export class SampleTestcaseService {
   /**
    * Delete sample testcase
    */
+  @Transactional()
   async deleteSampleTestcase(id: number): Promise<void> {
     const sample = await this.sampleTestcaseRepository.findOne({
       where: { id },

@@ -7,23 +7,32 @@ import { Tag } from './entities/tag.entity';
 import { Topic } from './entities/topic.entity';
 import { ProblemsController } from './problems.controller';
 import { ProblemsService } from './problems.service';
-import { SampleTestcaseService, TestcaseFileService } from './services';
+import {
+  SampleTestcaseService,
+  TagService,
+  TestcaseFileService,
+  TopicService,
+} from './services';
 import { TestcaseTransformService } from './services/testcase-transform.service';
 import { TestcaseValidationService } from './services/testcase-validation.service';
 import { StorageModule } from '../storage/storage.module';
+import { TagsController } from './tags.controller';
+import { TopicsController } from './topics.controller';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Problem, SampleTestcase, Topic, Tag]),
     StorageModule,
   ],
-  controllers: [ProblemsController],
+  controllers: [ProblemsController, TagsController, TopicsController],
   providers: [
     ProblemsService,
     TestcaseFileService,
     SampleTestcaseService,
     TestcaseValidationService,
     TestcaseTransformService,
+    TagService,
+    TopicService,
   ],
   exports: [
     ProblemsService,
@@ -31,6 +40,8 @@ import { StorageModule } from '../storage/storage.module';
     SampleTestcaseService,
     TestcaseValidationService,
     TestcaseTransformService,
+    TagService,
+    TopicService,
   ],
 })
 export class ProblemsModule {}

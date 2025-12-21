@@ -10,6 +10,7 @@ import { Repository } from 'typeorm';
 import { unlink } from 'node:fs/promises';
 
 import { StorageService } from 'src/modules/storage/storage.service';
+import { Transactional } from 'typeorm-transactional';
 import {
   TESTCASE_FILE_EXTENSION,
   TESTCASE_FILE_MIME_TYPE,
@@ -38,6 +39,7 @@ export class TestcaseFileService {
    * Upload testcase file for a problem
    * @returns Object containing S3 key and testcase count
    */
+  @Transactional()
   async uploadTestcaseFile(
     file: Express.Multer.File,
     problemId: number,
@@ -46,6 +48,7 @@ export class TestcaseFileService {
 
     // Generate S3 key
     const key = `testcases/problem-${problemId}${TESTCASE_FILE_EXTENSION}`;
+    let isUploaded = false;
 
     try {
       const validationResult =
@@ -71,6 +74,7 @@ export class TestcaseFileService {
         file.path,
       );
 
+      // Upload to S3 using StorageService with progress tracking
       await this.storageService.uploadStream(
         key,
         transformStream,
@@ -82,12 +86,7 @@ export class TestcaseFileService {
         },
       );
 
-      // Upload to S3 using StorageService
-      await this.storageService.uploadFile(
-        key,
-        transformStream,
-        TESTCASE_FILE_MIME_TYPE,
-      );
+      isUploaded = true;
 
       // Update problem with testcase info
       problem.testcaseFileKey = key;
@@ -102,6 +101,11 @@ export class TestcaseFileService {
       this.logger.error(
         `Failed to upload testcase file: ${(err as Error)?.message}`,
       );
+
+      if (isUploaded) {
+        await this.storageService.deleteFile(key);
+      }
+
       throw err;
     } finally {
       await this.cleanupTempFile(file.path);
@@ -153,6 +157,7 @@ export class TestcaseFileService {
   /**
    * Delete testcase file for a problem
    */
+  @Transactional()
   async deleteTestcaseFile(problemId: number): Promise<void> {
     const problem = await this.getProblem(problemId);
 

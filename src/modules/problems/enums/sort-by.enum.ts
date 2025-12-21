@@ -1,5 +1,7 @@
 export enum SortBy {
   ID = 'id',
   DIFFICULTY = 'difficulty',
-  ACCEPTANCE_RATE = 'acceptance_rate',
+  ACCEPTANCE_RATE = 'acceptanceRate',
+  CREATED_AT = 'createdAt',
+  UPDATED_AT = 'updatedAt',
 }

@@ -1,4 +1,4 @@
-import { ApiPropertyOptional, OmitType } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsArray,
@@ -11,7 +11,7 @@ import { PaginationQueryDto } from '../../../common';
 import { ProblemDifficulty } from '../enums/problem-difficulty.enum';
 import { SortBy } from '../enums/sort-by.enum';
 
-export class FilterProblemDto extends OmitType(PaginationQueryDto, ['sortBy']) {
+export class FilterProblemDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     description: 'Sort by',
     enum: SortBy,
@@ -19,7 +19,7 @@ export class FilterProblemDto extends OmitType(PaginationQueryDto, ['sortBy']) {
   })
   @IsOptional()
   @IsEnum(SortBy)
-  sortBy: SortBy = SortBy.ID;
+  override sortBy?: SortBy = SortBy.ID;
 
   @ApiPropertyOptional({
     description: 'Filter by difficulty',

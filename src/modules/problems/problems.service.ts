@@ -1,11 +1,13 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
-import { In, Repository } from 'typeorm';
+import slugify from 'slugify';
+import { Repository } from 'typeorm';
 import { Transactional } from 'typeorm-transactional';
 
 import { PaginatedResultDto } from '../../common';
@@ -15,21 +17,17 @@ import { CreateProblemDto } from './dto/create-problem.dto';
 import { FilterProblemDto } from './dto/filter-problem.dto';
 import { UpdateProblemDto } from './dto/update-problem.dto';
 import { Problem } from './entities/problem.entity';
-import { Tag } from './entities/tag.entity';
-import { Topic } from './entities/topic.entity';
-import { TestcaseFileService } from './services';
+import { TagService, TestcaseFileService, TopicService } from './services';
 
 @Injectable()
 export class ProblemsService {
   constructor(
     @InjectRepository(Problem)
     private readonly problemRepository: Repository<Problem>,
-    @InjectRepository(Topic)
-    private readonly topicRepository: Repository<Topic>,
-    @InjectRepository(Tag)
-    private readonly tagRepository: Repository<Tag>,
     private readonly testcaseService: TestcaseFileService,
     private readonly caslAbilityFactory: CaslAbilityFactory,
+    private readonly topicService: TopicService,
+    private readonly tagService: TagService,
   ) {}
 
   @Transactional()
@@ -45,10 +43,10 @@ export class ProblemsService {
     // Check for duplicate slug
     await this.validateUniqueSlug(slug);
 
-    // Fetch topics and tags in parallel for better performance
+    // Fetch topics and tags using cached services
     const [topics, tags] = await Promise.all([
-      this.topicRepository.findBy({ id: In(topicIds) }),
-      this.tagRepository.findBy({ id: In(tagIds) }),
+      this.topicService.findByIds(topicIds),
+      this.tagService.findByIds(tagIds),
     ]);
 
     // Validate that all requested topics and tags exist
@@ -124,19 +122,25 @@ export class ProblemsService {
 
     const queryBuilder = this.problemRepository
       .createQueryBuilder('problem')
-      .leftJoinAndSelect('problem.topics', 'topic')
-      .leftJoinAndSelect('problem.tags', 'tag');
+      .leftJoinAndSelect('problem.tags', 'tag')
+      .leftJoinAndSelect('problem.topics', 'topic');
+
+    if (tagIds && tagIds.length > 0) {
+      queryBuilder.andWhere('tag.id IN (:...tagIds)', { tagIds });
+    }
+
+    if (topicIds && topicIds.length > 0) {
+      queryBuilder.andWhere('topic.id IN (:...topicIds)', { topicIds });
+    }
 
     // Check if user has read_all permission
     const canReadAll = user
       ? this.caslAbilityFactory.createForUser(user).can(Action.ReadAll, Problem)
       : false;
 
-    // Only apply published/active filters if user doesn't have read_all permission
+    // Only apply active filters if user doesn't have read_all permission
     if (!canReadAll) {
-      queryBuilder
-        .andWhere('problem.isPublished = :isPublished', { isPublished: true })
-        .andWhere('problem.isActive = :isActive', { isActive: true });
+      queryBuilder.andWhere('problem.isActive = :isActive', { isActive: true });
     }
 
     if (difficulty) {
@@ -148,35 +152,41 @@ export class ProblemsService {
     }
 
     if (search) {
-      queryBuilder.andWhere(
-        '(problem.title ILIKE :search OR problem.description ILIKE :search)',
-        { search: `%${search}%` },
-      );
-    }
+      // Sanitize search query for tsquery
+      const sanitizedSearch = search.replace(/[^\w\s]/g, ' ').trim();
 
-    if (topicIds && topicIds.length > 0) {
-      queryBuilder.andWhere('topic.id IN (:...topicIds)', { topicIds });
-    }
-
-    if (tagIds && tagIds.length > 0) {
-      queryBuilder.andWhere('tag.id IN (:...tagIds)', { tagIds });
+      queryBuilder
+        .addSelect(
+          `ts_rank(problem.search_vector, plainto_tsquery('english', :search))`,
+          'rank',
+        )
+        .andWhere(
+          `problem.search_vector @@ plainto_tsquery('english', :search)`,
+          { search: sanitizedSearch },
+        );
     }
 
     const sortBy = filterDto.sortBy;
     const sortOrder = filterDto.sortOrder;
-    queryBuilder.orderBy(`problem.${sortBy}`, sortOrder);
+
+    // If searching, order by relevance (rank) first, then by sortBy
+    if (search) {
+      queryBuilder.orderBy('rank', 'DESC');
+    }
+    queryBuilder.addOrderBy(`problem.${sortBy}`, sortOrder);
+
     queryBuilder.skip(filterDto.skip).take(filterDto.take);
 
-    const [data, total] = await queryBuilder.getManyAndCount();
+    const [items, total] = await queryBuilder.getManyAndCount();
 
-    return new PaginatedResultDto(data, {
+    return new PaginatedResultDto(items, {
       page: filterDto.page ?? 1,
       limit: filterDto.limit ?? 20,
       total,
     });
   }
 
-  async getProblemById(id: number): Promise<Problem> {
+  async getProblemById(id: number, user?: User): Promise<Problem> {
     const problem = await this.problemRepository.findOne({
       where: { id },
       relations: ['topics', 'tags', 'createdBy', 'updatedBy'],
@@ -186,10 +196,13 @@ export class ProblemsService {
       throw new NotFoundException(`Problem with ID ${id} not found`);
     }
 
+    // Check premium access
+    this.validatePremiumAccess(problem, user);
+
     return problem;
   }
 
-  async getProblemBySlug(slug: string): Promise<Problem> {
+  async getProblemBySlug(slug: string, user?: User): Promise<Problem> {
     const problem = await this.problemRepository.findOne({
       where: { slug },
       relations: ['topics', 'tags'],
@@ -199,7 +212,38 @@ export class ProblemsService {
       throw new NotFoundException(`Problem with slug ${slug} not found`);
     }
 
+    // Check premium access
+    this.validatePremiumAccess(problem, user);
+
     return problem;
+  }
+
+  /**
+   * Validates if a user can access a premium problem
+   * @throws ForbiddenException if problem is premium and user doesn't have access
+   */
+  private validatePremiumAccess(problem: Problem, user?: User): void {
+    // If problem is not premium, allow access to everyone
+    if (!problem.isPremium) {
+      return;
+    }
+
+    // If problem is premium and user is not authenticated
+    if (!user) {
+      throw new ForbiddenException(
+        'This is a premium problem. Please subscribe to access premium content.',
+      );
+    }
+
+    // Check if user has premium access using CASL
+    const ability = this.caslAbilityFactory.createForUser(user);
+    const canAccessPremium = ability.can(Action.ReadPremium, problem);
+
+    if (!canAccessPremium) {
+      throw new ForbiddenException(
+        'This is a premium problem. Please upgrade to premium to access this content.',
+      );
+    }
   }
 
   @Transactional()
@@ -236,7 +280,7 @@ export class ProblemsService {
     // Update topics if provided
     if (topicIds !== undefined) {
       if (topicIds.length > 0) {
-        const topics = await this.topicRepository.findBy({ id: In(topicIds) });
+        const topics = await this.topicService.findByIds(topicIds);
         problem.topics = topics;
       } else {
         problem.topics = [];
@@ -246,7 +290,7 @@ export class ProblemsService {
     // Update tags if provided
     if (tagIds !== undefined) {
       if (tagIds.length > 0) {
-        const tags = await this.tagRepository.findBy({ id: In(tagIds) });
+        const tags = await this.tagService.findByIds(tagIds);
         problem.tags = tags;
       } else {
         problem.tags = [];
@@ -263,19 +307,14 @@ export class ProblemsService {
   }
 
   @Transactional()
-  async togglePublishProblem(id: number): Promise<Problem> {
+  async toggleStatusProblem(id: number): Promise<Problem> {
     const problem = await this.getProblemById(id);
-    problem.isPublished = !problem.isPublished;
+    problem.isActive = !problem.isActive;
     return this.problemRepository.save(problem);
   }
 
   private generateSlug(title: string): string {
-    return title
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .trim();
+    return slugify(title, { lower: true, strict: true });
   }
 
   @Transactional()
@@ -299,11 +338,9 @@ export class ProblemsService {
       ? this.caslAbilityFactory.createForUser(user).can(Action.ReadAll, Problem)
       : false;
 
-    // Only apply published/active filters if user doesn't have read_all permission
+    // Only apply active filters if user doesn't have read_all permission
     if (!canReadAll) {
-      queryBuilder
-        .where('problem.isPublished = :isPublished', { isPublished: true })
-        .andWhere('problem.isActive = :isActive', { isActive: true });
+      queryBuilder.where('problem.isActive = :isActive', { isActive: true });
     }
 
     return queryBuilder.orderBy('RANDOM()').limit(count).getMany();

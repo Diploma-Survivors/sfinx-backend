@@ -18,7 +18,16 @@ import { Tag } from './tag.entity';
 import { Topic } from './topic.entity';
 
 export class ProblemHint {
+  @ApiProperty({
+    description: 'Hint order',
+    example: 1,
+  })
   order: number;
+
+  @ApiProperty({
+    description: 'Hint content',
+    example: 'Think about using a hash map',
+  })
   content: string;
 }
 
@@ -44,6 +53,14 @@ export class Problem {
   @Column({ type: 'text', nullable: true })
   constraints: string;
 
+  @Column({
+    type: 'tsvector',
+    select: false,
+    nullable: true,
+    name: 'search_vector',
+  })
+  searchVector?: string;
+
   @ApiProperty({
     description: 'Problem difficulty',
     enum: ProblemDifficulty,
@@ -59,12 +76,8 @@ export class Problem {
   @Column({ name: 'is_premium', default: false })
   isPremium: boolean;
 
-  @ApiProperty({ description: 'Whether problem is published' })
-  @Column({ name: 'is_published', default: false })
-  isPublished: boolean;
-
   @ApiProperty({ description: 'Whether problem is active' })
-  @Column({ name: 'is_active', default: true })
+  @Column({ name: 'is_active', default: false })
   isActive: boolean;
 
   // Statistics
@@ -219,10 +232,10 @@ export class Problem {
   tags: Tag[];
 
   @ApiProperty({ description: 'Creation timestamp' })
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
   @ApiProperty({ description: 'Last update timestamp' })
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 }

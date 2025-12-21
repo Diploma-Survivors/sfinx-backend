@@ -6,14 +6,20 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsOptional,
+  IsPositive,
   IsString,
   MaxLength,
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import { TESTCASE_FILE_FIELD_NAME } from 'src/common';
+import {
+  JsonTransformToInstance,
+  JsonTransformToObject,
+  TESTCASE_FILE_FIELD_NAME,
+} from 'src/common';
 import { ProblemHint } from '../entities/problem.entity';
 import { ProblemDifficulty } from '../enums/problem-difficulty.enum';
 
@@ -42,12 +48,15 @@ export class CreateProblemDto {
 
   @ApiProperty({ description: 'Problem description in markdown' })
   @IsString()
-  @IsNotEmpty()
+  @MinLength(10)
+  @MaxLength(10000)
   description: string;
 
   @ApiPropertyOptional({ description: 'Input constraints' })
   @IsOptional()
   @IsString()
+  @MinLength(10)
+  @MaxLength(10000)
   constraints?: string;
 
   @ApiProperty({
@@ -66,11 +75,13 @@ export class CreateProblemDto {
   @IsBoolean()
   isPremium?: boolean;
 
-  @ApiPropertyOptional({ description: 'Whether problem is published' })
+  @ApiPropertyOptional({
+    description: 'Whether problem is active',
+  })
   @IsOptional()
   @Type(() => Boolean)
   @IsBoolean()
-  isPublished?: boolean;
+  isActive?: boolean;
 
   @ApiProperty({
     description: 'Testcase file',
@@ -86,6 +97,7 @@ export class CreateProblemDto {
   })
   @IsOptional()
   @Type(() => Number)
+  @IsPositive()
   timeLimitMs?: number;
 
   @ApiPropertyOptional({
@@ -95,6 +107,7 @@ export class CreateProblemDto {
   })
   @IsOptional()
   @Type(() => Number)
+  @IsPositive()
   memoryLimitKb?: number;
 
   @ApiPropertyOptional({
@@ -102,7 +115,7 @@ export class CreateProblemDto {
     type: () => [SampleTestcaseDto],
   })
   @IsOptional()
-  @Type(() => SampleTestcaseDto)
+  @JsonTransformToInstance(SampleTestcaseDto)
   @IsArray()
   @ValidateNested({ each: true })
   sampleTestcases?: SampleTestcaseDto[];
@@ -113,7 +126,7 @@ export class CreateProblemDto {
     example: [{ order: 1, content: 'Think about using a hash map' }],
   })
   @IsOptional()
-  @Type(() => ProblemHint)
+  @JsonTransformToInstance(ProblemHint)
   @IsArray()
   @ValidateNested({ each: true })
   hints?: ProblemHint[];
@@ -125,20 +138,23 @@ export class CreateProblemDto {
 
   @ApiPropertyOptional({ description: 'Similar problem IDs' })
   @IsOptional()
-  @Type(() => Number)
+  @JsonTransformToObject('similarProblems')
   @IsArray()
+  @IsInt({ each: true })
   similarProblems?: number[];
 
   @ApiProperty({ description: 'Topic IDs' })
-  @Type(() => Number)
+  @JsonTransformToObject('topicIds')
   @IsArray()
+  @IsInt({ each: true })
   @ArrayMinSize(1)
   @ArrayMaxSize(3)
   topicIds: number[];
 
   @ApiProperty({ description: 'Tag IDs' })
-  @Type(() => Number)
+  @JsonTransformToObject('tagIds')
   @IsArray()
+  @IsInt({ each: true })
   @ArrayMinSize(1)
   @ArrayMaxSize(3)
   tagIds: number[];

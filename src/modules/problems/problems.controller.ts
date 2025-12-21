@@ -22,6 +22,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+
 import {
   ApiPaginatedResponse,
   CheckAbility,
@@ -39,6 +40,8 @@ import { CreateProblemDto } from './dto/create-problem.dto';
 import { CreateSampleTestcaseDto } from './dto/create-sample-testcase.dto';
 import { UploadTestcaseDto } from './dto/create-testcase.dto';
 import { FilterProblemDto } from './dto/filter-problem.dto';
+import { TestcaseDownloadUrlDto } from './dto/testcase-download-url.dto';
+import { TestcaseUploadResponseDto } from './dto/testcase-upload-response.dto';
 import { UpdateProblemDto } from './dto/update-problem.dto';
 import { Problem } from './entities/problem.entity';
 import { SampleTestcase } from './entities/sample-testcase.entity';
@@ -85,7 +88,7 @@ export class ProblemsController {
   @ApiOperation({
     summary: 'Get all problems with filtering and pagination',
     description:
-      'Returns published/active problems by default. Authenticated admins with read_all permission can view all problems.',
+      'Returns active problems by default. Authenticated admins with read_all permission can view all problems.',
   })
   @ApiBearerAuth('JWT-auth')
   @ApiPaginatedResponse(Problem, 'Problems retrieved successfully')
@@ -101,7 +104,7 @@ export class ProblemsController {
   @ApiOperation({
     summary: 'Get random problems',
     description:
-      'Returns random published/active problems by default. Authenticated admins with read_all permission can get random problems from all problems.',
+      'Returns random active problems by default. Authenticated admins with read_all permission can get random problems from all problems.',
   })
   @ApiQuery({
     name: 'count',
@@ -126,7 +129,13 @@ export class ProblemsController {
   }
 
   @Get('slug/:slug')
-  @ApiOperation({ summary: 'Get problem by slug' })
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiOperation({
+    summary: 'Get problem by slug',
+    description:
+      'Returns problem details. Premium problems require authentication and premium subscription.',
+  })
+  @ApiBearerAuth('JWT-auth')
   @ApiParam({ name: 'slug', description: 'Problem slug' })
   @ApiResponse({
     status: 200,
@@ -134,12 +143,25 @@ export class ProblemsController {
     type: Problem,
   })
   @ApiResponse({ status: 404, description: 'Problem not found' })
-  async getProblemBySlug(@Param('slug') slug: string): Promise<Problem> {
-    return this.problemsService.getProblemBySlug(slug);
+  @ApiResponse({
+    status: 403,
+    description: 'Premium subscription required to access this problem',
+  })
+  async getProblemBySlug(
+    @Param('slug') slug: string,
+    @GetUser() user?: User,
+  ): Promise<Problem> {
+    return this.problemsService.getProblemBySlug(slug, user);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get problem by ID' })
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiOperation({
+    summary: 'Get problem by ID',
+    description:
+      'Returns problem details. Premium problems require authentication and premium subscription.',
+  })
+  @ApiBearerAuth('JWT-auth')
   @ApiParam({ name: 'id', description: 'Problem ID', type: Number })
   @ApiResponse({
     status: 200,
@@ -147,8 +169,15 @@ export class ProblemsController {
     type: Problem,
   })
   @ApiResponse({ status: 404, description: 'Problem not found' })
-  async getProblemById(@Param('id') id: string): Promise<Problem> {
-    return this.problemsService.getProblemById(+id);
+  @ApiResponse({
+    status: 403,
+    description: 'Premium subscription required to access this problem',
+  })
+  async getProblemById(
+    @Param('id') id: string,
+    @GetUser() user?: User,
+  ): Promise<Problem> {
+    return this.problemsService.getProblemById(+id, user);
   }
 
   @Put(':id')
@@ -184,7 +213,7 @@ export class ProblemsController {
     return this.problemsService.deleteProblem(+id);
   }
 
-  @Post(':id/publish')
+  @Post(':id/toggle')
   @UseGuards(CaslGuard)
   @CheckPolicies(new ManageProblemsPolicy())
   @ApiBearerAuth('JWT-auth')
@@ -196,7 +225,7 @@ export class ProblemsController {
     type: Problem,
   })
   async togglePublishProblem(@Param('id') id: string): Promise<Problem> {
-    return this.problemsService.togglePublishProblem(+id);
+    return this.problemsService.toggleStatusProblem(+id);
   }
 
   // ==================== TESTCASES ENDPOINTS ====================
@@ -210,7 +239,7 @@ export class ProblemsController {
   @ApiResponse({
     status: 201,
     description: 'Testcase file uploaded successfully',
-    type: Problem,
+    type: TestcaseUploadResponseDto,
   })
   @ApiResponse({
     status: 400,
@@ -219,28 +248,39 @@ export class ProblemsController {
   async uploadTestcaseFile(
     @Body() uploadTestcaseDto: UploadTestcaseDto,
     @UploadedFile(FileRequiredPipe) testcaseFile: Express.Multer.File,
-  ): Promise<{ key: string; testcaseCount: number }> {
+  ): Promise<TestcaseUploadResponseDto> {
     const { problemId } = uploadTestcaseDto;
     return this.testcaseFileService.uploadTestcaseFile(testcaseFile, problemId);
   }
 
   @UseGuards(CaslGuard)
-  @CheckAbility({ action: Action.Read, subject: Problem })
+  @CheckAbility({ action: Action.ReadAll, subject: Problem })
   @ApiBearerAuth('JWT-auth')
-  @Get(':id/testcases/content')
+  @Get(':id/testcases/download-url')
   @ApiOperation({
-    summary: 'Get testcase file content (Admin only - for Judge0)',
+    summary: 'Get presigned URL for testcase file download (Admin only)',
+    description:
+      'Returns a presigned URL that allows direct download from S3 without overloading the backend',
   })
   @ApiParam({ name: 'id', description: 'Problem ID', type: Number })
+  @ApiQuery({
+    name: 'expiresIn',
+    required: false,
+    type: Number,
+    description: 'URL expiration time in seconds (default: 3600)',
+  })
   @ApiResponse({
     status: 200,
-    description: 'Testcase content retrieved successfully',
+    description: 'Presigned URL generated successfully',
+    type: TestcaseDownloadUrlDto,
   })
-  async getTestcaseContent(
+  async getTestcaseDownloadUrl(
     @Param('id') id: string,
-  ): Promise<{ content: string }> {
-    const content = await this.testcaseFileService.getTestcaseContent(+id);
-    return { content };
+    @Query('expiresIn') expiresIn?: number,
+  ): Promise<TestcaseDownloadUrlDto> {
+    const expires = expiresIn ? Number(expiresIn) : 3600;
+    const url = await this.testcaseFileService.getTestcaseFileUrl(+id, expires);
+    return { url, expiresIn: expires };
   }
 
   @Delete(':id/testcases')
