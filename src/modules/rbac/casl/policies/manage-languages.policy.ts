@@ -1,5 +1,6 @@
-import { IPolicyHandler } from '../policy-handler.interface';
+import { ProgrammingLanguage } from 'src/modules/programming-language';
 import { Action, AppAbility } from '../casl-ability.factory';
+import { IPolicyHandler } from '../policy-handler.interface';
 
 /**
  * Policy: Check if user can manage programming languages
@@ -7,11 +8,11 @@ import { Action, AppAbility } from '../casl-ability.factory';
 export class ManageLanguagesPolicy implements IPolicyHandler {
   handle(ability: AppAbility): boolean {
     return (
-      ability.can(Action.Create, 'Language') ||
-      ability.can(Action.Update, 'Language') ||
-      ability.can(Action.Delete, 'Language') ||
-      ability.can(Action.Activate, 'Language') ||
-      ability.can(Action.Deactivate, 'Language')
+      ability.can(Action.Create, ProgrammingLanguage) ||
+      ability.can(Action.Update, ProgrammingLanguage) ||
+      ability.can(Action.Delete, ProgrammingLanguage) ||
+      ability.can(Action.Activate, ProgrammingLanguage) ||
+      ability.can(Action.Deactivate, ProgrammingLanguage)
     );
   }
 }

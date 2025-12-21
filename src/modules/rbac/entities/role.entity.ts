@@ -1,13 +1,13 @@
+import { ApiProperty } from '@nestjs/swagger';
 import {
-  Entity,
-  PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
-  UpdateDateColumn,
-  ManyToMany,
+  Entity,
   JoinTable,
+  ManyToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
-import { ApiProperty } from '@nestjs/swagger';
 import { Permission } from './permission.entity';
 
 @Entity('roles')
@@ -53,10 +53,10 @@ export class Role {
   permissions: Permission[];
 
   @ApiProperty({ description: 'Creation timestamp' })
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
   @ApiProperty({ description: 'Last update timestamp' })
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 }

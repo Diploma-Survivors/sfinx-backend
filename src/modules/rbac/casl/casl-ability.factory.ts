@@ -6,17 +6,17 @@ import {
   PureAbility,
 } from '@casl/ability';
 import { Injectable } from '@nestjs/common';
-import { User } from '../../auth/entities/user.entity';
 import { RefreshToken } from '../../auth/entities/refresh-token.entity';
+import { User } from '../../auth/entities/user.entity';
 import { Problem } from '../../problems/entities/problem.entity';
+import { SampleTestcase } from '../../problems/entities/sample-testcase.entity';
 import { Tag } from '../../problems/entities/tag.entity';
 import { Topic } from '../../problems/entities/topic.entity';
-import { SampleTestcase } from '../../problems/entities/sample-testcase.entity';
+import { ProgrammingLanguage } from '../../programming-language/entities/programming-language.entity';
 import { Submission } from '../../submissions/entities/submission.entity';
 import { UserProblemProgress } from '../../submissions/entities/user-problem-progress.entity';
 import { Permission } from '../entities/permission.entity';
 import { Role } from '../entities/role.entity';
-import { ProgrammingLanguage } from '../../programming-language/entities/programming-language.entity';
 
 // Define all possible actions
 export enum Action {
@@ -90,6 +90,8 @@ export class CaslAbilityFactory {
       return build({
         detectSubjectType: (item) =>
           item.constructor as ExtractSubjectType<Subjects>,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        conditionsMatcher: this.conditionsMatcher.bind(this),
       });
     }
 
@@ -101,6 +103,8 @@ export class CaslAbilityFactory {
       return build({
         detectSubjectType: (item) =>
           item.constructor as ExtractSubjectType<Subjects>,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        conditionsMatcher: this.conditionsMatcher.bind(this),
       });
     }
 
@@ -120,6 +124,8 @@ export class CaslAbilityFactory {
     return build({
       detectSubjectType: (item) =>
         item.constructor as ExtractSubjectType<Subjects>,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      conditionsMatcher: this.conditionsMatcher.bind(this),
     });
   }
 
@@ -249,5 +255,27 @@ export class CaslAbilityFactory {
     return permissions.some(
       (p) => p.resource === resource && p.action === action,
     );
+  }
+
+  /**
+   * Custom conditions matcher for field-based permission checking
+   * Handles both simple fields (id) and nested fields (user.id)
+   */
+  private conditionsMatcher(conditions: Record<string, unknown>) {
+    return (object: Record<string, unknown>) => {
+      return Object.keys(conditions).every((key) => {
+        const expectedValue = conditions[key];
+
+        // Handle nested paths like 'user.id'
+        const actualValue = key.split('.').reduce<unknown>((obj, k) => {
+          if (obj && typeof obj === 'object' && k in obj) {
+            return (obj as Record<string, unknown>)[k];
+          }
+          return undefined;
+        }, object);
+
+        return actualValue === expectedValue;
+      });
+    };
   }
 }

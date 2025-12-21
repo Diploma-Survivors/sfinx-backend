@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
+import { Transactional } from 'typeorm-transactional';
 import { User } from '../auth/entities/user.entity';
 import {
   Action,
@@ -30,6 +31,7 @@ export class RbacService {
   /**
    * Create a new role
    */
+  @Transactional()
   async createRole(
     name: string,
     slug: string,
@@ -101,6 +103,7 @@ export class RbacService {
   /**
    * Update role
    */
+  @Transactional()
   async updateRole(id: number, updates: Partial<Role>): Promise<Role> {
     const role = await this.getRoleById(id);
 
@@ -115,6 +118,7 @@ export class RbacService {
   /**
    * Delete role
    */
+  @Transactional()
   async deleteRole(id: number): Promise<void> {
     const role = await this.getRoleById(id);
 
@@ -128,11 +132,16 @@ export class RbacService {
   /**
    * Assign permissions to role
    */
+  @Transactional()
   async assignPermissionsToRole(
     roleId: number,
     permissionIds: number[],
   ): Promise<Role> {
     const role = await this.getRoleById(roleId);
+
+    if (role.isSystemRole) {
+      throw new BadRequestException('Cannot modify system role permissions');
+    }
 
     const permissions = await this.permissionRepository.findBy({
       id: In(permissionIds),
@@ -149,11 +158,16 @@ export class RbacService {
   /**
    * Remove permissions from role
    */
+  @Transactional()
   async removePermissionsFromRole(
     roleId: number,
     permissionIds: number[],
   ): Promise<Role> {
     const role = await this.getRoleById(roleId);
+
+    if (role.isSystemRole) {
+      throw new BadRequestException('Cannot modify system role permissions');
+    }
 
     role.permissions = role.permissions.filter(
       (permission) => !permissionIds.includes(permission.id),
@@ -167,6 +181,7 @@ export class RbacService {
   /**
    * Create a new permission
    */
+  @Transactional()
   async createPermission(
     resource: string,
     action: string,
