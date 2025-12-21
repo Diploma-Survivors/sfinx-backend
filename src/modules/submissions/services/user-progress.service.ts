@@ -2,10 +2,24 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { PaginatedResultDto, PaginationQueryDto } from '../../../common';
 import { Submission } from '../entities/submission.entity';
 import { UserProblemProgress } from '../entities/user-problem-progress.entity';
 import { ProgressStatus } from '../enums/progress-status.enum';
 import { SubmissionStatus } from '../enums/submission-status.enum';
+
+export interface UserProgressStats {
+  userId: number;
+  problemId: number;
+  status: ProgressStatus;
+  totalAttempts: number;
+  totalAccepted: number;
+  bestRuntimeMs: number | null;
+  bestMemoryKb: number | null;
+  firstAttemptedAt: Date;
+  firstSolvedAt: Date | null;
+  lastAttemptedAt: Date;
+}
 
 /**
  * Service responsible for managing user problem progress
@@ -32,27 +46,40 @@ export class UserProgressService {
   }
 
   /**
-   * Get all problem progress for a user
+   * Get all problem progress for a user with pagination
    */
-  async getAllUserProgress(userId: number): Promise<UserProblemProgress[]> {
-    return this.progressRepository.find({
+  async getAllUserProgress(
+    userId: number,
+    paginationDto?: PaginationQueryDto,
+  ): Promise<PaginatedResultDto<UserProblemProgress>> {
+    const page = paginationDto?.page ?? 1;
+    const limit = paginationDto?.limit ?? 20;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await this.progressRepository.findAndCount({
       where: { userId },
       relations: ['problem', 'bestSubmission'],
       order: { lastAttemptedAt: 'DESC' },
+      skip,
+      take: limit,
     });
+
+    return new PaginatedResultDto(data, { page, limit, total });
   }
 
   /**
    * Update user progress when a new submission is created
+   * Note: This only tracks attempts. Acceptance is tracked in updateProgressAfterJudge()
    */
   async updateProgressOnSubmit(
     userId: number,
     problemId: number,
-    submission: Submission,
   ): Promise<void> {
     let progress = await this.progressRepository.findOne({
       where: { userId, problemId },
     });
+
+    const now = new Date();
 
     if (!progress) {
       // Create new progress record
@@ -64,15 +91,13 @@ export class UserProgressService {
         status: ProgressStatus.ATTEMPTED,
         totalAttempts: 1,
         totalAccepted: 0,
-        lastAttemptedAt: new Date(),
+        firstAttemptedAt: now,
+        lastAttemptedAt: now,
       });
     } else {
-      // Update existing progress
-      if (submission?.status === SubmissionStatus.ACCEPTED) {
-        progress.totalAccepted += 1;
-      }
+      // Update existing progress - only increment attempts
       progress.totalAttempts += 1;
-      progress.lastAttemptedAt = new Date();
+      progress.lastAttemptedAt = now;
     }
 
     await this.progressRepository.save(progress);

@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   Column,
   CreateDateColumn,
@@ -8,6 +8,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { User } from '../../auth/entities/user.entity';
+import { Contest } from '../../contest/entities/contest.entity';
 import { Problem } from '../../problems/entities/problem.entity';
 import { ProgrammingLanguage } from '../../programming-language/entities/programming-language.entity';
 import { SubmissionStatus } from '../enums/submission-status.enum';
@@ -103,7 +104,7 @@ export class Submission {
   ipAddress: string | null;
 
   @ApiProperty({ description: 'Submission timestamp' })
-  @CreateDateColumn({ name: 'submitted_at' })
+  @CreateDateColumn({ name: 'submitted_at', type: 'timestamptz' })
   submittedAt: Date;
 
   @ApiProperty({ description: 'Judging completion timestamp', required: false })
@@ -123,4 +124,15 @@ export class Submission {
   })
   @Column({ name: 'is_after_contest', default: false })
   isAfterContest: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Contest ID if this is a contest submission',
+  })
+  @Column({ name: 'contest_id', nullable: true })
+  contestId: number | null;
+
+  @ApiPropertyOptional({ description: 'Contest', type: () => Contest })
+  @ManyToOne(() => Contest, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'contest_id' })
+  contest: Contest | null;
 }

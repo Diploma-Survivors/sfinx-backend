@@ -16,21 +16,27 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+
 import {
   ApiPaginatedResponse,
   CheckPolicies,
   GetUser,
   PaginatedResultDto,
+  PaginationQueryDto,
 } from '../../common';
 import { User } from '../auth/entities/user.entity';
 import { CaslGuard } from '../auth/guards/casl.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ViewAllSubmissionsPolicy } from '../rbac/casl/policies';
+import { CreateSubmissionResponseDto } from './dto/create-submission-response.dto';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { FilterSubmissionDto } from './dto/filter-submission.dto';
-import { SubmissionResponseDto } from './dto/submission-response.dto';
+import {
+  SubmissionListResponseDto,
+  SubmissionResponseDto,
+} from './dto/submission-response.dto';
+import { UserProblemProgress } from './entities/user-problem-progress.entity';
 import { SubmissionsService } from './submissions.service';
-import { CreateSubmissionResponseDto } from './dto/create-submission-response.dto';
 
 @ApiTags('Submissions')
 @Controller('submissions')
@@ -93,12 +99,12 @@ export class SubmissionsController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get all submissions (Admin only)' })
   @ApiPaginatedResponse(
-    SubmissionResponseDto,
+    SubmissionListResponseDto,
     'Submissions retrieved successfully',
   )
   async getAllSubmissions(
     @Query() filterDto: FilterSubmissionDto,
-  ): Promise<PaginatedResultDto<SubmissionResponseDto>> {
+  ): Promise<PaginatedResultDto<SubmissionListResponseDto>> {
     return this.submissionsService.getSubmissions(filterDto);
   }
 
@@ -107,13 +113,13 @@ export class SubmissionsController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get current user submissions' })
   @ApiPaginatedResponse(
-    SubmissionResponseDto,
+    SubmissionListResponseDto,
     'User submissions retrieved successfully',
   )
   async getUserSubmissions(
     @GetUser() user: User,
     @Query() filterDto: FilterSubmissionDto,
-  ): Promise<PaginatedResultDto<SubmissionResponseDto>> {
+  ): Promise<PaginatedResultDto<SubmissionListResponseDto>> {
     return this.submissionsService.getUserSubmissions(user.id, filterDto);
   }
 
@@ -133,12 +139,15 @@ export class SubmissionsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get current user problem progress' })
-  @ApiResponse({
-    status: 200,
-    description: 'User problem progress retrieved successfully',
-  })
-  async getUserAllProgress(@GetUser() user: User) {
-    return this.submissionsService.getUserAllProgress(user.id);
+  @ApiPaginatedResponse(
+    UserProblemProgress,
+    'User problem progress retrieved successfully',
+  )
+  async getUserAllProgress(
+    @GetUser() user: User,
+    @Query() paginationDto: PaginationQueryDto,
+  ): Promise<PaginatedResultDto<UserProblemProgress>> {
+    return this.submissionsService.getUserAllProgress(user.id, paginationDto);
   }
 
   @Get('problem/:problemId/progress')
@@ -164,21 +173,25 @@ export class SubmissionsController {
   })
   @ApiParam({ name: 'problemId', description: 'Problem ID', type: Number })
   @ApiPaginatedResponse(
-    SubmissionResponseDto,
+    SubmissionListResponseDto,
     'Problem submissions retrieved successfully',
   )
   async getProblemSubmissions(
     @Param('problemId') problemId: string,
     @Query() filterDto: FilterSubmissionDto,
-  ): Promise<PaginatedResultDto<SubmissionResponseDto>> {
+  ): Promise<PaginatedResultDto<SubmissionListResponseDto>> {
     filterDto.problemId = +problemId;
+    // Only show accepted submissions publicly
+    filterDto.acceptedOnly = true;
     return this.submissionsService.getSubmissions(filterDto);
   }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Get submission by ID' })
+  @ApiOperation({
+    summary: 'Get submission by ID (with source code for own submissions)',
+  })
   @ApiParam({ name: 'id', description: 'Submission ID', type: Number })
   @ApiResponse({
     status: 200,
@@ -190,8 +203,7 @@ export class SubmissionsController {
     @Param('id') id: string,
     @GetUser() user: User,
   ): Promise<SubmissionResponseDto> {
-    // Users can only see their own submissions
-    // TODO: Admins should be able to see all submissions
-    return this.submissionsService.getSubmissionById(+id, user.id);
+    // Users can only see their own submissions with source code
+    return this.submissionsService.getSubmissionById(+id, user.id, true);
   }
 }

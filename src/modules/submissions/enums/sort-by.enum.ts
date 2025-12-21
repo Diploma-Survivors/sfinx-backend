@@ -1,3 +1,8 @@
 export enum SortBy {
-  CREATED_AT = 'createdAt',
+  SUBMITTED_AT = 'submittedAt',
+  JUDGED_AT = 'judgedAt',
+  STATUS = 'status',
+  RUNTIME = 'runtimeMs',
+  MEMORY = 'memoryKb',
+  PASSED_TESTCASES = 'passedTestcases',
 }

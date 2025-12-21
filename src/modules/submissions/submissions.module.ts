@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Judge0Module } from '../judge0/judge0.module';
 import { ProblemsModule } from '../problems/problems.module';
 import { ProgrammingLanguageModule } from '../programming-language';
+import { RedisModule } from '../redis/redis.module';
 import { StorageModule } from '../storage/storage.module';
 import { Submission } from './entities/submission.entity';
 import { UserProblemProgress } from './entities/user-problem-progress.entity';
@@ -22,6 +23,7 @@ import { SubmissionsService } from './submissions.service';
     ProblemsModule,
     Judge0Module,
     ProgrammingLanguageModule,
+    RedisModule,
     StorageModule,
   ],
   controllers: [SubmissionsController],

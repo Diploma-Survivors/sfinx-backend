@@ -1,21 +1,26 @@
-import { ApiPropertyOptional, OmitType } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional } from 'class-validator';
+import {
+  IsDate,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  Min,
+  ValidateIf,
+} from 'class-validator';
 import { PaginationQueryDto } from '../../../common';
 import { SortBy } from '../enums/sort-by.enum';
 import { SubmissionStatus } from '../enums/submission-status.enum';
 
-export class FilterSubmissionDto extends OmitType(PaginationQueryDto, [
-  'sortBy',
-]) {
+export class FilterSubmissionDto extends PaginationQueryDto {
   @ApiPropertyOptional({
-    description: 'Sort by',
+    description: 'Sort by field',
     enum: SortBy,
-    default: SortBy.CREATED_AT,
+    default: SortBy.SUBMITTED_AT,
   })
   @IsEnum(SortBy)
   @IsOptional()
-  sortBy: SortBy = SortBy.CREATED_AT;
+  override sortBy?: SortBy = SortBy.SUBMITTED_AT;
 
   @ApiPropertyOptional({
     description: 'Filter by problem ID',
@@ -42,4 +47,89 @@ export class FilterSubmissionDto extends OmitType(PaginationQueryDto, [
   @IsEnum(SubmissionStatus)
   @IsOptional()
   status?: SubmissionStatus;
+
+  @ApiPropertyOptional({
+    description: 'Filter by user ID (admin only)',
+    type: Number,
+  })
+  @IsInt()
+  @IsOptional()
+  @Type(() => Number)
+  userId?: number;
+
+  @ApiPropertyOptional({
+    description: 'Filter submissions from this date',
+    type: Date,
+    example: '2024-01-01T00:00:00.000Z',
+  })
+  @IsDate()
+  @IsOptional()
+  @Type(() => Date)
+  fromDate?: Date;
+
+  @ApiPropertyOptional({
+    description: 'Filter submissions until this date',
+    type: Date,
+    example: '2024-12-31T23:59:59.999Z',
+  })
+  @IsDate()
+  @IsOptional()
+  @Type(() => Date)
+  @ValidateIf(
+    (o: FilterSubmissionDto) =>
+      o.fromDate !== undefined || o.toDate !== undefined,
+  )
+  toDate?: Date;
+
+  @ApiPropertyOptional({
+    description: 'Filter by minimum runtime in milliseconds',
+    type: Number,
+    minimum: 0,
+  })
+  @IsInt()
+  @IsOptional()
+  @Min(0)
+  @Type(() => Number)
+  minRuntimeMs?: number;
+
+  @ApiPropertyOptional({
+    description: 'Filter by maximum runtime in milliseconds',
+    type: Number,
+    minimum: 0,
+  })
+  @IsInt()
+  @IsOptional()
+  @Min(0)
+  @Type(() => Number)
+  maxRuntimeMs?: number;
+
+  @ApiPropertyOptional({
+    description: 'Filter by minimum memory usage in KB',
+    type: Number,
+    minimum: 0,
+  })
+  @IsInt()
+  @IsOptional()
+  @Min(0)
+  @Type(() => Number)
+  minMemoryKb?: number;
+
+  @ApiPropertyOptional({
+    description: 'Filter by maximum memory usage in KB',
+    type: Number,
+    minimum: 0,
+  })
+  @IsInt()
+  @IsOptional()
+  @Min(0)
+  @Type(() => Number)
+  maxMemoryKb?: number;
+
+  @ApiPropertyOptional({
+    description: 'Only show accepted submissions',
+    type: Boolean,
+  })
+  @IsOptional()
+  @Type(() => Boolean)
+  acceptedOnly?: boolean;
 }

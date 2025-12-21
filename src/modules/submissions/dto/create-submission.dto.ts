@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsArray,
@@ -41,10 +41,9 @@ export class CreateSubmissionDto {
   @IsNotEmpty()
   sourceCode: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Test cases to try running code',
     type: [CreateTestcaseDto],
-    required: false,
     isArray: true,
   })
   @IsOptional()

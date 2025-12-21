@@ -70,7 +70,7 @@ export class UserProblemProgress {
   bestMemoryKb: number | null;
 
   @ApiProperty({ description: 'First attempt timestamp' })
-  @CreateDateColumn({ name: 'first_attempted_at' })
+  @CreateDateColumn({ name: 'first_attempted_at', type: 'timestamptz' })
   firstAttemptedAt: Date;
 
   @ApiProperty({ description: 'First solve timestamp', required: false })

@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class TestcaseResultDto {
   @ApiProperty({ description: 'Testcase ID', type: Number })
@@ -7,20 +7,73 @@ export class TestcaseResultDto {
   @ApiProperty({ description: 'Testcase status' })
   status: string;
 
-  @ApiProperty({ description: 'Actual output', required: false })
+  @ApiPropertyOptional({ description: 'Input for the testcase' })
+  input?: string;
+
+  @ApiPropertyOptional({ description: 'Actual output' })
   actualOutput?: string;
 
-  @ApiProperty({ description: 'Expected output', required: false })
+  @ApiPropertyOptional({ description: 'Expected output' })
   expectedOutput?: string;
 
-  @ApiProperty({ description: 'Execution time in ms', required: false })
+  @ApiPropertyOptional({ description: 'Execution time in ms' })
   executionTime?: number;
 
-  @ApiProperty({ description: 'Memory used in KB', required: false })
+  @ApiPropertyOptional({ description: 'Memory used in KB' })
   memoryUsed?: number;
 
-  @ApiProperty({ description: 'Error message', required: false })
+  @ApiPropertyOptional({ description: 'Error message' })
   error?: string;
+
+  @ApiPropertyOptional({ description: 'Standard error output' })
+  stderr?: string;
+}
+
+export class FailedResultDto {
+  @ApiPropertyOptional({ description: 'Error or status message' })
+  message?: string;
+
+  @ApiPropertyOptional({ description: 'Input that caused the failure' })
+  input?: string;
+
+  @ApiPropertyOptional({ description: 'Expected output' })
+  expectedOutput?: string;
+
+  @ApiPropertyOptional({ description: 'Actual output produced' })
+  actualOutput?: string;
+
+  @ApiPropertyOptional({ description: 'Standard error output' })
+  stderr?: string;
+
+  @ApiPropertyOptional({ description: 'Compilation output/error' })
+  compileOutput?: string;
+}
+
+export class UserInfoDto {
+  @ApiProperty({ description: 'User ID' })
+  id: number;
+
+  @ApiProperty({ description: 'Username' })
+  username: string;
+}
+
+export class ProblemInfoDto {
+  @ApiProperty({ description: 'Problem ID' })
+  id: number;
+
+  @ApiProperty({ description: 'Problem title' })
+  title: string;
+
+  @ApiPropertyOptional({ description: 'Problem slug' })
+  slug?: string;
+}
+
+export class LanguageInfoDto {
+  @ApiProperty({ description: 'Language ID' })
+  id: number;
+
+  @ApiProperty({ description: 'Language name' })
+  name: string;
 }
 
 export class SubmissionResponseDto {
@@ -30,10 +83,10 @@ export class SubmissionResponseDto {
   @ApiProperty({ description: 'Overall submission status' })
   status: string;
 
-  @ApiProperty({ description: 'Execution time in ms', required: false })
+  @ApiPropertyOptional({ description: 'Execution time in ms' })
   executionTime?: number;
 
-  @ApiProperty({ description: 'Memory used in KB', required: false })
+  @ApiPropertyOptional({ description: 'Memory used in KB' })
   memoryUsed?: number;
 
   @ApiProperty({ description: 'Number of testcases passed' })
@@ -42,18 +95,76 @@ export class SubmissionResponseDto {
   @ApiProperty({ description: 'Total number of testcases' })
   totalTestcases: number;
 
-  @ApiProperty({
-    description: 'Testcase results',
+  @ApiPropertyOptional({
+    description: 'Testcase results (for run mode)',
     type: [TestcaseResultDto],
-    required: false,
   })
   testcaseResults?: TestcaseResultDto[];
 
-  @ApiProperty({ description: 'Compilation error', required: false })
+  @ApiPropertyOptional({
+    description: 'Failed result details',
+    type: FailedResultDto,
+  })
+  failedResult?: FailedResultDto;
+
+  @ApiPropertyOptional({ description: 'Compilation error' })
   compileError?: string;
 
-  @ApiProperty({ description: 'Runtime error', required: false })
+  @ApiPropertyOptional({ description: 'Runtime error' })
   runtimeError?: string;
+
+  @ApiProperty({ description: 'Submission timestamp' })
+  submittedAt: Date;
+
+  @ApiPropertyOptional({ description: 'Judging completion timestamp' })
+  judgedAt?: Date;
+
+  @ApiProperty({ description: 'Problem ID', type: Number })
+  problemId: number;
+
+  @ApiProperty({ description: 'Language ID', type: Number })
+  languageId: number;
+
+  @ApiPropertyOptional({
+    description: 'Problem information',
+    type: ProblemInfoDto,
+  })
+  problem?: ProblemInfoDto;
+
+  @ApiPropertyOptional({
+    description: 'Language information',
+    type: LanguageInfoDto,
+  })
+  language?: LanguageInfoDto;
+
+  @ApiPropertyOptional({
+    description: 'User information (admin only)',
+    type: UserInfoDto,
+  })
+  user?: UserInfoDto;
+
+  @ApiPropertyOptional({ description: 'Source code (own submissions only)' })
+  sourceCode?: string;
+}
+
+export class SubmissionListResponseDto {
+  @ApiProperty({ description: 'Submission ID', type: Number })
+  id: number;
+
+  @ApiProperty({ description: 'Overall submission status' })
+  status: string;
+
+  @ApiPropertyOptional({ description: 'Execution time in ms' })
+  executionTime?: number;
+
+  @ApiPropertyOptional({ description: 'Memory used in KB' })
+  memoryUsed?: number;
+
+  @ApiProperty({ description: 'Number of testcases passed' })
+  testcasesPassed: number;
+
+  @ApiProperty({ description: 'Total number of testcases' })
+  totalTestcases: number;
 
   @ApiProperty({ description: 'Submission timestamp' })
   submittedAt: Date;
@@ -63,4 +174,16 @@ export class SubmissionResponseDto {
 
   @ApiProperty({ description: 'Language ID', type: Number })
   languageId: number;
+
+  @ApiPropertyOptional({
+    description: 'Problem information',
+    type: ProblemInfoDto,
+  })
+  problem?: ProblemInfoDto;
+
+  @ApiPropertyOptional({
+    description: 'Language information',
+    type: LanguageInfoDto,
+  })
+  language?: LanguageInfoDto;
 }

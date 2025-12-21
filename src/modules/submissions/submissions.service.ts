@@ -7,7 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { v4 as uuidV4 } from 'uuid';
 
-import { PaginatedResultDto } from '../../common';
+import { PaginatedResultDto, PaginationQueryDto } from '../../common';
 import { Judge0BatchResponse } from '../judge0/interfaces';
 import { Judge0Service } from '../judge0/judge0.service';
 import { Problem } from '../problems/entities/problem.entity';
@@ -15,8 +15,12 @@ import { ProblemsService } from '../problems/problems.service';
 import { ProgrammingLanguageService } from '../programming-language';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { FilterSubmissionDto } from './dto/filter-submission.dto';
-import { SubmissionResponseDto } from './dto/submission-response.dto';
+import {
+  SubmissionListResponseDto,
+  SubmissionResponseDto,
+} from './dto/submission-response.dto';
 import { Submission } from './entities/submission.entity';
+import { UserProblemProgress } from './entities/user-problem-progress.entity';
 import { SubmissionStatus } from './enums/submission-status.enum';
 import type { TestCaseResult } from './interfaces/testcase-result.interface';
 import { SubmissionMapper } from './mappers/submission.mapper';
@@ -102,12 +106,8 @@ export class SubmissionsService {
 
     const savedSubmission = await this.submissionRepository.save(submission);
 
-    // Update user progress
-    await this.userProgress.updateProgressOnSubmit(
-      userId,
-      problemId,
-      savedSubmission,
-    );
+    // Update user progress (only tracks attempts, acceptance tracked after judging)
+    await this.userProgress.updateProgressOnSubmit(userId, problemId);
 
     return this.submitBatch(
       savedSubmission.id.toString(),
@@ -183,8 +183,19 @@ export class SubmissionsService {
   async getSubmissions(
     filterDto: FilterSubmissionDto,
     userId?: number,
-  ): Promise<PaginatedResultDto<SubmissionResponseDto>> {
-    const { problemId, languageId, status } = filterDto;
+  ): Promise<PaginatedResultDto<SubmissionListResponseDto>> {
+    const {
+      problemId,
+      languageId,
+      status,
+      fromDate,
+      toDate,
+      minRuntimeMs,
+      maxRuntimeMs,
+      minMemoryKb,
+      maxMemoryKb,
+      acceptedOnly,
+    } = filterDto;
 
     const queryBuilder = this.submissionRepository
       .createQueryBuilder('submission')
@@ -197,7 +208,7 @@ export class SubmissionsService {
       queryBuilder.andWhere('submission.user.id = :userId', { userId });
     }
 
-    // Apply filters
+    // Apply basic filters
     if (problemId) {
       queryBuilder.andWhere('submission.problem.id = :problemId', {
         problemId,
@@ -214,6 +225,50 @@ export class SubmissionsService {
       queryBuilder.andWhere('submission.status = :status', { status });
     }
 
+    // Apply accepted only filter
+    if (acceptedOnly) {
+      queryBuilder.andWhere('submission.status = :acceptedStatus', {
+        acceptedStatus: SubmissionStatus.ACCEPTED,
+      });
+    }
+
+    // Apply date range filters
+    if (fromDate) {
+      queryBuilder.andWhere('submission.submittedAt >= :fromDate', {
+        fromDate,
+      });
+    }
+
+    if (toDate) {
+      queryBuilder.andWhere('submission.submittedAt <= :toDate', { toDate });
+    }
+
+    // Apply runtime filters
+    if (minRuntimeMs !== undefined) {
+      queryBuilder.andWhere('submission.runtimeMs >= :minRuntimeMs', {
+        minRuntimeMs,
+      });
+    }
+
+    if (maxRuntimeMs !== undefined) {
+      queryBuilder.andWhere('submission.runtimeMs <= :maxRuntimeMs', {
+        maxRuntimeMs,
+      });
+    }
+
+    // Apply memory filters
+    if (minMemoryKb !== undefined) {
+      queryBuilder.andWhere('submission.memoryKb >= :minMemoryKb', {
+        minMemoryKb,
+      });
+    }
+
+    if (maxMemoryKb !== undefined) {
+      queryBuilder.andWhere('submission.memoryKb <= :maxMemoryKb', {
+        maxMemoryKb,
+      });
+    }
+
     // Apply sorting
     const sortBy = filterDto.sortBy || 'submittedAt';
     const sortOrder = filterDto.sortOrder || 'DESC';
@@ -225,8 +280,8 @@ export class SubmissionsService {
     // Get data and count
     const [submissions, total] = await queryBuilder.getManyAndCount();
 
-    // Map to response DTOs
-    const data = submissions.map((s) => SubmissionMapper.toResponseDto(s));
+    // Map to list response DTOs
+    const data = SubmissionMapper.toListResponseDtos(submissions);
 
     return new PaginatedResultDto(data, {
       page: filterDto.page ?? 1,
@@ -237,10 +292,14 @@ export class SubmissionsService {
 
   /**
    * Get submission by ID
+   * @param id Submission ID
+   * @param userId Optional user ID to filter by (for authorization)
+   * @param includeSourceCode Whether to include source code in response
    */
   async getSubmissionById(
     id: number,
     userId?: number,
+    includeSourceCode = false,
   ): Promise<SubmissionResponseDto> {
     const queryBuilder = this.submissionRepository
       .createQueryBuilder('submission')
@@ -260,7 +319,13 @@ export class SubmissionsService {
       throw new NotFoundException(`Submission with ID ${id} not found`);
     }
 
-    return SubmissionMapper.toResponseDto(submission);
+    // Include source code only for own submissions
+    const isOwner = submission.user?.id === userId;
+
+    return SubmissionMapper.toResponseDto(submission, {
+      includeSourceCode: includeSourceCode && isOwner,
+      includeUser: !userId, // Include user info for admin views
+    });
   }
 
   /**
@@ -269,8 +334,29 @@ export class SubmissionsService {
   async getUserSubmissions(
     userId: number,
     filterDto: FilterSubmissionDto,
-  ): Promise<PaginatedResultDto<SubmissionResponseDto>> {
+  ): Promise<PaginatedResultDto<SubmissionListResponseDto>> {
     return this.getSubmissions(filterDto, userId);
+  }
+
+  /**
+   * Validate that the status is a valid SubmissionStatus value
+   */
+  private validateSubmissionStatus(status: SubmissionStatus): void {
+    const validStatuses = Object.values(SubmissionStatus);
+    if (!validStatuses.includes(status)) {
+      throw new BadRequestException(
+        `Invalid submission status: ${status}. Valid statuses are: ${validStatuses.join(', ')}`,
+      );
+    }
+  }
+
+  /**
+   * Get the first failed testcase result for error reporting
+   */
+  private getFirstFailedResult(
+    testcaseResults: TestCaseResult[],
+  ): TestCaseResult | undefined {
+    return testcaseResults.find((tc) => tc.status !== 'Accepted');
   }
 
   /**
@@ -285,6 +371,9 @@ export class SubmissionsService {
     errorMessage?: string,
     compileOutput?: string,
   ): Promise<Submission> {
+    // Validate status
+    this.validateSubmissionStatus(status);
+
     const submission = await this.submissionRepository.findOne({
       where: { id },
       relations: ['user', 'problem'],
@@ -294,20 +383,34 @@ export class SubmissionsService {
       throw new NotFoundException(`Submission with ID ${id} not found`);
     }
 
+    // Prevent updating already judged submissions (idempotency)
+    if (submission.judgedAt !== null) {
+      return submission; // Already judged, return as-is
+    }
+
     // Calculate passed testcases
     const passedTestcases = testcaseResults.filter(
       (tc) => tc.status === 'Accepted',
     ).length;
 
+    // Get first failed testcase for error reporting
+    const failedResult = this.getFirstFailedResult(testcaseResults);
+
     // Update submission
     submission.status = status;
-    submission.resultDescription = {
-      input: testcaseResults.at(-1)?.input,
-      actualOutput: testcaseResults.at(-1)?.actualOutput,
-      expectedOutput: testcaseResults.at(-1)?.expectedOutput,
-      message: errorMessage ?? '',
-      compileOutput,
-    };
+    submission.resultDescription = failedResult
+      ? {
+          input: failedResult.input,
+          actualOutput: failedResult.actualOutput,
+          expectedOutput: failedResult.expectedOutput,
+          message: errorMessage ?? failedResult.error ?? '',
+          stderr: failedResult.stderr,
+          compileOutput,
+        }
+      : {
+          message: errorMessage ?? '',
+          compileOutput,
+        };
     submission.passedTestcases = passedTestcases;
     submission.runtimeMs = runtimeMs ?? null;
     submission.memoryKb = memoryKb ?? null;
@@ -328,6 +431,9 @@ export class SubmissionsService {
       memoryKb,
     );
 
+    // Invalidate user statistics cache
+    await this.userStatistics.invalidateUserStatisticsCache(submission.user.id);
+
     return updatedSubmission;
   }
 
@@ -339,10 +445,13 @@ export class SubmissionsService {
   }
 
   /**
-   * Get all problem progress for a user
+   * Get all problem progress for a user with pagination
    */
-  async getUserAllProgress(userId: number) {
-    return this.userProgress.getAllUserProgress(userId);
+  async getUserAllProgress(
+    userId: number,
+    paginationDto?: PaginationQueryDto,
+  ): Promise<PaginatedResultDto<UserProblemProgress>> {
+    return this.userProgress.getAllUserProgress(userId, paginationDto);
   }
 
   /**
