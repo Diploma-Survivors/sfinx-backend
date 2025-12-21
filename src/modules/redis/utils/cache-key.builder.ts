@@ -251,8 +251,20 @@ export class CacheKeys {
   static topic = {
     all: () => CacheKeyBuilder.namespace('topic').suffix('all').build(),
 
+    allWithInactive: () =>
+      CacheKeyBuilder.namespace('topic').suffix('all:with-inactive').build(),
+
     byId: (topicId: string | number) =>
       CacheKeyBuilder.namespace('topic').id(topicId).build(),
+
+    byIds: (ids: number[]) =>
+      CacheKeyBuilder.namespace('topic')
+        .suffix('ids')
+        .part(ids.sort().join(','))
+        .build(),
+
+    bySlug: (slug: string) =>
+      CacheKeyBuilder.namespace('topic').suffix('slug').part(slug).build(),
   };
 
   /**
@@ -263,5 +275,72 @@ export class CacheKeys {
 
     byId: (tagId: string | number) =>
       CacheKeyBuilder.namespace('tag').id(tagId).build(),
+
+    byIds: (ids: number[]) =>
+      CacheKeyBuilder.namespace('tag')
+        .suffix('ids')
+        .part(ids.sort().join(','))
+        .build(),
+
+    bySlug: (slug: string) =>
+      CacheKeyBuilder.namespace('tag').suffix('slug').part(slug).build(),
+
+    byType: (type: string) =>
+      CacheKeyBuilder.namespace('tag').suffix('type').part(type).build(),
+  };
+
+  /**
+   * Contest-related cache keys
+   */
+  static contest = {
+    detail: (contestId: string | number) =>
+      CacheKeyBuilder.namespace('contest')
+        .id(contestId)
+        .suffix('detail')
+        .build(),
+
+    bySlug: (slug: string) =>
+      CacheKeyBuilder.namespace('contest').suffix('slug').part(slug).build(),
+
+    problems: (contestId: string | number) =>
+      CacheKeyBuilder.namespace('contest')
+        .id(contestId)
+        .suffix('problems')
+        .build(),
+
+    leaderboard: (contestId: string | number, page: number, limit: number) =>
+      CacheKeyBuilder.namespace('contest')
+        .id(contestId)
+        .suffix('leaderboard')
+        .part(`p${page}`)
+        .part(`l${limit}`)
+        .build(),
+
+    leaderboardPattern: (contestId: string | number) =>
+      CacheKeyBuilder.namespace('contest')
+        .id(contestId)
+        .suffix('leaderboard')
+        .buildPattern(),
+
+    participant: (contestId: string | number, userId: string | number) =>
+      CacheKeyBuilder.namespace('contest')
+        .id(contestId)
+        .suffix('participant')
+        .id(userId)
+        .build(),
+
+    participantCount: (contestId: string | number) =>
+      CacheKeyBuilder.namespace('contest')
+        .id(contestId)
+        .suffix('participant-count')
+        .build(),
+
+    list: (filters: Record<string, unknown>) => {
+      const builder = CacheKeyBuilder.namespace('contest').suffix('list');
+      Object.entries(filters).forEach(([key, value]) => {
+        builder.part(`${key}:${String(value)}`);
+      });
+      return builder.build();
+    },
   };
 }

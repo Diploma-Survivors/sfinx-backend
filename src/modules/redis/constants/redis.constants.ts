@@ -66,6 +66,10 @@ export const PUBSUB_CHANNELS = {
   PROBLEM_EVENTS: 'problem:events',
   /** System events */
   SYSTEM_EVENTS: 'system:events',
+  /** Contest events */
+  CONTEST_EVENTS: 'contest:events',
+  /** Contest leaderboard updates pattern (contest:{id}:leaderboard) */
+  CONTEST_LEADERBOARD_PATTERN: 'contest:*:leaderboard',
 } as const;
 
 /**
