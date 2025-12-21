@@ -3,12 +3,12 @@ import { resolve } from 'node:path';
 
 import { DataSource } from 'typeorm';
 
+import { User } from '../../modules/auth/entities/user.entity';
 import { Problem } from '../../modules/problems/entities/problem.entity';
-import { ProblemDifficulty } from '../../modules/problems/enums/problem-difficulty.enum';
 import { SampleTestcase } from '../../modules/problems/entities/sample-testcase.entity';
 import { Tag } from '../../modules/problems/entities/tag.entity';
 import { Topic } from '../../modules/problems/entities/topic.entity';
-import { User } from '../../modules/auth/entities/user.entity';
+import { ProblemDifficulty } from '../../modules/problems/enums/problem-difficulty.enum';
 
 interface ProblemSeedData {
   title: string;
@@ -106,7 +106,6 @@ export async function seedProblems(dataSource: DataSource) {
         constraints: problemData.constraints,
         difficulty: problemData.difficulty as ProblemDifficulty,
         isPremium: problemData.isPremium,
-        isPublished: problemData.isPublished,
         isActive: problemData.isActive,
         timeLimitMs: problemData.timeLimitMs,
         memoryLimitKb: problemData.memoryLimitKb,

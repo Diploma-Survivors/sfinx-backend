@@ -31,7 +31,7 @@ export class InitialSchema1734325000000 implements MigrationInterface {
 
     // Create permissions table
     await queryRunner.query(`
-      CREATE TABLE "permissions" (
+      CREATE TABLE IF NOT EXISTS "permissions" (
         "id" SERIAL NOT NULL,
         "resource" VARCHAR(100) NOT NULL,
         "action" VARCHAR(100) NOT NULL,
@@ -45,7 +45,7 @@ export class InitialSchema1734325000000 implements MigrationInterface {
 
     // Create roles table
     await queryRunner.query(`
-      CREATE TABLE "roles" (
+      CREATE TABLE IF NOT EXISTS "roles" (
         "id" SERIAL NOT NULL,
         "name" VARCHAR(100) NOT NULL,
         "slug" VARCHAR(100) NOT NULL,
@@ -62,7 +62,7 @@ export class InitialSchema1734325000000 implements MigrationInterface {
 
     // Create role_permissions junction table
     await queryRunner.query(`
-      CREATE TABLE "role_permissions" (
+      CREATE TABLE IF NOT EXISTS "role_permissions" (
         "role_id" INTEGER NOT NULL,
         "permission_id" INTEGER NOT NULL,
         CONSTRAINT "PK_role_permissions" PRIMARY KEY ("role_id", "permission_id"),
@@ -85,7 +85,7 @@ export class InitialSchema1734325000000 implements MigrationInterface {
 
     // Create users table
     await queryRunner.query(`
-      CREATE TABLE "users" (
+      CREATE TABLE IF NOT EXISTS "users" (
         "id" SERIAL NOT NULL,
         "email" VARCHAR(255) NOT NULL,
         "username" VARCHAR(50) NOT NULL,
@@ -136,7 +136,7 @@ export class InitialSchema1734325000000 implements MigrationInterface {
 
     // Create refresh_tokens table
     await queryRunner.query(`
-      CREATE TABLE "refresh_tokens" (
+      CREATE TABLE IF NOT EXISTS "refresh_tokens" (
         "id" SERIAL NOT NULL,
         "user_id" INTEGER NOT NULL,
         "jti" UUID NOT NULL,
@@ -165,7 +165,7 @@ export class InitialSchema1734325000000 implements MigrationInterface {
 
     // Create topics table
     await queryRunner.query(`
-      CREATE TABLE "topics" (
+      CREATE TABLE IF NOT EXISTS "topics" (
         "id" SERIAL NOT NULL,
         "name" VARCHAR(100) NOT NULL,
         "slug" VARCHAR(100) NOT NULL,
@@ -182,7 +182,7 @@ export class InitialSchema1734325000000 implements MigrationInterface {
 
     // Create tags table
     await queryRunner.query(`
-      CREATE TABLE "tags" (
+      CREATE TABLE IF NOT EXISTS "tags" (
         "id" SERIAL NOT NULL,
         "name" VARCHAR(100) NOT NULL,
         "slug" VARCHAR(100) NOT NULL,
@@ -198,7 +198,7 @@ export class InitialSchema1734325000000 implements MigrationInterface {
 
     // Create programming_languages table
     await queryRunner.query(`
-      CREATE TABLE "programming_languages" (
+      CREATE TABLE IF NOT EXISTS "programming_languages" (
         "id" SERIAL NOT NULL,
         "name" VARCHAR(50) NOT NULL,
         "slug" VARCHAR(50) NOT NULL,
@@ -216,7 +216,7 @@ export class InitialSchema1734325000000 implements MigrationInterface {
 
     // Create problems table
     await queryRunner.query(`
-      CREATE TABLE "problems" (
+      CREATE TABLE IF NOT EXISTS "problems" (
         "id" SERIAL NOT NULL,
         "title" VARCHAR(255) NOT NULL,
         "slug" VARCHAR(255) NOT NULL,
@@ -224,7 +224,6 @@ export class InitialSchema1734325000000 implements MigrationInterface {
         "constraints" TEXT,
         "difficulty" problem_difficulty_enum NOT NULL,
         "is_premium" BOOLEAN NOT NULL DEFAULT false,
-        "is_published" BOOLEAN NOT NULL DEFAULT false,
         "is_active" BOOLEAN NOT NULL DEFAULT true,
         "total_submissions" INTEGER NOT NULL DEFAULT 0,
         "total_accepted" INTEGER NOT NULL DEFAULT 0,
@@ -264,7 +263,7 @@ export class InitialSchema1734325000000 implements MigrationInterface {
 
     // Create sample_testcases table
     await queryRunner.query(`
-      CREATE TABLE "sample_testcases" (
+      CREATE TABLE IF NOT EXISTS "sample_testcases" (
         "id" SERIAL NOT NULL,
         "problem_id" INTEGER NOT NULL,
         "input" TEXT NOT NULL,
@@ -285,7 +284,7 @@ export class InitialSchema1734325000000 implements MigrationInterface {
 
     // Create problem_topics junction table
     await queryRunner.query(`
-      CREATE TABLE "problem_topics" (
+      CREATE TABLE IF NOT EXISTS "problem_topics" (
         "problem_id" INTEGER NOT NULL,
         "topic_id" INTEGER NOT NULL,
         CONSTRAINT "PK_problem_topics" PRIMARY KEY ("problem_id", "topic_id"),
@@ -306,7 +305,7 @@ export class InitialSchema1734325000000 implements MigrationInterface {
 
     // Create problem_tags junction table
     await queryRunner.query(`
-      CREATE TABLE "problem_tags" (
+      CREATE TABLE IF NOT EXISTS "problem_tags" (
         "problem_id" INTEGER NOT NULL,
         "tag_id" INTEGER NOT NULL,
         CONSTRAINT "PK_problem_tags" PRIMARY KEY ("problem_id", "tag_id"),
@@ -329,7 +328,7 @@ export class InitialSchema1734325000000 implements MigrationInterface {
 
     // Create submissions table
     await queryRunner.query(`
-      CREATE TABLE "submissions" (
+      CREATE TABLE IF NOT EXISTS "submissions" (
         "id" SERIAL NOT NULL,
         "user_id" INTEGER NOT NULL,
         "problem_id" INTEGER NOT NULL,
@@ -379,7 +378,7 @@ export class InitialSchema1734325000000 implements MigrationInterface {
 
     // Create user_problem_progress table
     await queryRunner.query(`
-      CREATE TABLE "user_problem_progress" (
+      CREATE TABLE IF NOT EXISTS "user_problem_progress" (
         "user_id" INTEGER NOT NULL,
         "problem_id" INTEGER NOT NULL,
         "status" VARCHAR(50) NOT NULL DEFAULT 'Attempted',

@@ -4,328 +4,375 @@
     "slug": "assembly-nasm",
     "judge0Id": 45,
     "monacoLanguage": "asm",
-    "orderIndex": 100
+    "orderIndex": 100,
+    "starterCode": "section .data\n\nsection .bss\n\nsection .text\n    global _start\n\n_start:\n    ; Your code here\n    \n    ; Exit program\n    mov eax, 1\n    xor ebx, ebx\n    int 0x80"
   },
   {
     "name": "Bash (5.0.0)",
     "slug": "bash",
     "judge0Id": 46,
     "monacoLanguage": "shell",
-    "orderIndex": 101
+    "orderIndex": 101,
+    "starterCode": "#!/bin/bash\n\n# Your code here\n"
   },
   {
     "name": "Basic (FBC 1.07.1)",
     "slug": "basic",
     "judge0Id": 47,
     "monacoLanguage": "vb",
-    "orderIndex": 102
+    "orderIndex": 102,
+    "starterCode": "' Your code here\n\nPrint \"Hello, World!\"\n"
   },
   {
     "name": "C (Clang 7.0.1)",
     "slug": "c-clang",
     "judge0Id": 75,
     "monacoLanguage": "c",
-    "orderIndex": 103
+    "orderIndex": 103,
+    "starterCode": "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n\nint main() {\n    // Your code here\n    \n    return 0;\n}"
   },
   {
     "name": "C++ (Clang 7.0.1)",
     "slug": "cpp-clang",
     "judge0Id": 76,
     "monacoLanguage": "cpp",
-    "orderIndex": 104
+    "orderIndex": 104,
+    "starterCode": "#include <iostream>\n#include <vector>\n#include <string>\n#include <algorithm>\n\nusing namespace std;\n\nint main() {\n    // Your code here\n    \n    return 0;\n}"
   },
   {
     "name": "C (GCC 7.4.0)",
     "slug": "c-gcc-7",
     "judge0Id": 48,
     "monacoLanguage": "c",
-    "orderIndex": 105
+    "orderIndex": 105,
+    "starterCode": "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n\nint main() {\n    // Your code here\n    \n    return 0;\n}"
   },
   {
     "name": "C++ (GCC 7.4.0)",
     "slug": "cpp-gcc-7",
     "judge0Id": 52,
     "monacoLanguage": "cpp",
-    "orderIndex": 106
+    "orderIndex": 106,
+    "starterCode": "#include <iostream>\n#include <vector>\n#include <string>\n#include <algorithm>\n\nusing namespace std;\n\nint main() {\n    // Your code here\n    \n    return 0;\n}"
   },
   {
     "name": "C (GCC 8.3.0)",
     "slug": "c-gcc-8",
     "judge0Id": 49,
     "monacoLanguage": "c",
-    "orderIndex": 107
+    "orderIndex": 107,
+    "starterCode": "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n\nint main() {\n    // Your code here\n    \n    return 0;\n}"
   },
   {
     "name": "C++ (GCC 8.3.0)",
     "slug": "cpp-gcc-8",
     "judge0Id": 53,
     "monacoLanguage": "cpp",
-    "orderIndex": 108
+    "orderIndex": 108,
+    "starterCode": "#include <iostream>\n#include <vector>\n#include <string>\n#include <algorithm>\n\nusing namespace std;\n\nint main() {\n    // Your code here\n    \n    return 0;\n}"
   },
   {
     "name": "C (GCC 9.2.0)",
     "slug": "c",
     "judge0Id": 50,
     "monacoLanguage": "c",
-    "orderIndex": 6
+    "orderIndex": 6,
+    "starterCode": "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n\nint main() {\n    // Your code here\n    \n    return 0;\n}"
   },
   {
     "name": "C++ (GCC 9.2.0)",
     "slug": "cpp",
     "judge0Id": 54,
     "monacoLanguage": "cpp",
-    "orderIndex": 2
+    "orderIndex": 2,
+    "starterCode": "#include <iostream>\n#include <vector>\n#include <string>\n#include <algorithm>\n\nusing namespace std;\n\nint main() {\n    // Your code here\n    \n    return 0;\n}"
   },
   {
     "name": "Clojure (1.10.1)",
     "slug": "clojure",
     "judge0Id": 86,
     "monacoLanguage": "clojure",
-    "orderIndex": 109
+    "orderIndex": 109,
+    "starterCode": "(ns solution)\n\n(defn solve []\n  ;; Your code here\n  )\n\n(solve)"
   },
   {
     "name": "C# (Mono 6.6.0.161)",
     "slug": "csharp",
     "judge0Id": 51,
     "monacoLanguage": "csharp",
-    "orderIndex": 7
+    "orderIndex": 7,
+    "starterCode": "using System;\nusing System.Collections.Generic;\nusing System.Linq;\n\nclass Solution {\n    static void Main(string[] args) {\n        // Your code here\n        \n    }\n}"
   },
   {
     "name": "COBOL (GnuCOBOL 2.2)",
     "slug": "cobol",
     "judge0Id": 77,
     "monacoLanguage": "cobol",
-    "orderIndex": 110
+    "orderIndex": 110,
+    "starterCode": "       IDENTIFICATION DIVISION.\n       PROGRAM-ID. SOLUTION.\n       \n       DATA DIVISION.\n       WORKING-STORAGE SECTION.\n       \n       PROCEDURE DIVISION.\n           DISPLAY \"Hello, World!\".\n           STOP RUN."
   },
   {
     "name": "Common Lisp (SBCL 2.0.0)",
     "slug": "common-lisp",
     "judge0Id": 55,
     "monacoLanguage": "scheme",
-    "orderIndex": 111
+    "orderIndex": 111,
+    "starterCode": "(defun solve ()\n  ;; Your code here\n  )\n\n(solve)"
   },
   {
     "name": "D (DMD 2.089.1)",
     "slug": "d",
     "judge0Id": 56,
     "monacoLanguage": "d",
-    "orderIndex": 112
+    "orderIndex": 112,
+    "starterCode": "import std.stdio;\nimport std.algorithm;\nimport std.array;\n\nvoid main() {\n    // Your code here\n    \n}"
   },
   {
     "name": "Elixir (1.9.4)",
     "slug": "elixir",
     "judge0Id": 57,
     "monacoLanguage": "elixir",
-    "orderIndex": 113
+    "orderIndex": 113,
+    "starterCode": "defmodule Solution do\n  def solve do\n    # Your code here\n    \n  end\nend\n\nSolution.solve()"
   },
   {
     "name": "Erlang (OTP 22.2)",
     "slug": "erlang",
     "judge0Id": 58,
     "monacoLanguage": "erlang",
-    "orderIndex": 114
+    "orderIndex": 114,
+    "starterCode": "-module(solution).\n-export([solve/0]).\n\nsolve() ->\n    %% Your code here\n    ok."
   },
   {
     "name": "Executable",
     "slug": "executable",
     "judge0Id": 44,
     "monacoLanguage": "plaintext",
-    "orderIndex": 115
+    "orderIndex": 115,
+    "starterCode": ""
   },
   {
     "name": "F# (.NET Core SDK 3.1.202)",
     "slug": "fsharp",
     "judge0Id": 87,
     "monacoLanguage": "fsharp",
-    "orderIndex": 116
+    "orderIndex": 116,
+    "starterCode": "open System\n\nlet solve () =\n    // Your code here\n    ()\n\n[<EntryPoint>]\nlet main argv =\n    solve ()\n    0"
   },
   {
     "name": "Fortran (GFortran 9.2.0)",
     "slug": "fortran",
     "judge0Id": 59,
     "monacoLanguage": "fortran",
-    "orderIndex": 117
+    "orderIndex": 117,
+    "starterCode": "program solution\n    implicit none\n    \n    ! Your code here\n    \nend program solution"
   },
   {
     "name": "Go (1.13.5)",
     "slug": "go",
     "judge0Id": 60,
     "monacoLanguage": "go",
-    "orderIndex": 9
+    "orderIndex": 9,
+    "starterCode": "package main\n\nimport (\n\t\"fmt\"\n)\n\nfunc main() {\n\t// Your code here\n\t\n}"
   },
   {
     "name": "Groovy (3.0.3)",
     "slug": "groovy",
     "judge0Id": 88,
     "monacoLanguage": "groovy",
-    "orderIndex": 118
+    "orderIndex": 118,
+    "starterCode": "class Solution {\n    static void main(String[] args) {\n        // Your code here\n        \n    }\n}"
   },
   {
     "name": "Haskell (GHC 8.8.1)",
     "slug": "haskell",
     "judge0Id": 61,
     "monacoLanguage": "haskell",
-    "orderIndex": 119
+    "orderIndex": 119,
+    "starterCode": "module Main where\n\nimport Data.List\n\nmain :: IO ()\nmain = do\n    -- Your code here\n    return ()"
   },
   {
     "name": "Java (OpenJDK 13.0.1)",
     "slug": "java",
     "judge0Id": 62,
     "monacoLanguage": "java",
-    "orderIndex": 3
+    "orderIndex": 3,
+    "starterCode": "import java.util.*;\nimport java.io.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        // Your code here\n        \n    }\n}"
   },
   {
     "name": "JavaScript (Node.js 12.14.0)",
     "slug": "javascript",
     "judge0Id": 63,
     "monacoLanguage": "javascript",
-    "orderIndex": 4
+    "orderIndex": 4,
+    "starterCode": "// Your code here\n\nfunction solve() {\n    \n}\n\nsolve();"
   },
   {
     "name": "Kotlin (1.3.70)",
     "slug": "kotlin",
     "judge0Id": 78,
     "monacoLanguage": "kotlin",
-    "orderIndex": 12
+    "orderIndex": 12,
+    "starterCode": "fun main() {\n    // Your code here\n    \n}"
   },
   {
     "name": "Lua (5.3.5)",
     "slug": "lua",
     "judge0Id": 64,
     "monacoLanguage": "lua",
-    "orderIndex": 120
+    "orderIndex": 120,
+    "starterCode": "-- Your code here\n\nfunction solve()\n    \nend\n\nsolve()"
   },
   {
     "name": "Multi-file program",
     "slug": "multi-file",
     "judge0Id": 89,
     "monacoLanguage": "plaintext",
-    "orderIndex": 121
+    "orderIndex": 121,
+    "starterCode": ""
   },
   {
     "name": "Objective-C (Clang 7.0.1)",
     "slug": "objective-c",
     "judge0Id": 79,
     "monacoLanguage": "objective-c",
-    "orderIndex": 122
+    "orderIndex": 122,
+    "starterCode": "#import <Foundation/Foundation.h>\n\nint main(int argc, const char * argv[]) {\n    @autoreleasepool {\n        // Your code here\n        \n    }\n    return 0;\n}"
   },
   {
     "name": "OCaml (4.09.0)",
     "slug": "ocaml",
     "judge0Id": 65,
     "monacoLanguage": "ocaml",
-    "orderIndex": 123
+    "orderIndex": 123,
+    "starterCode": "(* Your code here *)\n\nlet solve () =\n  ()\n\nlet () = solve ()"
   },
   {
     "name": "Octave (5.1.0)",
     "slug": "octave",
     "judge0Id": 66,
     "monacoLanguage": "matlab",
-    "orderIndex": 124
+    "orderIndex": 124,
+    "starterCode": "% Your code here\n\nfunction solve()\n    \nendfunction\n\nsolve();"
   },
   {
     "name": "Pascal (FPC 3.0.4)",
     "slug": "pascal",
     "judge0Id": 67,
     "monacoLanguage": "pascal",
-    "orderIndex": 125
+    "orderIndex": 125,
+    "starterCode": "program Solution;\n\nbegin\n    { Your code here }\n    \nend."
   },
   {
     "name": "Perl (5.28.1)",
     "slug": "perl",
     "judge0Id": 85,
     "monacoLanguage": "perl",
-    "orderIndex": 126
+    "orderIndex": 126,
+    "starterCode": "#!/usr/bin/perl\nuse strict;\nuse warnings;\n\n# Your code here\n\n"
   },
   {
     "name": "PHP (7.4.1)",
     "slug": "php",
     "judge0Id": 68,
     "monacoLanguage": "php",
-    "orderIndex": 127
+    "orderIndex": 127,
+    "starterCode": "<?php\n\n// Your code here\n\nfunction solve() {\n    \n}\n\nsolve();\n\n?>"
   },
   {
     "name": "Plain Text",
     "slug": "plaintext",
     "judge0Id": 43,
     "monacoLanguage": "plaintext",
-    "orderIndex": 128
+    "orderIndex": 128,
+    "starterCode": ""
   },
   {
     "name": "Prolog (GNU Prolog 1.4.5)",
     "slug": "prolog",
     "judge0Id": 69,
     "monacoLanguage": "prolog",
-    "orderIndex": 129
+    "orderIndex": 129,
+    "starterCode": "% Your code here\n\nsolve :-\n    write('Hello, World!'), nl.\n\n:- initialization(solve)."
   },
   {
     "name": "Python (2.7.17)",
     "slug": "python2",
     "judge0Id": 70,
     "monacoLanguage": "python",
-    "orderIndex": 130
+    "orderIndex": 130,
+    "starterCode": "# Your code here\n\ndef solve():\n    pass\n\nif __name__ == '__main__':\n    solve()"
   },
   {
     "name": "Python (3.8.1)",
     "slug": "python3",
     "judge0Id": 71,
     "monacoLanguage": "python",
-    "orderIndex": 1
+    "orderIndex": 1,
+    "starterCode": "# Your code here\n\ndef solve():\n    pass\n\nif __name__ == '__main__':\n    solve()"
   },
   {
     "name": "R (4.0.0)",
     "slug": "r",
     "judge0Id": 80,
     "monacoLanguage": "r",
-    "orderIndex": 131
+    "orderIndex": 131,
+    "starterCode": "# Your code here\n\nsolve <- function() {\n    \n}\n\nsolve()"
   },
   {
     "name": "Ruby (2.7.0)",
     "slug": "ruby",
     "judge0Id": 72,
     "monacoLanguage": "ruby",
-    "orderIndex": 8
+    "orderIndex": 8,
+    "starterCode": "# Your code here\n\ndef solve\n    \nend\n\nsolve"
   },
   {
     "name": "Rust (1.40.0)",
     "slug": "rust",
     "judge0Id": 73,
     "monacoLanguage": "rust",
-    "orderIndex": 10
+    "orderIndex": 10,
+    "starterCode": "use std::io;\n\nfn main() {\n    // Your code here\n    \n}"
   },
   {
     "name": "Scala (2.13.2)",
     "slug": "scala",
     "judge0Id": 81,
     "monacoLanguage": "scala",
-    "orderIndex": 132
+    "orderIndex": 132,
+    "starterCode": "object Solution {\n  def main(args: Array[String]): Unit = {\n    // Your code here\n    \n  }\n}"
   },
   {
     "name": "SQL (SQLite 3.27.2)",
     "slug": "sql",
     "judge0Id": 82,
     "monacoLanguage": "sql",
-    "orderIndex": 133
+    "orderIndex": 133,
+    "starterCode": "-- Your code here\n\nSELECT 'Hello, World!';"
   },
   {
     "name": "Swift (5.2.3)",
     "slug": "swift",
     "judge0Id": 83,
     "monacoLanguage": "swift",
-    "orderIndex": 11
+    "orderIndex": 11,
+    "starterCode": "import Foundation\n\n// Your code here\n\nfunc solve() {\n    \n}\n\nsolve()"
   },
   {
     "name": "TypeScript (3.7.4)",
     "slug": "typescript",
     "judge0Id": 74,
     "monacoLanguage": "typescript",
-    "orderIndex": 5
+    "orderIndex": 5,
+    "starterCode": "// Your code here\n\nfunction solve(): void {\n    \n}\n\nsolve();"
   },
   {
     "name": "Visual Basic.Net (vbnc 0.0.0.5943)",
     "slug": "vb-net",
     "judge0Id": 84,
     "monacoLanguage": "vb",
-    "orderIndex": 134
+    "orderIndex": 134,
+    "starterCode": "Imports System\n\nModule Solution\n    Sub Main()\n        ' Your code here\n        \n    End Sub\nEnd Module"
   }
 ]
