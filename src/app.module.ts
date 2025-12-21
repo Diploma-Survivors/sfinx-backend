@@ -26,15 +26,18 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AllExceptionsFilter, TransformInterceptor } from './common';
 import {
+  adminConfig,
   appConfig,
   awsConfig,
   databaseConfig,
+  emailConfig,
   environmentValidation,
   googleConfig,
   judge0Config,
   jwtConfig,
   redisConfig,
   submissionConfig,
+  vnpayConfig,
 } from './config';
 import { AuthModule } from './modules/auth/auth.module';
 import { Judge0Module } from './modules/judge0/judge0.module';
@@ -43,6 +46,7 @@ import { ProgrammingLanguageModule } from './modules/programming-language';
 import { RbacModule } from './modules/rbac/rbac.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { SubmissionsModule } from './modules/submissions/submissions.module';
+import { ContestModule } from './modules/contest/contest.module';
 import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
@@ -50,14 +54,17 @@ import { ScheduleModule } from '@nestjs/schedule';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [
+        adminConfig,
         appConfig,
         awsConfig,
         databaseConfig,
+        emailConfig,
         googleConfig,
         judge0Config,
         jwtConfig,
         redisConfig,
         submissionConfig,
+        vnpayConfig,
       ],
       validationSchema: environmentValidation,
       envFilePath: '.env',
@@ -115,8 +122,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     SubmissionsModule,
     Judge0Module,
     ProgrammingLanguageModule,
+    ContestModule,
     // UsersModule,
-    // ContestsModule,
     // PaymentsModule,
     // AiModule,
     // CommunityModule,
