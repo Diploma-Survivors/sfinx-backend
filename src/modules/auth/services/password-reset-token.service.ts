@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { hash } from 'bcrypt';
+import { createHash } from 'node:crypto';
 import { Repository } from 'typeorm';
 import { v4 as uuidV4 } from 'uuid';
 import { PasswordResetToken } from '../entities/password-reset-token.entity';
@@ -19,14 +19,14 @@ export class PasswordResetTokenService {
    * Generate secure random token
    */
   generateToken(): string {
-    return uuidV4() + uuidV4().replace(/-/g, '');
+    return uuidV4().replace(/-/g, '');
   }
 
   /**
    * Hash token for storage
    */
-  async hashToken(token: string): Promise<string> {
-    return hash(token, 10);
+  hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
   }
 
   /**
@@ -34,7 +34,7 @@ export class PasswordResetTokenService {
    */
   async createToken(user: User, expiresInMs: number): Promise<string> {
     const token = this.generateToken();
-    const hashedToken = await this.hashToken(token);
+    const hashedToken = this.hashToken(token);
     const expiresAt = new Date(Date.now() + expiresInMs);
 
     const resetToken = this.tokenRepository.create({
@@ -53,7 +53,7 @@ export class PasswordResetTokenService {
    * Find and validate token
    */
   async findAndValidateToken(token: string): Promise<PasswordResetToken> {
-    const hashedToken = await this.hashToken(token);
+    const hashedToken = this.hashToken(token);
 
     const resetToken = await this.tokenRepository.findOne({
       where: { token: hashedToken },

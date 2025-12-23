@@ -164,7 +164,7 @@ export class AuthController {
         <h2>Đang chuyển hướng...</h2>
         <p>Vui lòng đợi trong khi chúng tôi xử lý xác thực của bạn...</p>
         <p><small>Nếu trang này không tự động chuyển hướng, vui lòng nhấn nút bên dưới.</small></p>
-        
+
         <form id="postRedirectForm" action="${handshakeUrl}" method="POST" style="margin-top: 20px;">
             <input type="hidden" name="accessToken" value="${authResponse.accessToken}" />
             <input type="hidden" name="refreshToken" value="${authResponse.refreshToken}" />
@@ -175,7 +175,7 @@ export class AuthController {
             </button>
         </form>
     </div>
-    
+
     <script type="text/javascript">
         (function() {
             var form = document.getElementById('postRedirectForm');
