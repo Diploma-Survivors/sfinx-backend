@@ -14,6 +14,7 @@ export interface EmailConfig {
     address: string;
   };
   templatesDir: string;
+  defaultLayout: string;
   queue: {
     enabled: boolean;
     attempts: number;
@@ -39,6 +40,7 @@ export const emailConfig = registerAs(
       address: process.env.SMTP_FROM!,
     },
     templatesDir: path.join(__dirname, '..', 'modules', 'mail', 'templates'),
+    defaultLayout: process.env.MAIL_DEFAULT_LAYOUT || 'layouts/base',
     queue: {
       enabled: process.env.MAIL_QUEUE_ENABLED !== 'false',
       attempts: 3,

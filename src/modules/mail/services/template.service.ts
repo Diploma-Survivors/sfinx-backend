@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as Handlebars from 'handlebars';
 import * as fs from 'fs/promises';
+import * as Handlebars from 'handlebars';
 import * as path from 'path';
 import { EmailConfig } from '../../../config/email.config';
 
@@ -9,6 +9,7 @@ import { EmailConfig } from '../../../config/email.config';
 export class TemplateService {
   private readonly logger = new Logger(TemplateService.name);
   private readonly templatesDir: string;
+  private readonly defaultLayout: string;
   private readonly templateCache = new Map<
     string,
     HandlebarsTemplateDelegate
@@ -17,19 +18,26 @@ export class TemplateService {
   constructor(private readonly configService: ConfigService) {
     const emailConfig = this.configService.get<EmailConfig>('email')!;
     this.templatesDir = emailConfig.templatesDir;
+    this.defaultLayout = emailConfig.defaultLayout;
     this.registerHelpers();
   }
 
   /**
-   * Render a template with context data
+   * Render a template with context data, wrapped in the default layout
    */
   async render(
     templateName: string,
     context: Record<string, any> = {},
   ): Promise<string> {
     try {
+      // 1. Render the specific template (the body)
       const template = await this.getTemplate(templateName);
-      return template(context);
+      const body = template(context);
+
+      // 2. Render the layout, injecting the body
+      const layout = await this.getTemplate(this.defaultLayout);
+
+      return layout({ ...context, body });
     } catch (error) {
       this.logger.error(`Failed to render template ${templateName}:`, error);
       throw new Error(`Template rendering failed: ${templateName}`);
