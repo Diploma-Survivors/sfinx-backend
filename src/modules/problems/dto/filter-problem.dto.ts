@@ -13,7 +13,8 @@ import { SortBy } from '../enums/sort-by.enum';
 
 export class FilterProblemDto extends PaginationQueryDto {
   @ApiPropertyOptional({
-    description: 'Sort by',
+    description:
+      'Field to sort by. Defaults to "id". Options: "id", "difficulty", "acceptanceRate", "createdAt", "updatedAt". Note: If "search" is provided, results are automatically sorted by relevance first.',
     enum: SortBy,
     default: SortBy.ID,
   })
@@ -22,22 +23,27 @@ export class FilterProblemDto extends PaginationQueryDto {
   override sortBy?: SortBy = SortBy.ID;
 
   @ApiPropertyOptional({
-    description: 'Filter by difficulty',
+    description:
+      'Filter by problem difficulty. Options: "Easy", "Medium", "Hard".',
     enum: ProblemDifficulty,
   })
   @IsOptional()
   @IsEnum(ProblemDifficulty)
   difficulty?: ProblemDifficulty;
 
-  @ApiPropertyOptional({ description: 'Filter by premium status' })
+  @ApiPropertyOptional({
+    description: 'Filter by premium status. true = premium only, false = free.',
+  })
   @IsOptional()
   @IsBoolean()
   @Type(() => Boolean)
   isPremium?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Filter by topic IDs',
+    description:
+      'Filter by one or more topic IDs. Returns problems matching ANY of the provided topic IDs.',
     type: [Number],
+    example: [1, 2],
   })
   @IsOptional()
   @IsArray()
@@ -45,8 +51,10 @@ export class FilterProblemDto extends PaginationQueryDto {
   topicIds?: number[];
 
   @ApiPropertyOptional({
-    description: 'Filter by tag IDs',
+    description:
+      'Filter by one or more tag IDs. Returns problems matching ANY of the provided tag IDs.',
     type: [Number],
+    example: [5, 8],
   })
   @IsOptional()
   @IsArray()
@@ -54,7 +62,8 @@ export class FilterProblemDto extends PaginationQueryDto {
   tagIds?: number[];
 
   @ApiPropertyOptional({
-    description: 'Search by title or description',
+    description:
+      'Full-text search on title and description. When used, results are sorted by relevance score descending.',
   })
   @IsOptional()
   @IsString()

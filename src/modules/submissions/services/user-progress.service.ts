@@ -142,9 +142,9 @@ export class UserProgressService {
         progress.bestSubmission = { id: submissionId } as Submission;
       }
     } else {
-      // Update status to attempted-unsolved if not solved yet
-      if (progress.status === ProgressStatus.ATTEMPTED) {
-        progress.status = ProgressStatus.ATTEMPTED_UNSOLVED;
+      // Update status to attempted if not solved yet
+      if (progress.status === ProgressStatus.NOT_STARTED) {
+        progress.status = ProgressStatus.ATTEMPTED;
       }
     }
 

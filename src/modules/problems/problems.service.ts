@@ -7,14 +7,16 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 
 import slugify from 'slugify';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Transactional } from 'typeorm-transactional';
 
 import { PaginatedResultDto } from '../../common';
 import { User } from '../auth/entities/user.entity';
 import { Action, CaslAbilityFactory } from '../rbac/casl/casl-ability.factory';
+import { UserProblemProgress } from '../submissions/entities/user-problem-progress.entity';
 import { CreateProblemDto } from './dto/create-problem.dto';
 import { FilterProblemDto } from './dto/filter-problem.dto';
+import { ProblemListItemDto } from './dto/problem-list-item.dto';
 import { UpdateProblemDto } from './dto/update-problem.dto';
 import { Problem } from './entities/problem.entity';
 import { TagService, TestcaseFileService, TopicService } from './services';
@@ -24,6 +26,8 @@ export class ProblemsService {
   constructor(
     @InjectRepository(Problem)
     private readonly problemRepository: Repository<Problem>,
+    @InjectRepository(UserProblemProgress)
+    private readonly userProblemProgressRepository: Repository<UserProblemProgress>,
     private readonly testcaseService: TestcaseFileService,
     private readonly caslAbilityFactory: CaslAbilityFactory,
     private readonly topicService: TopicService,
@@ -117,26 +121,53 @@ export class ProblemsService {
   async getProblems(
     filterDto: FilterProblemDto,
     user?: User,
-  ): Promise<PaginatedResultDto<Problem>> {
+  ): Promise<PaginatedResultDto<ProblemListItemDto>> {
     const { difficulty, isPremium, topicIds, tagIds, search } = filterDto;
 
     const queryBuilder = this.problemRepository
       .createQueryBuilder('problem')
-      .leftJoinAndSelect('problem.tags', 'tag')
-      .leftJoinAndSelect('problem.topics', 'topic');
-
-    if (tagIds && tagIds.length > 0) {
-      queryBuilder.andWhere('tag.id IN (:...tagIds)', { tagIds });
-    }
-
-    if (topicIds && topicIds.length > 0) {
-      queryBuilder.andWhere('topic.id IN (:...topicIds)', { topicIds });
-    }
+      .leftJoinAndSelect('problem.tags', 'tags')
+      .leftJoinAndSelect('problem.topics', 'topics');
 
     // Check if user has read_all permission
     const canReadAll = user
       ? this.caslAbilityFactory.createForUser(user).can(Action.ReadAll, Problem)
       : false;
+
+    const commonFields = [
+      'problem.id',
+      'problem.title',
+      'problem.slug',
+      'problem.difficulty',
+      'problem.isPremium',
+      'problem.acceptanceRate',
+      'tags',
+      'topics',
+    ];
+
+    if (canReadAll) {
+      queryBuilder.select([
+        ...commonFields,
+        'problem.isActive',
+        'problem.totalSubmissions',
+        'problem.totalAccepted',
+        'problem.testcaseCount',
+        'problem.timeLimitMs',
+        'problem.memoryLimitKb',
+        'problem.createdAt',
+        'problem.updatedAt',
+      ]);
+    } else {
+      queryBuilder.select(commonFields);
+    }
+
+    if (tagIds && tagIds.length > 0) {
+      queryBuilder.andWhere('tags.id IN (:...tagIds)', { tagIds });
+    }
+
+    if (topicIds && topicIds.length > 0) {
+      queryBuilder.andWhere('topics.id IN (:...topicIds)', { topicIds });
+    }
 
     // Only apply active filters if user doesn't have read_all permission
     if (!canReadAll) {
@@ -179,7 +210,29 @@ export class ProblemsService {
 
     const [items, total] = await queryBuilder.getManyAndCount();
 
-    return new PaginatedResultDto(items, {
+    const results: any[] = items;
+
+    // Fetch user progress if user is authenticated and not viewing as admin
+    if (user && !canReadAll && items.length > 0) {
+      const problemIds = items.map((p) => p.id);
+      const progressList = await this.userProblemProgressRepository.find({
+        where: {
+          userId: user.id,
+          problemId: In(problemIds),
+        },
+        select: ['problemId', 'status'],
+      });
+
+      const progressMap = new Map(
+        progressList.map((p) => [p.problemId, p.status]),
+      );
+
+      for (const item of results) {
+        item.status = progressMap.get(item.id) ?? null;
+      }
+    }
+
+    return new PaginatedResultDto(results, {
       page: filterDto.page ?? 1,
       limit: filterDto.limit ?? 20,
       total,

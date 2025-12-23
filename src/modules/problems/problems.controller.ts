@@ -40,6 +40,7 @@ import { CreateProblemDto } from './dto/create-problem.dto';
 import { CreateSampleTestcaseDto } from './dto/create-sample-testcase.dto';
 import { UploadTestcaseDto } from './dto/create-testcase.dto';
 import { FilterProblemDto } from './dto/filter-problem.dto';
+import { ProblemListItemDto } from './dto/problem-list-item.dto';
 import { TestcaseDownloadUrlDto } from './dto/testcase-download-url.dto';
 import { TestcaseUploadResponseDto } from './dto/testcase-upload-response.dto';
 import { UpdateProblemDto } from './dto/update-problem.dto';
@@ -91,11 +92,11 @@ export class ProblemsController {
       'Returns active problems by default. Authenticated admins with read_all permission can view all problems.',
   })
   @ApiBearerAuth('JWT-auth')
-  @ApiPaginatedResponse(Problem, 'Problems retrieved successfully')
+  @ApiPaginatedResponse(ProblemListItemDto, 'Problems retrieved successfully')
   async getProblems(
     @Query() filterDto: FilterProblemDto,
     @GetUser() user?: User,
-  ): Promise<PaginatedResultDto<Problem>> {
+  ): Promise<PaginatedResultDto<ProblemListItemDto>> {
     return this.problemsService.getProblems(filterDto, user);
   }
 
