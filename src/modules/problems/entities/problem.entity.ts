@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { UserProblemProgress } from 'src/modules/submissions/entities/user-problem-progress.entity';
 import {
   Column,
   CreateDateColumn,
@@ -160,6 +161,14 @@ export class Problem {
     cascade: true,
   })
   sampleTestcases: SampleTestcase[];
+
+  @ApiProperty({
+    description: 'User progress on this problem',
+    type: () => [UserProblemProgress],
+    required: false,
+  })
+  @OneToMany(() => UserProblemProgress, (progress) => progress.problem)
+  userProgress?: UserProblemProgress[];
 
   @ApiProperty({
     description: 'Progressive hints array',

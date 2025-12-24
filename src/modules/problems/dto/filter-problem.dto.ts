@@ -8,10 +8,20 @@ import {
   IsString,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../common';
+import { ProgressStatus } from '../../submissions/enums/progress-status.enum';
 import { ProblemDifficulty } from '../enums/problem-difficulty.enum';
 import { SortBy } from '../enums/sort-by.enum';
 
 export class FilterProblemDto extends PaginationQueryDto {
+  @ApiPropertyOptional({
+    description:
+      'Filter by user progress status. Requires authentication. Options: "solved", "attempted", "not-started".',
+    enum: ProgressStatus,
+  })
+  @IsOptional()
+  @IsEnum(ProgressStatus)
+  status?: ProgressStatus;
+
   @ApiPropertyOptional({
     description:
       'Field to sort by. Defaults to "id". Options: "id", "difficulty", "acceptanceRate", "createdAt", "updatedAt". Note: If "search" is provided, results are automatically sorted by relevance first.',

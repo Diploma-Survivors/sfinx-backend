@@ -7,13 +7,14 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 
 import slugify from 'slugify';
-import { In, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Transactional } from 'typeorm-transactional';
 
 import { PaginatedResultDto } from '../../common';
 import { User } from '../auth/entities/user.entity';
 import { Action, CaslAbilityFactory } from '../rbac/casl/casl-ability.factory';
 import { UserProblemProgress } from '../submissions/entities/user-problem-progress.entity';
+import { ProgressStatus } from '../submissions/enums/progress-status.enum';
 import { CreateProblemDto } from './dto/create-problem.dto';
 import { FilterProblemDto } from './dto/filter-problem.dto';
 import { ProblemListItemDto } from './dto/problem-list-item.dto';
@@ -122,7 +123,8 @@ export class ProblemsService {
     filterDto: FilterProblemDto,
     user?: User,
   ): Promise<PaginatedResultDto<ProblemListItemDto>> {
-    const { difficulty, isPremium, topicIds, tagIds, search } = filterDto;
+    const { difficulty, isPremium, topicIds, tagIds, search, status } =
+      filterDto;
 
     const queryBuilder = this.problemRepository
       .createQueryBuilder('problem')
@@ -159,6 +161,29 @@ export class ProblemsService {
       ]);
     } else {
       queryBuilder.select(commonFields);
+    }
+
+    // Join user progress if needed (Authenticated user AND (not admin OR filtering by status))
+    const shouldJoinProgress = user && (!canReadAll || !!status);
+
+    if (shouldJoinProgress) {
+      queryBuilder.leftJoinAndSelect(
+        'problem.userProgress',
+        'user_progress',
+        'user_progress.userId = :userId',
+        { userId: user.id },
+      );
+
+      if (status) {
+        if (status === ProgressStatus.NOT_STARTED) {
+          queryBuilder.andWhere(
+            '(user_progress.status IS NULL OR user_progress.status = :status)',
+            { status: ProgressStatus.NOT_STARTED },
+          );
+        } else {
+          queryBuilder.andWhere('user_progress.status = :status', { status });
+        }
+      }
     }
 
     if (tagIds && tagIds.length > 0) {
@@ -210,25 +235,13 @@ export class ProblemsService {
 
     const [items, total] = await queryBuilder.getManyAndCount();
 
-    const results: any[] = items;
+    const results = items;
 
-    // Fetch user progress if user is authenticated and not viewing as admin
-    if (user && !canReadAll && items.length > 0) {
-      const problemIds = items.map((p) => p.id);
-      const progressList = await this.userProblemProgressRepository.find({
-        where: {
-          userId: user.id,
-          problemId: In(problemIds),
-        },
-        select: ['problemId', 'status'],
-      });
-
-      const progressMap = new Map(
-        progressList.map((p) => [p.problemId, p.status]),
-      );
-
+    if (shouldJoinProgress) {
       for (const item of results) {
-        item.status = progressMap.get(item.id) ?? null;
+        const progress = item.userProgress?.[0];
+        (item as ProblemListItemDto).status = progress?.status ?? null;
+        delete item.userProgress;
       }
     }
 
