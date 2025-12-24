@@ -2,6 +2,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -13,10 +14,12 @@ import { Transactional } from 'typeorm-transactional';
 import { PaginatedResultDto } from '../../common';
 import { User } from '../auth/entities/user.entity';
 import { Action, CaslAbilityFactory } from '../rbac/casl/casl-ability.factory';
+import { StorageService } from '../storage/storage.service';
 import { UserProblemProgress } from '../submissions/entities/user-problem-progress.entity';
 import { ProgressStatus } from '../submissions/enums/progress-status.enum';
 import { CreateProblemDto } from './dto/create-problem.dto';
 import { FilterProblemDto } from './dto/filter-problem.dto';
+import { ProblemDetailDto } from './dto/problem-detail.dto';
 import { ProblemListItemDto } from './dto/problem-list-item.dto';
 import { UpdateProblemDto } from './dto/update-problem.dto';
 import { Problem } from './entities/problem.entity';
@@ -24,15 +27,17 @@ import { TagService, TestcaseFileService, TopicService } from './services';
 
 @Injectable()
 export class ProblemsService {
+  private readonly logger = new Logger(ProblemsService.name);
+
   constructor(
     @InjectRepository(Problem)
     private readonly problemRepository: Repository<Problem>,
     @InjectRepository(UserProblemProgress)
-    private readonly userProblemProgressRepository: Repository<UserProblemProgress>,
     private readonly testcaseService: TestcaseFileService,
     private readonly caslAbilityFactory: CaslAbilityFactory,
     private readonly topicService: TopicService,
     private readonly tagService: TagService,
+    private readonly storageService: StorageService,
   ) {}
 
   @Transactional()
@@ -252,7 +257,7 @@ export class ProblemsService {
     });
   }
 
-  async getProblemById(id: number, user?: User): Promise<Problem> {
+  async findProblemEntityById(id: number): Promise<Problem> {
     const problem = await this.problemRepository.findOne({
       where: { id },
       relations: ['topics', 'tags', 'createdBy', 'updatedBy'],
@@ -262,17 +267,32 @@ export class ProblemsService {
       throw new NotFoundException(`Problem with ID ${id} not found`);
     }
 
-    // Check premium access
-    this.validatePremiumAccess(problem, user);
-
     return problem;
   }
 
-  async getProblemBySlug(slug: string, user?: User): Promise<Problem> {
-    const problem = await this.problemRepository.findOne({
-      where: { slug },
-      relations: ['topics', 'tags'],
-    });
+  async getProblemById(id: number, user?: User): Promise<ProblemDetailDto> {
+    const queryBuilder = this.createProblemDetailQuery(user);
+
+    queryBuilder.where('problem.id = :id', { id });
+
+    const problem = await queryBuilder.getOne();
+
+    if (!problem) {
+      throw new NotFoundException(`Problem with ID ${id} not found`);
+    }
+
+    // Check premium access
+    this.validatePremiumAccess(problem, user);
+
+    return this.mapToDetailDto(problem);
+  }
+
+  async getProblemBySlug(slug: string, user?: User): Promise<ProblemDetailDto> {
+    const queryBuilder = this.createProblemDetailQuery(user);
+
+    queryBuilder.where('problem.slug = :slug', { slug });
+
+    const problem = await queryBuilder.getOne();
 
     if (!problem) {
       throw new NotFoundException(`Problem with slug ${slug} not found`);
@@ -281,7 +301,106 @@ export class ProblemsService {
     // Check premium access
     this.validatePremiumAccess(problem, user);
 
-    return problem;
+    return this.mapToDetailDto(problem);
+  }
+
+  private async mapToDetailDto(problem: Problem): Promise<ProblemDetailDto> {
+    const { testcaseFileKey, userProgress, ...rest } = problem;
+    let testcaseFileUrl: string | undefined;
+
+    if (testcaseFileKey) {
+      try {
+        testcaseFileUrl =
+          await this.storageService.getPresignedUrl(testcaseFileKey);
+      } catch (error) {
+        this.logger.error(
+          `Failed to get presigned URL for testcase file: ${(error as Error).message}`,
+        );
+      }
+    }
+
+    let status: ProgressStatus | null = null;
+    if (userProgress && userProgress.length > 0) {
+      status = userProgress[0].status;
+    }
+
+    return {
+      ...rest,
+      testcaseFileUrl,
+      status,
+    } as unknown as ProblemDetailDto;
+  }
+
+  private createProblemDetailQuery(user?: User) {
+    const queryBuilder = this.problemRepository
+      .createQueryBuilder('problem')
+      .leftJoinAndSelect('problem.tags', 'tags')
+      .leftJoinAndSelect('problem.topics', 'topics');
+
+    // Check if user has read_all permission
+    const canReadAll = user
+      ? this.caslAbilityFactory.createForUser(user).can(Action.ReadAll, Problem)
+      : false;
+
+    // Join user progress if user is authenticated and is NOT admin (or doesn't have read_all)
+    // Matches logic in getProblems list
+    const shouldJoinProgress = user && !canReadAll;
+
+    if (shouldJoinProgress) {
+      queryBuilder.leftJoinAndSelect(
+        'problem.userProgress',
+        'user_progress',
+        'user_progress.userId = :userId',
+        { userId: user.id },
+      );
+    }
+
+    const commonFields = [
+      'problem.id',
+      'problem.title',
+      'problem.slug',
+      'problem.description',
+      'problem.constraints',
+      'problem.difficulty',
+      'problem.isPremium',
+      'problem.totalSubmissions',
+      'problem.totalAccepted',
+      'problem.acceptanceRate',
+      'problem.totalAttempts',
+      'problem.totalSolved',
+      'problem.hints',
+      'problem.hasOfficialSolution',
+      'problem.similarProblems',
+      'problem.timeLimitMs',
+      'problem.memoryLimitKb',
+      'tags',
+      'topics',
+    ];
+
+    if (canReadAll) {
+      queryBuilder
+        .select([
+          ...commonFields,
+          'problem.isActive',
+          'problem.testcaseCount',
+          'problem.testcaseFileKey',
+          'problem.officialSolutionContent',
+          'problem.difficultyRating',
+          'problem.averageTimeToSolve',
+          'problem.createdAt',
+          'problem.updatedAt',
+          'createdBy',
+          'updatedBy',
+        ])
+        .leftJoinAndSelect('problem.createdBy', 'createdBy')
+        .leftJoinAndSelect('problem.updatedBy', 'updatedBy');
+    } else {
+      queryBuilder
+        .select(commonFields)
+        .andWhere('problem.isActive = :isActive', { isActive: true });
+    }
+
+    return queryBuilder;
   }
 
   /**
@@ -318,7 +437,7 @@ export class ProblemsService {
     updateProblemDto: UpdateProblemDto,
     userId: number,
   ): Promise<Problem> {
-    const problem = await this.getProblemById(id);
+    const problem = await this.findProblemEntityById(id);
 
     const { topicIds, tagIds, title, ...updateData } = updateProblemDto;
 
@@ -368,13 +487,13 @@ export class ProblemsService {
 
   @Transactional()
   async deleteProblem(id: number): Promise<void> {
-    const problem = await this.getProblemById(id);
+    const problem = await this.findProblemEntityById(id);
     await this.problemRepository.remove(problem);
   }
 
   @Transactional()
   async toggleStatusProblem(id: number): Promise<Problem> {
-    const problem = await this.getProblemById(id);
+    const problem = await this.findProblemEntityById(id);
     problem.isActive = !problem.isActive;
     return this.problemRepository.save(problem);
   }
@@ -385,7 +504,7 @@ export class ProblemsService {
 
   @Transactional()
   async updateProblemStats(problemId: number): Promise<void> {
-    const problem = await this.getProblemById(problemId);
+    const problem = await this.findProblemEntityById(problemId);
 
     if (problem.totalSubmissions > 0) {
       problem.acceptanceRate = Number(

@@ -57,8 +57,7 @@ export class SubmissionsService {
   ): Promise<{ submissionId: string }> {
     const { problemId, languageId, sourceCode, testCases } =
       createSubmissionDto;
-
-    const problem = await this.problemsService.getProblemById(problemId);
+    const problem = await this.problemsService.findProblemEntityById(problemId);
     const language = await this.languagesService.findById(languageId);
 
     const submissionId = uuidV4();
@@ -84,7 +83,7 @@ export class SubmissionsService {
     const { problemId, languageId, sourceCode } = createSubmissionDto;
 
     // Verify problem and language exist
-    const problem = await this.problemsService.getProblemById(problemId);
+    const problem = await this.problemsService.findProblemEntityById(problemId);
     const language = await this.languagesService.findById(languageId);
 
     // Check if problem has testcases
@@ -468,7 +467,7 @@ export class SubmissionsService {
     problemId: number,
     status: SubmissionStatus,
   ): Promise<void> {
-    const problem = await this.problemsService.getProblemById(problemId);
+    const problem = await this.problemsService.findProblemEntityById(problemId);
 
     problem.totalSubmissions += 1;
 

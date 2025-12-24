@@ -40,6 +40,7 @@ import { CreateProblemDto } from './dto/create-problem.dto';
 import { CreateSampleTestcaseDto } from './dto/create-sample-testcase.dto';
 import { UploadTestcaseDto } from './dto/create-testcase.dto';
 import { FilterProblemDto } from './dto/filter-problem.dto';
+import { ProblemDetailDto } from './dto/problem-detail.dto';
 import { ProblemListItemDto } from './dto/problem-list-item.dto';
 import { TestcaseDownloadUrlDto } from './dto/testcase-download-url.dto';
 import { TestcaseUploadResponseDto } from './dto/testcase-upload-response.dto';
@@ -141,7 +142,7 @@ export class ProblemsController {
   @ApiResponse({
     status: 200,
     description: 'Problem retrieved successfully',
-    type: Problem,
+    type: ProblemDetailDto,
   })
   @ApiResponse({ status: 404, description: 'Problem not found' })
   @ApiResponse({
@@ -151,7 +152,7 @@ export class ProblemsController {
   async getProblemBySlug(
     @Param('slug') slug: string,
     @GetUser() user?: User,
-  ): Promise<Problem> {
+  ): Promise<ProblemDetailDto> {
     return this.problemsService.getProblemBySlug(slug, user);
   }
 
@@ -167,7 +168,7 @@ export class ProblemsController {
   @ApiResponse({
     status: 200,
     description: 'Problem retrieved successfully',
-    type: Problem,
+    type: ProblemDetailDto,
   })
   @ApiResponse({ status: 404, description: 'Problem not found' })
   @ApiResponse({
@@ -177,7 +178,7 @@ export class ProblemsController {
   async getProblemById(
     @Param('id') id: string,
     @GetUser() user?: User,
-  ): Promise<Problem> {
+  ): Promise<ProblemDetailDto> {
     return this.problemsService.getProblemById(+id, user);
   }
 
