@@ -136,13 +136,33 @@
   },
   {
     "resource": "comment",
+    "action": "read",
+    "description": "View comments"
+  },
+  {
+    "resource": "comment",
     "action": "create",
-    "description": "Comment on posts"
+    "description": "Create comments on problems"
+  },
+  {
+    "resource": "comment",
+    "action": "update",
+    "description": "Edit own comments"
   },
   {
     "resource": "comment",
     "action": "delete",
-    "description": "Delete comments"
+    "description": "Delete own or all comments"
+  },
+  {
+    "resource": "comment_report",
+    "action": "read",
+    "description": "View comment reports (Admin/Moderator)"
+  },
+  {
+    "resource": "comment_report",
+    "action": "update",
+    "description": "Resolve comment reports (Admin/Moderator)"
   },
   {
     "resource": "payment",
