@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { PaginatedResultDto } from '../../../common';
+import { PaginatedResultDto, SortOrder } from '../../../common';
 import { CacheService } from '../../redis/services/cache.service';
 import { PubSubService } from '../../redis/services/pubsub.service';
 import { CacheKeys } from '../../redis/utils/cache-key.builder';
@@ -52,8 +52,8 @@ export class ContestLeaderboardService {
             where: { contestId },
             relations: ['user'],
             order: {
-              totalScore: 'DESC',
-              lastSubmissionAt: 'ASC',
+              totalScore: SortOrder.DESC,
+              lastSubmissionAt: SortOrder.ASC,
             },
             skip,
             take: limit,
@@ -62,7 +62,7 @@ export class ContestLeaderboardService {
         // Get contest problems for score breakdown
         const contestProblems = await this.contestProblemRepository.find({
           where: { contestId },
-          order: { orderIndex: 'ASC' },
+          order: { orderIndex: SortOrder.ASC },
         });
 
         // Calculate ranks (considering there might be ties)
@@ -234,8 +234,8 @@ export class ContestLeaderboardService {
     const participants = await this.participantRepository.find({
       where: { contestId },
       order: {
-        totalScore: 'DESC',
-        lastSubmissionAt: 'ASC',
+        totalScore: SortOrder.DESC,
+        lastSubmissionAt: SortOrder.ASC,
       },
     });
 
@@ -283,7 +283,7 @@ export class ContestLeaderboardService {
     // Get contest problems
     const contestProblems = await this.contestProblemRepository.find({
       where: { contestId },
-      order: { orderIndex: 'ASC' },
+      order: { orderIndex: SortOrder.ASC },
     });
 
     // Build problem scores

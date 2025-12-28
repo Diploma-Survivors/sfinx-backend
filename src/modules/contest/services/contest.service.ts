@@ -8,7 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import slugify from 'slugify';
 import { Repository } from 'typeorm';
-import { PaginatedResultDto } from '../../../common';
+import { PaginatedResultDto, SortOrder } from '../../../common';
 import { User } from '../../auth/entities/user.entity';
 import { Problem } from '../../problems/entities/problem.entity';
 import { CacheService } from '../../redis/services/cache.service';
@@ -348,7 +348,7 @@ export class ContestService {
     const problems = await this.contestProblemRepository.find({
       where: { contestId },
       relations: ['problem'],
-      order: { orderIndex: 'ASC' },
+      order: { orderIndex: SortOrder.ASC },
     });
 
     return problems;
