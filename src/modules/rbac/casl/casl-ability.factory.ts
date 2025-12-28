@@ -8,6 +8,8 @@ import {
 import { Injectable } from '@nestjs/common';
 import { RefreshToken } from '../../auth/entities/refresh-token.entity';
 import { User } from '../../auth/entities/user.entity';
+import { Comment } from '../../problems/comments/entities/comment.entity';
+import { CommentReport } from '../../problems/comments/entities/comment-report.entity';
 import { Problem } from '../../problems/entities/problem.entity';
 import { SampleTestcase } from '../../problems/entities/sample-testcase.entity';
 import { Tag } from '../../problems/entities/tag.entity';
@@ -55,6 +57,8 @@ export type Subjects =
       | typeof Role
       | typeof Permission
       | typeof ProgrammingLanguage
+      | typeof Comment
+      | typeof CommentReport
     >
   | 'Problem'
   | 'Tag'
@@ -67,6 +71,7 @@ export type Subjects =
   | 'RefreshToken'
   | 'Post'
   | 'Comment'
+  | 'CommentReport'
   | 'Admin'
   | 'AI'
   | 'Payment'

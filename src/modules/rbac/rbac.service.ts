@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { SortOrder } from 'src/common';
 import { In, Repository } from 'typeorm';
 import { Transactional } from 'typeorm-transactional';
 import { User } from '../auth/entities/user.entity';
@@ -64,7 +65,7 @@ export class RbacService {
   async getAllRoles(): Promise<Role[]> {
     return this.roleRepository.find({
       relations: ['permissions'],
-      order: { priority: 'DESC', name: 'ASC' },
+      order: { priority: SortOrder.DESC, name: SortOrder.ASC },
     });
   }
 
@@ -211,7 +212,7 @@ export class RbacService {
    */
   async getAllPermissions(): Promise<Permission[]> {
     return this.permissionRepository.find({
-      order: { resource: 'ASC', action: 'ASC' },
+      order: { resource: SortOrder.ASC, action: SortOrder.ASC },
     });
   }
 
@@ -236,7 +237,7 @@ export class RbacService {
   async getPermissionsByResource(resource: string): Promise<Permission[]> {
     return this.permissionRepository.find({
       where: { resource },
-      order: { action: 'ASC' },
+      order: { action: SortOrder.ASC },
     });
   }
 

@@ -34,4 +34,4 @@ export * from './manage-users.policy';
 export * from './manage-languages.policy';
 
 // Contest management
-export { ManageContestsPolicy } from '../../../contest/policies/manage-contests.policy';
+export { ManageContestsPolicy } from './manage-contests.policy';
