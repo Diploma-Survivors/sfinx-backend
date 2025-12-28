@@ -9,6 +9,7 @@ import {
   Put,
   Body,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -18,7 +19,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import { CheckAbility } from '../../common';
+import {
+  CheckAbility,
+  PaginatedResultDto,
+  PaginationQueryDto,
+} from '../../common';
 import { CaslGuard } from '../auth/guards/casl.guard';
 import { Action } from '../rbac/casl/casl-ability.factory';
 import { CreateTagDto } from './dto/create-tag.dto';
@@ -43,6 +48,25 @@ export class TagsController {
   })
   async getAllTags(): Promise<Tag[]> {
     return this.tagService.findAll();
+  }
+
+  @Get('admin/list')
+  @UseGuards(CaslGuard)
+  @CheckAbility({ action: Action.Read, subject: Tag })
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Get paginated tags (Admin only)',
+    description: 'Returns paginated tags for admin management',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Tags retrieved successfully',
+    type: PaginatedResultDto<Tag>,
+  })
+  async getPaginatedTags(
+    @Query() query: PaginationQueryDto,
+  ): Promise<PaginatedResultDto<Tag>> {
+    return this.tagService.findAllPaginated(query);
   }
 
   @Get('type/:type')

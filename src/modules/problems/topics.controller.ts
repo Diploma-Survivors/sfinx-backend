@@ -9,6 +9,7 @@ import {
   Put,
   Body,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -18,7 +19,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import { CheckAbility } from '../../common';
+import {
+  CheckAbility,
+  PaginatedResultDto,
+  PaginationQueryDto,
+} from '../../common';
 import { CaslGuard } from '../auth/guards/casl.guard';
 import { Action } from '../rbac/casl/casl-ability.factory';
 import { CreateTopicDto } from './dto/create-topic.dto';
@@ -43,6 +48,26 @@ export class TopicsController {
   })
   async getAllTopics(): Promise<Topic[]> {
     return this.topicService.findAll();
+  }
+
+  @Get('admin/list')
+  @UseGuards(CaslGuard)
+  @CheckAbility({ action: Action.Read, subject: Topic })
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Get paginated topics (Admin only)',
+    description:
+      'Returns paginated topics including inactive for admin management',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Topics retrieved successfully',
+    type: PaginatedResultDto<Topic>,
+  })
+  async getPaginatedTopics(
+    @Query() query: PaginationQueryDto,
+  ): Promise<PaginatedResultDto<Topic>> {
+    return this.topicService.findAllPaginated(query);
   }
 
   @Get('slug/:slug')
