@@ -41,9 +41,9 @@ async function bootstrap() {
   app.setGlobalPrefix(apiVersion);
 
   // CORS configuration
-  const corsOrigins = appConfig.corsOrigins;
+  // const corsOrigins = appConfig.corsOrigins;
   app.enableCors({
-    origin: corsOrigins,
+    origin: '*',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],

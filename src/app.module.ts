@@ -12,6 +12,7 @@ import {
   APP_PIPE,
   Reflector,
 } from '@nestjs/core';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 
@@ -111,6 +112,7 @@ import { ScheduleModule } from '@nestjs/schedule';
       },
     ]),
     ScheduleModule.forRoot(),
+    EventEmitterModule.forRoot(),
 
     // Core modules
     RedisModule,
