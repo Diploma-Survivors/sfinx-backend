@@ -12,6 +12,7 @@ import {
   PaginatedResultDto,
   SortOrder,
 } from '../../../../common';
+import { StorageService } from '../../../storage/storage.service';
 import {
   CommentAuthorDto,
   CommentResponseDto,
@@ -30,6 +31,7 @@ export class CommentsService {
     private readonly commentRepository: Repository<Comment>,
     private readonly votesService: CommentVotesService,
     private readonly markdownService: MarkdownService,
+    private readonly storageService: StorageService,
   ) {}
 
   /**
@@ -369,7 +371,7 @@ export class CommentsService {
     const author: CommentAuthorDto = {
       id: comment.author.id,
       username: comment.author.username,
-      avatarUrl: comment.author.avatarUrl,
+      avatarUrl: this.getAvatarUrl(comment.author.avatarKey) ?? undefined,
       isPremium: comment.author.isPremium,
     };
 
@@ -393,5 +395,20 @@ export class CommentsService {
       author,
       userVote: userVotes?.get(comment.id) ?? null,
     };
+  }
+
+  /**
+   * Transform avatarKey to CloudFront URL
+   */
+  private getAvatarUrl(avatarKey: string | null | undefined): string | null {
+    if (!avatarKey) return null;
+
+    // Check if it's already a full URL (legacy data)
+    if (avatarKey.startsWith('http://') || avatarKey.startsWith('https://')) {
+      return avatarKey;
+    }
+
+    // Transform S3 key to CloudFront URL
+    return this.storageService.getCloudFrontUrl(avatarKey);
   }
 }
