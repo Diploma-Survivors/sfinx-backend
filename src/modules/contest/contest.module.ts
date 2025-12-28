@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Problem } from '../problems/entities/problem.entity';
+import { StorageModule } from '../storage/storage.module';
 import { Submission } from '../submissions/entities/submission.entity';
 import { ContestController } from './controllers/contest.controller';
 import { ContestLeaderboardController } from './controllers/contest-leaderboard.controller';
@@ -24,6 +25,7 @@ import {
       Problem,
       Submission,
     ]),
+    StorageModule,
   ],
   controllers: [
     ContestController,

@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { PaginatedResultDto, SortOrder } from '../../../common';
 import { CacheService } from '../../redis/services/cache.service';
 import { PubSubService } from '../../redis/services/pubsub.service';
+import { StorageService } from '../../storage/storage.service';
 import { CacheKeys } from '../../redis/utils/cache-key.builder';
 import {
   LeaderboardEntryDto,
@@ -30,6 +31,7 @@ export class ContestLeaderboardService {
     private readonly contestProblemRepository: Repository<ContestProblem>,
     private readonly cacheService: CacheService,
     private readonly pubSubService: PubSubService,
+    private readonly storageService: StorageService,
   ) {}
 
   /**
@@ -101,7 +103,7 @@ export class ContestLeaderboardService {
             rank: currentRank,
             userId: p.userId,
             username: p.user?.username ?? 'Unknown',
-            avatarUrl: p.user?.avatarUrl ?? null,
+            avatarUrl: this.getAvatarUrl(p.user?.avatarKey),
             totalScore: Number(p.totalScore),
             problemScores,
             totalSubmissions: p.totalSubmissions,
@@ -305,7 +307,7 @@ export class ContestLeaderboardService {
       rank: participant.rank ?? 0,
       userId: participant.userId,
       username: participant.user?.username ?? 'Unknown',
-      avatarUrl: participant.user?.avatarUrl ?? null,
+      avatarUrl: this.getAvatarUrl(participant.user?.avatarKey),
       totalScore: Number(participant.totalScore),
       problemScores,
       totalSubmissions: participant.totalSubmissions,
@@ -340,5 +342,20 @@ export class ContestLeaderboardService {
     await this.cacheService.invalidateByPattern(
       CacheKeys.contest.leaderboardPattern(contestId),
     );
+  }
+
+  /**
+   * Transform avatarKey to CloudFront URL
+   */
+  private getAvatarUrl(avatarKey: string | null | undefined): string | null {
+    if (!avatarKey) return null;
+
+    // Check if it's already a full URL (legacy data)
+    if (avatarKey.startsWith('http://') || avatarKey.startsWith('https://')) {
+      return avatarKey;
+    }
+
+    // Transform S3 key to CloudFront URL
+    return this.storageService.getCloudFrontUrl(avatarKey);
   }
 }
