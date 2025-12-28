@@ -6,6 +6,7 @@ import { Transactional } from 'typeorm-transactional';
 import { CreateSampleTestcaseDto } from '../dto/create-sample-testcase.dto';
 import { Problem } from '../entities/problem.entity';
 import { SampleTestcase } from '../entities/sample-testcase.entity';
+import { SortOrder } from 'src/common';
 
 /**
  * Service responsible for managing sample testcases
@@ -46,7 +47,7 @@ export class SampleTestcaseService {
   async getSampleTestcases(problemId: number): Promise<SampleTestcase[]> {
     return this.sampleTestcaseRepository.find({
       where: { problem: { id: problemId } },
-      order: { orderIndex: 'ASC' },
+      order: { orderIndex: SortOrder.ASC },
     });
   }
 

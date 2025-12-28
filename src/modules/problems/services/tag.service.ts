@@ -14,6 +14,11 @@ import {
   Cacheable,
   CacheInvalidate,
 } from '../../../common/decorators/cacheable.decorator';
+import {
+  PaginatedResultDto,
+  PaginationQueryDto,
+  SortOrder,
+} from '../../../common/dto';
 import { CacheKeys } from '../../redis/utils/cache-key.builder';
 import { Tag } from '../entities/tag.entity';
 
@@ -34,7 +39,27 @@ export class TagService {
   })
   async findAll(): Promise<Tag[]> {
     return this.tagRepository.find({
-      order: { name: 'ASC' },
+      order: { name: SortOrder.ASC },
+    });
+  }
+
+  /**
+   * Get paginated tags for admin
+   */
+  async findAllPaginated(
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResultDto<Tag>> {
+    const { skip, take, sortBy, sortOrder } = query;
+
+    const result = await this.tagRepository.findAndCount({
+      skip,
+      take,
+      order: sortBy ? { [sortBy]: sortOrder } : { name: SortOrder.ASC },
+    });
+
+    return PaginatedResultDto.fromFindAndCount(result, {
+      page: query.page ?? 1,
+      limit: query.limit ?? 20,
     });
   }
 
@@ -102,7 +127,7 @@ export class TagService {
   async findByType(type: string): Promise<Tag[]> {
     return this.tagRepository.find({
       where: { type },
-      order: { name: 'ASC' },
+      order: { name: SortOrder.ASC },
     });
   }
 

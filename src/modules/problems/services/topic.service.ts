@@ -9,7 +9,14 @@ import slugify from 'slugify';
 import { In, Repository } from 'typeorm';
 
 import { Transactional } from 'typeorm-transactional';
-import { CACHE_TTL, Cacheable, CacheInvalidate } from '../../../common';
+import {
+  CACHE_TTL,
+  Cacheable,
+  CacheInvalidate,
+  PaginatedResultDto,
+  PaginationQueryDto,
+  SortOrder,
+} from '../../../common';
 import { CacheKeys } from '../../redis/utils/cache-key.builder';
 import { Topic } from '../entities/topic.entity';
 
@@ -31,7 +38,7 @@ export class TopicService {
   async findAll(): Promise<Topic[]> {
     return this.topicRepository.find({
       where: { isActive: true },
-      order: { orderIndex: 'ASC', name: 'ASC' },
+      order: { orderIndex: SortOrder.ASC, name: SortOrder.ASC },
     });
   }
 
@@ -45,7 +52,29 @@ export class TopicService {
   })
   async findAllWithInactive(): Promise<Topic[]> {
     return this.topicRepository.find({
-      order: { orderIndex: 'ASC', name: 'ASC' },
+      order: { orderIndex: SortOrder.ASC, name: SortOrder.ASC },
+    });
+  }
+
+  /**
+   * Get paginated topics for admin (includes inactive)
+   */
+  async findAllPaginated(
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResultDto<Topic>> {
+    const { skip, take, sortBy, sortOrder } = query;
+
+    const result = await this.topicRepository.findAndCount({
+      skip,
+      take,
+      order: sortBy
+        ? { [sortBy]: sortOrder }
+        : { orderIndex: SortOrder.ASC, name: SortOrder.ASC },
+    });
+
+    return PaginatedResultDto.fromFindAndCount(result, {
+      page: query.page ?? 1,
+      limit: query.limit ?? 20,
     });
   }
 
