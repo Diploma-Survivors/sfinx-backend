@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   Logger,
@@ -17,11 +18,21 @@ import { v4 as uuidV4 } from 'uuid';
 import { plainToInstance } from 'class-transformer';
 import { AppConfig, JwtConfig } from 'src/config';
 import { Transactional } from 'typeorm-transactional';
+import {
+  ALLOWED_AVATAR_EXTENSIONS,
+  ALLOWED_AVATAR_MIME_TYPES,
+  AVATAR_MAX_SIZE_BYTES,
+  AVATAR_UPLOAD_URL_EXPIRES_IN,
+} from './constants/avatar.constants';
 import { MailService } from '../mail/mail.service';
 import { Role } from '../rbac/entities/role.entity';
+import { StorageService } from '../storage/storage.service';
+import { AvatarUploadUrlResponseDto } from './dto/avatar-upload-url-response.dto';
 import { AuthResponseDto, UserResponseDto } from './dto/auth-response.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
+import { UserProfileResponseDto } from './dto/user-profile-response.dto';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { User } from './entities/user.entity';
 import { EmailVerificationTokenService } from './services/email-verification-token.service';
@@ -46,6 +57,7 @@ export class AuthService {
     private readonly mailService: MailService,
     private readonly passwordResetTokenService: PasswordResetTokenService,
     private readonly emailVerificationTokenService: EmailVerificationTokenService,
+    private readonly storageService: StorageService,
   ) {
     this.appConfig = this.configService.getOrThrow<AppConfig>('app');
     this.jwtConfig = this.configService.getOrThrow<JwtConfig>('jwt');
@@ -500,6 +512,201 @@ export class AuthService {
     this.logger.log(`Password changed for user ${user.email}`);
 
     return { message: 'Password changed successfully' };
+  }
+
+  /**
+   * Update user profile
+   */
+  @Transactional()
+  async updateUserProfile(
+    userId: number,
+    dto: UpdateUserProfileDto,
+  ): Promise<User> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    // Update only provided fields
+    Object.assign(user, dto);
+
+    return this.userRepository.save(user);
+  }
+
+  // ==================== AVATAR UPLOAD ====================
+
+  /**
+   * Generate presigned URL for avatar upload
+   */
+  async generateAvatarUploadUrl(
+    userId: number,
+    fileName: string,
+    contentType: string,
+  ): Promise<AvatarUploadUrlResponseDto> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    if (!ALLOWED_AVATAR_MIME_TYPES.includes(contentType as any)) {
+      throw new BadRequestException(
+        `Invalid content type. Allowed: ${ALLOWED_AVATAR_MIME_TYPES.join(', ')}`,
+      );
+    }
+
+    const fileExtension = fileName.split('.').pop()?.toLowerCase();
+    if (
+      !fileExtension ||
+      !ALLOWED_AVATAR_EXTENSIONS.includes(fileExtension as any)
+    ) {
+      throw new BadRequestException(
+        `Invalid file extension. Allowed: ${ALLOWED_AVATAR_EXTENSIONS.join(', ')}`,
+      );
+    }
+
+    const timestamp = Date.now();
+    const key = `avatars/${userId}/${timestamp}.${fileExtension}`;
+
+    const uploadUrl = await this.storageService.getPresignedUploadUrl(
+      key,
+      AVATAR_UPLOAD_URL_EXPIRES_IN,
+      contentType,
+      AVATAR_MAX_SIZE_BYTES,
+    );
+
+    this.logger.log(`Generated avatar upload URL for user ${userId}: ${key}`);
+
+    return {
+      uploadUrl,
+      key,
+      expiresIn: AVATAR_UPLOAD_URL_EXPIRES_IN,
+      maxSizeBytes: AVATAR_MAX_SIZE_BYTES,
+    };
+  }
+
+  /**
+   * Confirm avatar upload and save S3 key to database
+   */
+  @Transactional()
+  async confirmAvatarUpload(userId: number, key: string): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const keyPattern = new RegExp(
+      `^avatars/${userId}/\\d+\\.(jpg|jpeg|png|webp|gif)$`,
+      'i',
+    );
+    if (!keyPattern.test(key)) {
+      throw new BadRequestException(
+        `Invalid S3 key format. Expected: avatars/${userId}/{timestamp}.{ext}`,
+      );
+    }
+
+    const fileExists = await this.storageService.fileExists(key);
+    if (!fileExists) {
+      throw new NotFoundException(
+        'Upload not found in S3. Please upload the file first using the presigned URL.',
+      );
+    }
+
+    await this.cleanupOldAvatars(userId, key);
+
+    user.avatarKey = key;
+    const savedUser = await this.userRepository.save(user);
+
+    this.logger.log(`Avatar key saved for user ${userId}: ${key}`);
+
+    return savedUser;
+  }
+
+  /**
+   * Delete user avatar
+   */
+  @Transactional()
+  async deleteAvatar(userId: number): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    if (!user.avatarKey) {
+      throw new BadRequestException('User has no avatar to delete');
+    }
+
+    if (this.isS3Key(user.avatarKey)) {
+      try {
+        await this.storageService.deleteFile(user.avatarKey);
+        this.logger.log(`Deleted avatar from S3: ${user.avatarKey}`);
+      } catch (error) {
+        this.logger.warn(
+          `Failed to delete avatar from S3: ${(error as Error).message}`,
+        );
+      }
+    }
+
+    user.avatarKey = null;
+    const savedUser = await this.userRepository.save(user);
+
+    this.logger.log(`Avatar deleted for user ${userId}`);
+
+    return savedUser;
+  }
+
+  /**
+   * Clean up old avatars for a user
+   */
+  private async cleanupOldAvatars(
+    userId: number,
+    currentKey: string,
+  ): Promise<void> {
+    try {
+      const prefix = `avatars/${userId}/`;
+      const keys = await this.storageService.listObjectsByPrefix(prefix);
+
+      const keysToDelete = keys.filter((key) => key !== currentKey);
+
+      if (keysToDelete.length > 0) {
+        this.logger.log(
+          `Cleaning up ${keysToDelete.length} old avatar(s) for user ${userId}`,
+        );
+
+        await Promise.allSettled(
+          keysToDelete.map((key) => this.storageService.deleteFile(key)),
+        );
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Failed to cleanup old avatars for user ${userId}: ${(error as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * Transform User entity to UserProfileResponseDto with CloudFront URLs
+   */
+  transformUserResponse(user: User): UserProfileResponseDto {
+    const dto = plainToInstance(UserProfileResponseDto, user);
+
+    if (dto.avatarKey && this.isS3Key(dto.avatarKey)) {
+      (dto as any).avatarUrl = this.storageService.getCloudFrontUrl(
+        dto.avatarKey,
+      );
+    }
+
+    return dto;
+  }
+
+  /**
+   * Check if a string is an S3 key (not a full URL)
+   */
+  private isS3Key(value: string): boolean {
+    if (!value) return false;
+    return !value.startsWith('http://') && !value.startsWith('https://');
   }
 
   @Cron('0 2 * * *') // Run daily at 2:00 AM

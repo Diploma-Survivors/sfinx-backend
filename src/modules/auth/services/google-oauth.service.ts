@@ -143,7 +143,7 @@ export class GoogleOAuthService {
         // Link Google account to existing email
         existingUser.googleId = googleUser.id;
         existingUser.emailVerified = googleUser.verified_email;
-        existingUser.avatarUrl ??= googleUser.picture;
+        existingUser.avatarKey ??= googleUser.picture;
         user = await this.userRepository.save(existingUser);
         this.logger.log(
           `Linked Google account to existing user: ${user.email}`,
@@ -214,7 +214,7 @@ export class GoogleOAuthService {
       username,
       googleId: googleUser.id,
       fullName: googleUser.name,
-      avatarUrl: googleUser.picture,
+      avatarKey: googleUser.picture,
       emailVerified: googleUser.verified_email,
       isActive: true,
       passwordHash: null, // No password for OAuth users

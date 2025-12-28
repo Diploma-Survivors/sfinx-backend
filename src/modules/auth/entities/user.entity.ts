@@ -10,6 +10,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Role } from '../../rbac/entities/role.entity';
+import { Language } from '../enums';
 
 @Entity('users')
 export class User {
@@ -47,12 +48,13 @@ export class User {
   fullName: string;
 
   @ApiProperty({
-    description: 'Avatar URL',
+    description: 'Avatar URL (CloudFront CDN)',
     required: false,
-    example: 'https://example.com/avatar.jpg',
+    example: 'https://cdn.example.com/avatars/123/1735500000.jpg',
+    name: 'avatarUrl',
   })
-  @Column({ name: 'avatar_url', type: 'text', nullable: true })
-  avatarUrl: string;
+  @Column({ name: 'avatar_key', type: 'text', nullable: true })
+  avatarKey: string | null;
 
   @ApiProperty({
     description: 'User bio',
@@ -93,6 +95,20 @@ export class User {
   })
   @Column({ name: 'linkedin_url', nullable: true, length: 255 })
   linkedinUrl: string;
+
+  @ApiProperty({
+    description: 'Preferred language for UI',
+    enum: Language,
+    example: Language.EN,
+  })
+  @Column({
+    name: 'preferred_language',
+    type: 'varchar',
+    length: 2,
+    default: Language.EN,
+    comment: 'User preferred language for i18n (en, vi)',
+  })
+  preferredLanguage: Language;
 
   // OAuth integration
   @ApiProperty({

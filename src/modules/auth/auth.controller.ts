@@ -3,11 +3,13 @@ import type { Response } from 'express';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
   HttpCode,
   HttpStatus,
   Ip,
+  Patch,
   Post,
   Query,
   Res,
@@ -22,20 +24,21 @@ import {
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 
-import { plainToInstance } from 'class-transformer';
-
-import { AppConfig } from '../../config/app.config';
-
 import { GetUser } from '../../common';
+import { AppConfig } from '../../config/app.config';
 import { AuthService } from './auth.service';
 import { AuthResponseDto } from './dto/auth-response.dto';
+import { AvatarUploadUrlResponseDto } from './dto/avatar-upload-url-response.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { ConfirmAvatarUploadDto } from './dto/confirm-avatar-upload.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { GoogleAuthDto } from './dto/google-auth.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
+import { RequestAvatarUploadUrlDto } from './dto/request-avatar-upload-url.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { UserProfileResponseDto } from './dto/user-profile-response.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { User } from './entities/user.entity';
@@ -309,7 +312,130 @@ export class AuthController {
   })
   // eslint-disable-next-line @typescript-eslint/require-await
   async getCurrentUser(@GetUser() user: User): Promise<UserProfileResponseDto> {
-    return plainToInstance(UserProfileResponseDto, user);
+    return this.authService.transformUserResponse(user);
+  }
+
+  @Throttle({
+    default: {
+      limit: 5,
+      ttl: 60000,
+    },
+  })
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Update user profile',
+    description:
+      'Update authenticated user profile information including language preference',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile updated successfully',
+    type: UserProfileResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async updateProfile(
+    @GetUser('id') userId: number,
+    @Body() dto: UpdateUserProfileDto,
+  ): Promise<UserProfileResponseDto> {
+    const user = await this.authService.updateUserProfile(userId, dto);
+    return this.authService.transformUserResponse(user);
+  }
+
+  @Throttle({
+    default: {
+      limit: 10,
+      ttl: 60000,
+    },
+  })
+  @Post('me/avatar/upload-url')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Request presigned URL for avatar upload',
+    description:
+      'Generate a presigned S3 URL for direct avatar upload. ' +
+      'The URL expires in 15 minutes. Max file size: 5MB. ' +
+      'Allowed formats: jpg, jpeg, png, webp, gif.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Presigned URL generated successfully',
+    type: AvatarUploadUrlResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 400, description: 'Invalid file type or extension' })
+  async requestAvatarUploadUrl(
+    @GetUser('id') userId: number,
+    @Body() dto: RequestAvatarUploadUrlDto,
+  ): Promise<AvatarUploadUrlResponseDto> {
+    return this.authService.generateAvatarUploadUrl(
+      userId,
+      dto.fileName,
+      dto.contentType,
+    );
+  }
+
+  @Throttle({
+    default: {
+      limit: 10,
+      ttl: 60000,
+    },
+  })
+  @Post('me/avatar/confirm')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Confirm avatar upload',
+    description:
+      'Confirm that the avatar has been uploaded to S3 and save the S3 key to the database. ' +
+      'This endpoint verifies the file exists in S3 before saving.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Avatar confirmed and saved successfully',
+    type: UserProfileResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 400, description: 'Invalid S3 key format' })
+  @ApiResponse({ status: 404, description: 'Upload not found in S3' })
+  async confirmAvatarUpload(
+    @GetUser('id') userId: number,
+    @Body() dto: ConfirmAvatarUploadDto,
+  ): Promise<UserProfileResponseDto> {
+    const user = await this.authService.confirmAvatarUpload(userId, dto.key);
+    return this.authService.transformUserResponse(user);
+  }
+
+  @Throttle({
+    default: {
+      limit: 5,
+      ttl: 60000,
+    },
+  })
+  @Delete('me/avatar')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Delete avatar',
+    description:
+      'Delete the current user avatar from S3 and remove the reference from the database.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Avatar deleted successfully',
+    type: UserProfileResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 400, description: 'User has no avatar to delete' })
+  async deleteAvatar(
+    @GetUser('id') userId: number,
+  ): Promise<UserProfileResponseDto> {
+    const user = await this.authService.deleteAvatar(userId);
+    return this.authService.transformUserResponse(user);
   }
 
   @Throttle({

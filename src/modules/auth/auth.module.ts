@@ -7,6 +7,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtConfig } from 'src/config';
 import { MailModule } from '../mail/mail.module';
 import { Role } from '../rbac/entities/role.entity';
+import { StorageModule } from '../storage/storage.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { EmailVerificationToken } from './entities/email-verification-token.entity';
@@ -31,6 +32,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       EmailVerificationToken,
     ]),
     MailModule,
+    StorageModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
