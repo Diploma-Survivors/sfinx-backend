@@ -32,7 +32,6 @@ const ERROR_MESSAGES = {
 
 /**
  * Service responsible for building Judge0 submission payloads
- * Follows Single Responsibility Principle
  */
 @Injectable()
 export class Judge0PayloadBuilderService {
@@ -212,9 +211,6 @@ export class Judge0PayloadBuilderService {
     );
   }
 
-  /**
-   * Build a single Judge0 submission payload
-   */
   private buildPayload(
     sourceCode: string,
     judge0LanguageId: number,
@@ -227,7 +223,7 @@ export class Judge0PayloadBuilderService {
   ): Judge0SubmissionPayload {
     return {
       language_id: judge0LanguageId,
-      source_code: sourceCode,
+      source_code: encodeBase64(sourceCode),
       stdin: stdinRaw ? encodeBase64(stdinRaw) : undefined,
       expected_output: expectedOutput
         ? encodeBase64(expectedOutput)

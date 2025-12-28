@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Query,
+  Sse,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -16,6 +17,9 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { ConfigService } from '@nestjs/config';
+import { interval, merge, Observable } from 'rxjs';
+import { finalize, map } from 'rxjs/operators';
 
 import {
   ApiPaginatedResponse,
@@ -23,11 +27,13 @@ import {
   GetUser,
   PaginatedResultDto,
   PaginationQueryDto,
+  SkipTransformResponse,
 } from '../../common';
 import { User } from '../auth/entities/user.entity';
 import { CaslGuard } from '../auth/guards/casl.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ViewAllSubmissionsPolicy } from '../rbac/casl/policies';
+import { SUBMISSION_SSE } from './constants/submission.constants';
 import { CreateSubmissionResponseDto } from './dto/create-submission-response.dto';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { FilterSubmissionDto } from './dto/filter-submission.dto';
@@ -36,17 +42,26 @@ import {
   SubmissionResponseDto,
 } from './dto/submission-response.dto';
 import { UserProblemProgress } from './entities/user-problem-progress.entity';
+import { SubmissionEvent } from './enums';
+import {
+  MessageEvent,
+  SubmissionSseService,
+} from './services/submission-sse.service';
 import { SubmissionsService } from './submissions.service';
 
 @ApiTags('Submissions')
 @Controller('submissions')
 export class SubmissionsController {
-  constructor(private readonly submissionsService: SubmissionsService) {}
+  constructor(
+    private readonly submissionsService: SubmissionsService,
+    private readonly submissionSseService: SubmissionSseService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Throttle({
     default: {
       limit: 10,
-      ttl: 60,
+      ttl: 60000,
     },
   })
   @Post('run')
@@ -67,7 +82,7 @@ export class SubmissionsController {
   @Throttle({
     default: {
       limit: 6,
-      ttl: 60,
+      ttl: 60000,
     },
   })
   @Post('submit')
@@ -186,6 +201,59 @@ export class SubmissionsController {
     return this.submissionsService.getSubmissions(filterDto);
   }
 
+  @Get('problem/:problemId/relevant')
+  @ApiOperation({
+    summary: 'Get relevant (similar) submissions for a problem',
+  })
+  @ApiParam({ name: 'problemId', description: 'Problem ID', type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'Relevant submissions retrieved successfully',
+  })
+  async getRelevantSubmissions(
+    @Param('problemId') problemId: string,
+    @Query('languageId') languageId?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.submissionsService.getRelevantSubmissions(
+      +problemId,
+      languageId ? +languageId : undefined,
+      limit ? +limit : 10,
+    );
+  }
+
+  @Get('problem/:problemId/top-performers')
+  @ApiOperation({ summary: 'Get top performers for a problem' })
+  @ApiParam({ name: 'problemId', description: 'Problem ID', type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'Top performers retrieved successfully',
+  })
+  async getTopPerformers(
+    @Param('problemId') problemId: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.submissionsService.getTopPerformers(
+      +problemId,
+      limit ? +limit : 10,
+    );
+  }
+
+  @Get(':id/performance-stats')
+  @ApiOperation({ summary: 'Get performance statistics for a submission' })
+  @ApiParam({ name: 'id', description: 'Submission ID', type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'Performance statistics retrieved successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Submission not found or not accepted',
+  })
+  async getPerformanceStats(@Param('id') id: string) {
+    return this.submissionsService.getPerformanceStats(+id);
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
@@ -205,5 +273,32 @@ export class SubmissionsController {
   ): Promise<SubmissionResponseDto> {
     // Users can only see their own submissions with source code
     return this.submissionsService.getSubmissionById(+id, user.id, true);
+  }
+
+  @SkipTransformResponse()
+  @Sse(':id/stream')
+  @ApiOperation({
+    summary: 'Stream submission results via Server-Sent Events (SSE)',
+  })
+  @ApiParam({ name: 'id', description: 'Submission ID', type: String })
+  @ApiResponse({
+    status: 200,
+    description: 'SSE stream of submission results',
+  })
+  streamResults(@Param('id') submissionId: string): Observable<MessageEvent> {
+    // Create ping stream to keep connection alive
+    const ping$ = interval(
+      this.configService.get<number>('submission.pingTime'),
+    ).pipe(
+      map(() => ({
+        type: SubmissionEvent.PING,
+        data: SUBMISSION_SSE.PING_DATA,
+      })),
+    );
+
+    // Merge submission results with ping events
+    return merge(this.submissionSseService.connect(submissionId), ping$).pipe(
+      finalize(() => this.submissionSseService.cleanup(submissionId)),
+    );
   }
 }

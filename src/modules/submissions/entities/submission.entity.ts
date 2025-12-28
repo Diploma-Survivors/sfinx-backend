@@ -87,18 +87,6 @@ export class Submission {
   @Column({ name: 'result_description', type: 'jsonb', nullable: true })
   resultDescription: ResultDescription | null;
 
-  @ApiProperty({
-    description: 'Judge0 token for polling results',
-    required: false,
-  })
-  @Column({
-    name: 'judge0_token',
-    type: 'varchar',
-    nullable: true,
-    length: 255,
-  })
-  judge0Token: string | null;
-
   @ApiProperty({ description: 'IP address of submitter', required: false })
   @Column({ name: 'ip_address', type: 'inet', nullable: true })
   ipAddress: string | null;

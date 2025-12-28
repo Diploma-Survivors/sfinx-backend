@@ -1,10 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 
 import { CacheKeys, RedisService } from '../../redis';
 
 /**
  * Service responsible for initializing Redis tracking for submissions
- * Follows Single Responsibility Principle
  */
 @Injectable()
 export class SubmissionTrackerService {
@@ -46,7 +45,7 @@ export class SubmissionTrackerService {
       // Execute pipeline atomically
       await tx.exec();
     } catch (error) {
-      throw new Error(
+      throw new InternalServerErrorException(
         `Redis init failed for submission ${submissionId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     }

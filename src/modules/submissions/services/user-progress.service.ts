@@ -50,11 +50,11 @@ export class UserProgressService {
    */
   async getAllUserProgress(
     userId: number,
-    paginationDto?: PaginationQueryDto,
+    paginationDto: PaginationQueryDto,
   ): Promise<PaginatedResultDto<UserProblemProgress>> {
-    const page = paginationDto?.page ?? 1;
-    const limit = paginationDto?.limit ?? 20;
-    const skip = (page - 1) * limit;
+    const page = paginationDto.page ?? 1;
+    const limit = paginationDto.take;
+    const skip = paginationDto.skip;
 
     const [data, total] = await this.progressRepository.findAndCount({
       where: { userId },
@@ -132,14 +132,21 @@ export class UserProgressService {
         progress.firstSolvedAt = new Date();
       }
 
-      // Update best submission if this one is better
+      // Update best runtime if this submission is faster
       if (
         !progress.bestRuntimeMs ||
         (runtimeMs && runtimeMs < progress.bestRuntimeMs)
       ) {
         progress.bestRuntimeMs = runtimeMs ?? null;
-        progress.bestMemoryKb = memoryKb ?? null;
         progress.bestSubmission = { id: submissionId } as Submission;
+      }
+
+      // Update best memory separately if this submission uses less memory
+      if (
+        !progress.bestMemoryKb ||
+        (memoryKb && memoryKb < progress.bestMemoryKb)
+      ) {
+        progress.bestMemoryKb = memoryKb ?? null;
       }
     } else {
       // Update status to attempted if not solved yet

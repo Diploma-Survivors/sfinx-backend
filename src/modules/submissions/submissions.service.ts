@@ -1,8 +1,10 @@
 import {
   BadRequestException,
   Injectable,
-  NotFoundException,
+  InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { v4 as uuidV4 } from 'uuid';
@@ -13,6 +15,7 @@ import { Judge0Service } from '../judge0/judge0.service';
 import { Problem } from '../problems/entities/problem.entity';
 import { ProblemsService } from '../problems/problems.service';
 import { ProgrammingLanguageService } from '../programming-language';
+import { SUBMISSION_EVENTS } from './constants/submission-events.constants';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { FilterSubmissionDto } from './dto/filter-submission.dto';
 import {
@@ -21,22 +24,31 @@ import {
 } from './dto/submission-response.dto';
 import { Submission } from './entities/submission.entity';
 import { UserProblemProgress } from './entities/user-problem-progress.entity';
+import { ProgressStatus } from './enums/progress-status.enum';
 import { SubmissionStatus } from './enums/submission-status.enum';
-import type { TestCaseResult } from './interfaces/testcase-result.interface';
-import { SubmissionMapper } from './mappers/submission.mapper';
+import { ResultDescription } from './interfaces/result-description.interface';
+import {
+  ProblemSolvedEvent,
+  SubmissionAcceptedEvent,
+  SubmissionCreatedEvent,
+  SubmissionJudgedEvent,
+} from './events/submission.events';
 import {
   Judge0PayloadBuilderService,
   SubmissionTrackerService,
   UserProgressService,
   UserStatisticsService,
 } from './services';
+import { SubmissionAnalysisService } from './services/submission-analysis.service';
+import { SubmissionRetrievalService } from './services/submission-retrieval.service';
 
 /**
  * Main service for managing code submissions
- * Orchestrates workflow using focused services following SOLID principles
  */
 @Injectable()
 export class SubmissionsService {
+  private readonly logger = new Logger(SubmissionsService.name);
+
   constructor(
     @InjectRepository(Submission)
     private readonly submissionRepository: Repository<Submission>,
@@ -47,20 +59,29 @@ export class SubmissionsService {
     private readonly submissionTracker: SubmissionTrackerService,
     private readonly userProgress: UserProgressService,
     private readonly userStatistics: UserStatisticsService,
+    private readonly retrievalService: SubmissionRetrievalService,
+    private readonly analysisService: SubmissionAnalysisService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
-   * Run code for testing (without saving submission)
+   * Execute test run (no database submission)
    */
   async executeTestRun(
     createSubmissionDto: CreateSubmissionDto,
   ): Promise<{ submissionId: string }> {
     const { problemId, languageId, sourceCode, testCases } =
       createSubmissionDto;
+
+    this.logger.log(
+      `Executing test run for problem ${problemId}, language ${languageId}, testcases: ${testCases?.length || 0}`,
+    );
+
     const problem = await this.problemsService.findProblemEntityById(problemId);
     const language = await this.languagesService.findById(languageId);
 
     const submissionId = uuidV4();
+    this.logger.debug(`Generated submission ID: ${submissionId}`);
 
     return this.submitBatch(
       submissionId,
@@ -73,7 +94,7 @@ export class SubmissionsService {
   }
 
   /**
-   * Submit a solution for grading
+   * Submit code for grading (creates database record)
    */
   async submitForGrading(
     createSubmissionDto: CreateSubmissionDto,
@@ -82,34 +103,37 @@ export class SubmissionsService {
   ): Promise<{ submissionId: string }> {
     const { problemId, languageId, sourceCode } = createSubmissionDto;
 
-    // Verify problem and language exist
+    this.logger.log(
+      `User ${userId} submitting solution for problem ${problemId}, language ${languageId}`,
+    );
+
     const problem = await this.problemsService.findProblemEntityById(problemId);
     const language = await this.languagesService.findById(languageId);
 
-    // Check if problem has testcases
     if (!problem.testcaseFileKey) {
       throw new BadRequestException('Problem has no testcases');
     }
 
-    // Create submission record
-    const submission = this.submissionRepository.create({
-      user: { id: userId },
-      problem: { id: problemId },
-      language: { id: languageId },
+    const submission = await this.createSubmissionRecord(
+      userId,
+      problemId,
+      languageId,
       sourceCode,
-      status: SubmissionStatus.PENDING,
-      totalTestcases: problem.testcaseCount,
-      passedTestcases: 0,
+      problem.testcaseCount,
       ipAddress,
-    });
+    );
 
-    const savedSubmission = await this.submissionRepository.save(submission);
+    // Emit submission created event
+    this.eventEmitter.emit(
+      SUBMISSION_EVENTS.CREATED,
+      new SubmissionCreatedEvent(submission.id, userId, problemId, languageId),
+    );
 
-    // Update user progress (only tracks attempts, acceptance tracked after judging)
+    // Update user progress (tracks attempts)
     await this.userProgress.updateProgressOnSubmit(userId, problemId);
 
     return this.submitBatch(
-      savedSubmission.id.toString(),
+      submission.id.toString(),
       language.judge0Id,
       sourceCode,
       problem,
@@ -118,7 +142,34 @@ export class SubmissionsService {
   }
 
   /**
-   * Submit batch of testcases to Judge0
+   * Create submission database record
+   */
+  private async createSubmissionRecord(
+    userId: number,
+    problemId: number,
+    languageId: number,
+    sourceCode: string,
+    totalTestcases: number,
+    ipAddress?: string,
+  ): Promise<Submission> {
+    const submission = this.submissionRepository.create({
+      user: { id: userId },
+      problem: { id: problemId },
+      language: { id: languageId },
+      sourceCode,
+      status: SubmissionStatus.PENDING,
+      totalTestcases,
+      passedTestcases: 0,
+      ipAddress,
+    });
+
+    const saved = await this.submissionRepository.save(submission);
+    this.logger.log(`Submission ${saved.id} created for user ${userId}`);
+    return saved;
+  }
+
+  /**
+   * Submit batch to Judge0 and initialize tracking
    */
   private async submitBatch(
     submissionId: string,
@@ -128,14 +179,14 @@ export class SubmissionsService {
     isSubmit: boolean,
     testcases?: CreateSubmissionDto['testCases'],
   ): Promise<{ submissionId: string }> {
-    // Validate testcases for run mode
+    this.logger.log(
+      `[${submissionId}] Submitting batch - mode: ${isSubmit ? 'SUBMIT' : 'RUN'}`,
+    );
+
     if (!isSubmit && (!testcases || testcases.length === 0)) {
-      throw new Error(
-        'testCases must be a non-empty array when not using testcase file.',
-      );
+      throw new BadRequestException('testCases required for run mode');
     }
 
-    // Build Judge0 payloads
     const items = isSubmit
       ? await this.payloadBuilder.buildPayloadsForSubmit(
           submissionId,
@@ -152,275 +203,141 @@ export class SubmissionsService {
         );
 
     if (items.length === 0) {
-      throw new Error('No testcases found for submission.');
+      throw new BadRequestException('No testcases found');
     }
 
-    // Submit to Judge0
     const judge0BatchResponse: Judge0BatchResponse =
       await this.judge0Service.createSubmissionBatch(items);
 
-    // Verify response
     if (judge0BatchResponse.length !== items.length) {
-      throw new Error(
-        `Judge0 returned ${judge0BatchResponse.length} tokens, expected ${items.length}. submissionId=${submissionId}`,
+      throw new InternalServerErrorException(
+        `Judge0 token count mismatch: expected ${items.length}, got ${judge0BatchResponse.length}`,
       );
     }
 
-    // Initialize Redis tracking
     await this.submissionTracker.initializeTracking(
       submissionId,
       items.length,
       problem.id,
     );
 
+    this.logger.log(`[${submissionId}] ✓ Batch submitted successfully`);
     return { submissionId };
   }
 
   /**
-   * Get submissions with filtering and pagination
+   * Update submission after judging (called by finalize processor)
    */
-  async getSubmissions(
-    filterDto: FilterSubmissionDto,
-    userId?: number,
-  ): Promise<PaginatedResultDto<SubmissionListResponseDto>> {
-    const {
-      problemId,
-      languageId,
-      status,
-      fromDate,
-      toDate,
-      minRuntimeMs,
-      maxRuntimeMs,
-      minMemoryKb,
-      maxMemoryKb,
-      acceptedOnly,
-    } = filterDto;
-
-    const queryBuilder = this.submissionRepository
-      .createQueryBuilder('submission')
-      .leftJoinAndSelect('submission.problem', 'problem')
-      .leftJoinAndSelect('submission.language', 'language')
-      .leftJoinAndSelect('submission.user', 'user');
-
-    // Filter by user if userId provided
-    if (userId) {
-      queryBuilder.andWhere('submission.user.id = :userId', { userId });
-    }
-
-    // Apply basic filters
-    if (problemId) {
-      queryBuilder.andWhere('submission.problem.id = :problemId', {
-        problemId,
-      });
-    }
-
-    if (languageId) {
-      queryBuilder.andWhere('submission.language.id = :languageId', {
-        languageId,
-      });
-    }
-
-    if (status) {
-      queryBuilder.andWhere('submission.status = :status', { status });
-    }
-
-    // Apply accepted only filter
-    if (acceptedOnly) {
-      queryBuilder.andWhere('submission.status = :acceptedStatus', {
-        acceptedStatus: SubmissionStatus.ACCEPTED,
-      });
-    }
-
-    // Apply date range filters
-    if (fromDate) {
-      queryBuilder.andWhere('submission.submittedAt >= :fromDate', {
-        fromDate,
-      });
-    }
-
-    if (toDate) {
-      queryBuilder.andWhere('submission.submittedAt <= :toDate', { toDate });
-    }
-
-    // Apply runtime filters
-    if (minRuntimeMs !== undefined) {
-      queryBuilder.andWhere('submission.runtimeMs >= :minRuntimeMs', {
-        minRuntimeMs,
-      });
-    }
-
-    if (maxRuntimeMs !== undefined) {
-      queryBuilder.andWhere('submission.runtimeMs <= :maxRuntimeMs', {
-        maxRuntimeMs,
-      });
-    }
-
-    // Apply memory filters
-    if (minMemoryKb !== undefined) {
-      queryBuilder.andWhere('submission.memoryKb >= :minMemoryKb', {
-        minMemoryKb,
-      });
-    }
-
-    if (maxMemoryKb !== undefined) {
-      queryBuilder.andWhere('submission.memoryKb <= :maxMemoryKb', {
-        maxMemoryKb,
-      });
-    }
-
-    // Apply sorting
-    const sortBy = filterDto.sortBy || 'submittedAt';
-    const sortOrder = filterDto.sortOrder || 'DESC';
-    queryBuilder.orderBy(`submission.${sortBy}`, sortOrder);
-
-    // Apply pagination
-    queryBuilder.skip(filterDto.skip).take(filterDto.take);
-
-    // Get data and count
-    const [submissions, total] = await queryBuilder.getManyAndCount();
-
-    // Map to list response DTOs
-    const data = SubmissionMapper.toListResponseDtos(submissions);
-
-    return new PaginatedResultDto(data, {
-      page: filterDto.page ?? 1,
-      limit: filterDto.limit ?? 20,
-      total,
-    });
-  }
-
-  /**
-   * Get submission by ID
-   * @param id Submission ID
-   * @param userId Optional user ID to filter by (for authorization)
-   * @param includeSourceCode Whether to include source code in response
-   */
-  async getSubmissionById(
-    id: number,
-    userId?: number,
-    includeSourceCode = false,
-  ): Promise<SubmissionResponseDto> {
-    const queryBuilder = this.submissionRepository
-      .createQueryBuilder('submission')
-      .leftJoinAndSelect('submission.problem', 'problem')
-      .leftJoinAndSelect('submission.language', 'language')
-      .leftJoinAndSelect('submission.user', 'user')
-      .where('submission.id = :id', { id });
-
-    // Filter by user if provided
-    if (userId) {
-      queryBuilder.andWhere('submission.user.id = :userId', { userId });
-    }
-
-    const submission = await queryBuilder.getOne();
-
-    if (!submission) {
-      throw new NotFoundException(`Submission with ID ${id} not found`);
-    }
-
-    // Include source code only for own submissions
-    const isOwner = submission.user?.id === userId;
-
-    return SubmissionMapper.toResponseDto(submission, {
-      includeSourceCode: includeSourceCode && isOwner,
-      includeUser: !userId, // Include user info for admin views
-    });
-  }
-
-  /**
-   * Get all submissions for current user
-   */
-  async getUserSubmissions(
-    userId: number,
-    filterDto: FilterSubmissionDto,
-  ): Promise<PaginatedResultDto<SubmissionListResponseDto>> {
-    return this.getSubmissions(filterDto, userId);
-  }
-
-  /**
-   * Validate that the status is a valid SubmissionStatus value
-   */
-  private validateSubmissionStatus(status: SubmissionStatus): void {
-    const validStatuses = Object.values(SubmissionStatus);
-    if (!validStatuses.includes(status)) {
-      throw new BadRequestException(
-        `Invalid submission status: ${status}. Valid statuses are: ${validStatuses.join(', ')}`,
-      );
-    }
-  }
-
-  /**
-   * Get the first failed testcase result for error reporting
-   */
-  private getFirstFailedResult(
-    testcaseResults: TestCaseResult[],
-  ): TestCaseResult | undefined {
-    return testcaseResults.find((tc) => tc.status !== 'Accepted');
-  }
-
-  /**
-   * Update submission result (called when Judge0 returns results)
-   */
-  async updateSubmissionResult(
-    id: number,
+  async updateSubmissionAfterJudge(
+    submissionId: number,
     status: SubmissionStatus,
-    testcaseResults: TestCaseResult[],
+    passedTestcases: number,
+    totalTestcases: number,
     runtimeMs?: number,
     memoryKb?: number,
-    errorMessage?: string,
-    compileOutput?: string,
-  ): Promise<Submission> {
-    // Validate status
-    this.validateSubmissionStatus(status);
-
+    resultDescription?: ResultDescription,
+  ): Promise<void> {
     const submission = await this.submissionRepository.findOne({
-      where: { id },
+      where: { id: submissionId },
       relations: ['user', 'problem'],
     });
 
     if (!submission) {
-      throw new NotFoundException(`Submission with ID ${id} not found`);
+      this.logger.warn(`Submission ${submissionId} not found`);
+      return;
     }
 
-    // Prevent updating already judged submissions (idempotency)
     if (submission.judgedAt !== null) {
-      return submission; // Already judged, return as-is
+      this.logger.log(`Submission ${submissionId} already judged`);
+      return;
     }
 
-    // Calculate passed testcases
-    const passedTestcases = testcaseResults.filter(
-      (tc) => tc.status === 'Accepted',
-    ).length;
-
-    // Get first failed testcase for error reporting
-    const failedResult = this.getFirstFailedResult(testcaseResults);
-
-    // Update submission
     submission.status = status;
-    submission.resultDescription = failedResult
-      ? {
-          input: failedResult.input,
-          actualOutput: failedResult.actualOutput,
-          expectedOutput: failedResult.expectedOutput,
-          message: errorMessage ?? failedResult.error ?? '',
-          stderr: failedResult.stderr,
-          compileOutput,
-        }
-      : {
-          message: errorMessage ?? '',
-          compileOutput,
-        };
     submission.passedTestcases = passedTestcases;
     submission.runtimeMs = runtimeMs ?? null;
     submission.memoryKb = memoryKb ?? null;
+    submission.resultDescription = resultDescription
+      ? {
+          ...resultDescription,
+          message: resultDescription.message ?? 'Unknown Error',
+        }
+      : null;
     submission.judgedAt = new Date();
 
-    const updatedSubmission = await this.submissionRepository.save(submission);
+    await this.submissionRepository.save(submission);
 
-    // Update problem statistics
-    await this.updateProblemStatistics(submission.problem.id, status);
+    // Emit judged event (will trigger stats update via event handler)
+    this.eventEmitter.emit(
+      SUBMISSION_EVENTS.JUDGED,
+      new SubmissionJudgedEvent(
+        submissionId,
+        submission.user.id,
+        submission.problem.id,
+        status,
+        passedTestcases,
+        totalTestcases,
+        runtimeMs,
+        memoryKb,
+      ),
+    );
 
-    // Update user progress
+    // Check if this is first AC
+    const wasFirstSolve = await this.handleAcceptedSubmission(
+      submission,
+      status,
+      runtimeMs,
+      memoryKb,
+    );
+
+    if (wasFirstSolve) {
+      this.eventEmitter.emit(
+        SUBMISSION_EVENTS.PROBLEM_SOLVED,
+        new ProblemSolvedEvent(
+          submissionId,
+          submission.user.id,
+          submission.problem.id,
+        ),
+      );
+    }
+
+    // Invalidate cache
+    await this.userStatistics.invalidateUserStatisticsCache(submission.user.id);
+  }
+
+  /**
+   * Handle accepted submission logic
+   * Returns true if this is first AC
+   */
+  private async handleAcceptedSubmission(
+    submission: Submission,
+    status: SubmissionStatus,
+    runtimeMs?: number,
+    memoryKb?: number,
+  ): Promise<boolean> {
+    if (status !== SubmissionStatus.ACCEPTED) {
+      return false;
+    }
+
+    // Emit accepted event
+    this.eventEmitter.emit(
+      SUBMISSION_EVENTS.ACCEPTED,
+      new SubmissionAcceptedEvent(
+        submission.id,
+        submission.user.id,
+        submission.problem.id,
+        runtimeMs,
+        memoryKb,
+      ),
+    );
+
+    // Check if first solve
+    const progressBefore = await this.userProgress.getUserProgress(
+      submission.user.id,
+      submission.problem.id,
+    );
+    const wasFirstSolve = progressBefore?.status !== ProgressStatus.SOLVED;
+
+    // Update progress
     await this.userProgress.updateProgressAfterJudge(
       submission.user.id,
       submission.problem.id,
@@ -430,58 +347,96 @@ export class SubmissionsService {
       memoryKb,
     );
 
-    // Invalidate user statistics cache
-    await this.userStatistics.invalidateUserStatisticsCache(submission.user.id);
+    return wasFirstSolve;
+  }
 
-    return updatedSubmission;
+  // ==================== Delegation Methods ====================
+
+  /**
+   * Get submissions (delegates to retrieval service)
+   */
+  async getSubmissions(
+    filterDto: FilterSubmissionDto,
+    userId?: number,
+  ): Promise<PaginatedResultDto<SubmissionListResponseDto>> {
+    return this.retrievalService.getSubmissions(filterDto, userId);
   }
 
   /**
-   * Get user's progress on a specific problem
+   * Get submission by ID (delegates to retrieval service)
+   */
+  async getSubmissionById(
+    id: number,
+    userId?: number,
+    includeSourceCode = false,
+  ): Promise<SubmissionResponseDto> {
+    return this.retrievalService.getSubmissionById(
+      id,
+      userId,
+      includeSourceCode,
+    );
+  }
+
+  /**
+   * Get user submissions (delegates to retrieval service)
+   */
+  async getUserSubmissions(
+    userId: number,
+    filterDto: FilterSubmissionDto,
+  ): Promise<PaginatedResultDto<SubmissionListResponseDto>> {
+    return this.retrievalService.getSubmissions(filterDto, userId);
+  }
+
+  /**
+   * Get user problem progress (delegates to progress service)
    */
   async getUserProblemProgress(userId: number, problemId: number) {
     return this.userProgress.getUserProgress(userId, problemId);
   }
 
   /**
-   * Get all problem progress for a user with pagination
+   * Get all user progress (delegates to progress service)
    */
   async getUserAllProgress(
     userId: number,
-    paginationDto?: PaginationQueryDto,
+    paginationDto: PaginationQueryDto,
   ): Promise<PaginatedResultDto<UserProblemProgress>> {
     return this.userProgress.getAllUserProgress(userId, paginationDto);
   }
 
   /**
-   * Get user statistics
+   * Get user statistics (delegates to statistics service)
    */
   async getUserStatistics(userId: number) {
     return this.userStatistics.getUserStatistics(userId);
   }
 
   /**
-   * Update problem statistics (private helper)
+   * Get relevant submissions (delegates to analysis service)
    */
-  private async updateProblemStatistics(
+  async getRelevantSubmissions(
     problemId: number,
-    status: SubmissionStatus,
-  ): Promise<void> {
-    const problem = await this.problemsService.findProblemEntityById(problemId);
+    languageId?: number,
+    limit: number = 10,
+  ) {
+    return this.analysisService.getRelevantSubmissions(
+      problemId,
+      languageId,
+      limit,
+    );
+  }
 
-    problem.totalSubmissions += 1;
+  /**
+   * Get performance stats (delegates to analysis service)
+   */
+  async getPerformanceStats(submissionId: number) {
+    return this.analysisService.calculatePerformanceStats(submissionId);
+  }
 
-    if (status === SubmissionStatus.ACCEPTED) {
-      problem.totalAccepted += 1;
-    }
-
-    // Calculate acceptance rate
-    if (problem.totalSubmissions > 0) {
-      problem.acceptanceRate = Number(
-        ((problem.totalAccepted / problem.totalSubmissions) * 100).toFixed(2),
-      );
-    }
-
-    await this.problemsService.updateProblemStats(problemId);
+  /**
+   * Get top performers (delegates to analysis service)
+   */
+  async getTopPerformers(problemId: number, limit: number = 10) {
+    return this.analysisService.getTopPerformers(problemId, limit);
   }
 }

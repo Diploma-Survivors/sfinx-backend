@@ -1,4 +1,5 @@
 export enum SortBy {
+  ID = 'id',
   SUBMITTED_AT = 'submittedAt',
   JUDGED_AT = 'judgedAt',
   STATUS = 'status',
