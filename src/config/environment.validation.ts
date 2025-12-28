@@ -57,9 +57,11 @@ export const environmentValidation = Joi.object({
   REDIS_TTL: Joi.number().default(3600), // 1 hour in seconds
 
   AWS_REGION: Joi.string().required(),
+  AWS_S3_REGION: Joi.string().optional(),
   AWS_ACCESS_KEY_ID: Joi.string().required(),
   AWS_SECRET_ACCESS_KEY: Joi.string().required(),
   AWS_S3_BUCKET: Joi.string().required(),
+  AWS_CLOUDFRONT_URL: Joi.string().uri().required(),
 
   // VnPay Configuration
   VNPAY_TMN_CODE: Joi.string().required(),

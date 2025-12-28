@@ -2,6 +2,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -128,6 +129,28 @@ export class StorageService {
   }
 
   /**
+   * Construct CloudFront URL from S3 key
+   * @param key - S3 object key (e.g., "avatars/123/1735500000.jpg")
+   * @returns CloudFront URL (e.g., "https://cdn.example.com/avatars/123/1735500000.jpg")
+   */
+  getCloudFrontUrl(key: string): string {
+    if (!key) {
+      throw new Error('S3 key is required to construct CloudFront URL');
+    }
+
+    const cloudFrontUrl = this.awsConfig.cloudFront.url;
+    // Remove trailing slash from CloudFront URL if present
+    const baseUrl = cloudFrontUrl.endsWith('/')
+      ? cloudFrontUrl.slice(0, -1)
+      : cloudFrontUrl;
+
+    // Remove leading slash from key if present
+    const cleanKey = key.startsWith('/') ? key.slice(1) : key;
+
+    return `${baseUrl}/${cleanKey}`;
+  }
+
+  /**
    * Download a file from S3
    */
   async downloadFile(key: string): Promise<Buffer> {
@@ -242,6 +265,74 @@ export class StorageService {
       throw new Error(
         `Failed to generate presigned URL: ${(error as Error).message}`,
       );
+    }
+  }
+
+  /**
+   * Generate a presigned URL for uploading files to S3
+   * @param key - S3 object key where file will be stored
+   * @param expiresIn - URL expiration time in seconds (default: 900 = 15 minutes)
+   * @param contentType - MIME type of the file to be uploaded
+   * @param maxSizeBytes - Maximum file size in bytes (optional, not enforced by S3)
+   * @returns Presigned PUT URL
+   */
+  async getPresignedUploadUrl(
+    key: string,
+    expiresIn: number = 900,
+    contentType: string,
+    maxSizeBytes?: number,
+  ): Promise<string> {
+    try {
+      const command = new PutObjectCommand({
+        Bucket: this.awsConfig.s3.bucketName,
+        Key: key,
+        ContentType: contentType,
+        ContentLength: maxSizeBytes,
+      });
+
+      // Generate presigned URL with specific expiration
+      const presignedUrl = await getSignedUrl(this.s3Client, command, {
+        expiresIn,
+      });
+
+      this.logger.log(
+        `Generated presigned upload URL for key: ${key} (expires in ${expiresIn}s)`,
+      );
+
+      return presignedUrl;
+    } catch (error) {
+      this.logger.error(
+        `Failed to generate presigned upload URL for ${key}:`,
+        error,
+      );
+      throw new Error(
+        `Failed to generate presigned upload URL: ${(error as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * List all objects with a specific prefix
+   * @param prefix - S3 key prefix (e.g., "avatars/123/")
+   * @returns Array of S3 keys
+   */
+  async listObjectsByPrefix(prefix: string): Promise<string[]> {
+    try {
+      const command = new ListObjectsV2Command({
+        Bucket: this.awsConfig.s3.bucketName,
+        Prefix: prefix,
+      });
+
+      const response = await this.s3Client.send(command);
+
+      if (!response.Contents || response.Contents.length === 0) {
+        return [];
+      }
+
+      return response.Contents.filter((obj) => obj.Key).map((obj) => obj.Key!);
+    } catch (error) {
+      this.logger.error(`Failed to list objects with prefix ${prefix}:`, error);
+      throw new Error(`Failed to list objects: ${(error as Error).message}`);
     }
   }
 }
