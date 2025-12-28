@@ -19,13 +19,14 @@ import {
 } from 'src/common/decorators/cacheable.decorator';
 import { PaginatedResultDto } from 'src/common/dto/paginated-result.dto';
 
+import { SortOrder } from 'src/common';
+import { Transactional } from 'typeorm-transactional';
 import {
   CreateProgrammingLanguageDto,
   QueryProgrammingLanguageDto,
   UpdateProgrammingLanguageDto,
 } from './dto';
 import { ProgrammingLanguage } from './entities/programming-language.entity';
-import { Transactional } from 'typeorm-transactional';
 
 @Injectable()
 export class ProgrammingLanguageService {
@@ -70,7 +71,7 @@ export class ProgrammingLanguageService {
     // Execute query with pagination
     const result = await this.languageRepository.findAndCount({
       where,
-      order: { orderIndex: 'ASC', name: 'ASC' },
+      order: { orderIndex: SortOrder.ASC, name: SortOrder.ASC },
       skip: query.skip,
       take: query.take,
     });
@@ -92,7 +93,7 @@ export class ProgrammingLanguageService {
   async findAllActive(): Promise<ProgrammingLanguage[]> {
     return this.languageRepository.find({
       where: { isActive: true },
-      order: { orderIndex: 'ASC', name: 'ASC' },
+      order: { orderIndex: SortOrder.ASC, name: SortOrder.ASC },
     });
   }
 
