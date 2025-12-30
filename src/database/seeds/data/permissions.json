@@ -218,5 +218,55 @@
     "resource": "sample_testcase",
     "action": "delete",
     "description": "Delete sample testcases"
+  },
+  {
+    "resource": "solution",
+    "action": "create",
+    "description": "Create solutions"
+  },
+  {
+    "resource": "solution",
+    "action": "read",
+    "description": "View solutions"
+  },
+  {
+    "resource": "solution",
+    "action": "update",
+    "description": "Update solutions"
+  },
+  {
+    "resource": "solution",
+    "action": "delete",
+    "description": "Delete solutions"
+  },
+  {
+    "resource": "solution",
+    "action": "vote",
+    "description": "Vote on solutions"
+  },
+  {
+    "resource": "solution_comment",
+    "action": "create",
+    "description": "Create solution comments"
+  },
+  {
+    "resource": "solution_comment",
+    "action": "read",
+    "description": "View solution comments"
+  },
+  {
+    "resource": "solution_comment",
+    "action": "update",
+    "description": "Update solution comments"
+  },
+  {
+    "resource": "solution_comment",
+    "action": "delete",
+    "description": "Delete solution comments"
+  },
+  {
+    "resource": "solution_comment",
+    "action": "vote",
+    "description": "Vote on solution comments"
   }
 ]

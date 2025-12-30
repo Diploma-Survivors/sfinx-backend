@@ -49,6 +49,7 @@ import { RedisModule } from './modules/redis/redis.module';
 import { SubmissionsModule } from './modules/submissions/submissions.module';
 import { ContestModule } from './modules/contest/contest.module';
 import { UsersModule } from './modules/users/users.module';
+import { SolutionsModule } from './modules/solutions/solutions.module';
 import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
@@ -127,6 +128,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     ProgrammingLanguageModule,
     ContestModule,
     UsersModule,
+    SolutionsModule,
     // PaymentsModule,
     // AiModule,
     // CommunityModule,
