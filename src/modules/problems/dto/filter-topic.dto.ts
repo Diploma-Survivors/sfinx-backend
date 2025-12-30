@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
 import { IsBoolean, IsEnum, IsOptional } from 'class-validator';
 import { PaginationQueryDto } from '../../../common';
+import { ToBoolean } from '../../../common/decorators/transform.decorators';
 
 export enum TopicSortBy {
   ID = 'id',
@@ -16,7 +16,7 @@ export class FilterTopicDto extends PaginationQueryDto {
   })
   @IsOptional()
   @IsBoolean()
-  @Type(() => Boolean)
+  @ToBoolean()
   isActive?: boolean;
 
   @ApiPropertyOptional({

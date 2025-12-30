@@ -2,8 +2,9 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsDate, IsEnum, IsOptional, IsString } from 'class-validator';
 import { PaginationQueryDto } from '../../../common';
-import { ContestSortBy } from '../enums/contest-sort-by.enum';
-import { ContestStatus } from '../enums/contest-status.enum';
+import { ContestSortBy } from '../enums';
+import { ContestStatus } from '../enums';
+import { ToBoolean } from '../../../common/decorators/transform.decorators';
 
 export class FilterContestDto extends PaginationQueryDto {
   @ApiPropertyOptional({
@@ -46,11 +47,11 @@ export class FilterContestDto extends PaginationQueryDto {
 
   @ApiPropertyOptional({ description: 'Include only upcoming contests' })
   @IsOptional()
-  @Type(() => Boolean)
+  @ToBoolean()
   upcomingOnly?: boolean;
 
   @ApiPropertyOptional({ description: 'Include only running contests' })
   @IsOptional()
-  @Type(() => Boolean)
+  @ToBoolean()
   runningOnly?: boolean;
 }

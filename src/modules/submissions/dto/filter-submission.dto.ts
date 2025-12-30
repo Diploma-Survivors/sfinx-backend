@@ -11,6 +11,7 @@ import {
 import { PaginationQueryDto } from '../../../common';
 import { SortBy } from '../enums/sort-by.enum';
 import { SubmissionStatus } from '../enums/submission-status.enum';
+import { ToBoolean } from '../../../common/decorators/transform.decorators';
 
 export class FilterSubmissionDto extends PaginationQueryDto {
   @ApiPropertyOptional({
@@ -130,6 +131,6 @@ export class FilterSubmissionDto extends PaginationQueryDto {
     type: Boolean,
   })
   @IsOptional()
-  @Type(() => Boolean)
+  @ToBoolean()
   acceptedOnly?: boolean;
 }

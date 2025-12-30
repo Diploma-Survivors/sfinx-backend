@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsBoolean, IsEnum, IsOptional } from 'class-validator';
-import { Type } from 'class-transformer';
 import { PaginationQueryDto } from '../../../../common';
+import { ToBoolean } from '../../../../common/decorators/transform.decorators';
 
 /**
  * Sort fields for comment reports
@@ -22,7 +22,7 @@ export class FilterCommentReportDto extends PaginationQueryDto {
     example: false,
   })
   @IsOptional()
-  @Type(() => Boolean)
+  @ToBoolean()
   @IsBoolean()
   isResolved?: boolean;
 

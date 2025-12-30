@@ -8,9 +8,10 @@ import {
   IsString,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../common';
-import { ProgressStatus } from '../../submissions/enums/progress-status.enum';
+import { ProgressStatus } from '../../submissions/enums';
 import { ProblemDifficulty } from '../enums/problem-difficulty.enum';
 import { SortBy } from '../enums/sort-by.enum';
+import { ToBoolean } from '../../../common/decorators/transform.decorators';
 
 export class FilterProblemDto extends PaginationQueryDto {
   @ApiPropertyOptional({
@@ -55,7 +56,7 @@ export class FilterProblemDto extends PaginationQueryDto {
   })
   @IsOptional()
   @IsBoolean()
-  @Type(() => Boolean)
+  @ToBoolean()
   isPremium?: boolean;
 
   @ApiPropertyOptional({
@@ -64,7 +65,7 @@ export class FilterProblemDto extends PaginationQueryDto {
   })
   @IsOptional()
   @IsBoolean()
-  @Type(() => Boolean)
+  @ToBoolean()
   isActive?: boolean;
 
   @ApiPropertyOptional({

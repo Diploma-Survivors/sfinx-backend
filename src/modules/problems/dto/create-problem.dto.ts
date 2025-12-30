@@ -22,6 +22,7 @@ import {
 } from 'src/common';
 
 import { ProblemDifficulty } from '../enums/problem-difficulty.enum';
+import { ToBoolean } from '../../../common/decorators/transform.decorators';
 
 export class SampleTestcaseDto {
   @ApiProperty({ description: 'Input', example: '1 2 3' })
@@ -86,7 +87,7 @@ export class CreateProblemDto {
     description: 'Whether problem requires premium',
   })
   @IsOptional()
-  @Type(() => Boolean)
+  @ToBoolean()
   @IsBoolean()
   isPremium?: boolean;
 
@@ -94,7 +95,7 @@ export class CreateProblemDto {
     description: 'Whether problem is active',
   })
   @IsOptional()
-  @Type(() => Boolean)
+  @ToBoolean()
   @IsBoolean()
   isActive?: boolean;
 
