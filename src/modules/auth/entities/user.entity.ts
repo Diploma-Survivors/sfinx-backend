@@ -84,7 +84,7 @@ export class User {
     description: 'User rank',
     example: 0,
   })
-  @Column({ default: 0 })
+  @Column({ name: 'user_rank', default: 0 })
   rank: number;
 
   @ApiProperty({

@@ -198,5 +198,25 @@
     "resource": "language",
     "action": "deactivate",
     "description": "Deactivate programming languages"
+  },
+  {
+    "resource": "sample_testcase",
+    "action": "create",
+    "description": "Create sample testcases"
+  },
+  {
+    "resource": "sample_testcase",
+    "action": "read",
+    "description": "View sample testcases"
+  },
+  {
+    "resource": "sample_testcase",
+    "action": "update",
+    "description": "Update sample testcases"
+  },
+  {
+    "resource": "sample_testcase",
+    "action": "delete",
+    "description": "Delete sample testcases"
   }
 ]

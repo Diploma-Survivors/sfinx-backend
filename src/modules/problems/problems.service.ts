@@ -89,6 +89,8 @@ export class ProblemsService {
     // Final save with testcase metadata
     await this.problemRepository.save(savedProblem);
 
+    await this.updateSearchVector(savedProblem.id);
+
     return savedProblem;
   }
 
@@ -240,11 +242,24 @@ export class ProblemsService {
     const sortBy = filterDto.sortBy;
     const sortOrder = filterDto.sortOrder;
 
+    // Ensure the sort column is selected to avoid "distinctAlias" errors
+    const sortColumn = `problem.${sortBy}`;
+
+    // Only add to selection if it's not already in the selected fields
+    const isAlreadySelected =
+      commonFields.includes(sortColumn) ||
+      (canReadAll &&
+        ['problem.createdAt', 'problem.updatedAt'].includes(sortColumn));
+
+    if (!isAlreadySelected) {
+      queryBuilder.addSelect(sortColumn);
+    }
+
     // If searching, order by relevance (rank) first, then by sortBy
     if (search) {
       queryBuilder.orderBy('rank', 'DESC');
     }
-    queryBuilder.addOrderBy(`problem.${sortBy}`, sortOrder);
+    queryBuilder.addOrderBy(sortColumn, sortOrder);
 
     queryBuilder.skip(filterDto.skip).take(filterDto.take);
 
@@ -498,7 +513,9 @@ export class ProblemsService {
       }
     }
 
-    return this.problemRepository.save(problem);
+    const savedProblem = await this.problemRepository.save(problem);
+    await this.updateSearchVector(savedProblem.id);
+    return savedProblem;
   }
 
   @Transactional()
@@ -545,5 +562,19 @@ export class ProblemsService {
     }
 
     return queryBuilder.orderBy('RANDOM()').limit(count).getMany();
+  }
+
+  private async updateSearchVector(problemId: number) {
+    await this.problemRepository
+      .createQueryBuilder()
+      .update(Problem)
+      .set({
+        searchVector: () =>
+          `setweight(to_tsvector('english', coalesce(title, '')), 'A') || 
+           setweight(to_tsvector('english', coalesce(slug, '')), 'B') ||
+           setweight(to_tsvector('english', coalesce(description, '')), 'C')`,
+      })
+      .where('id = :id', { id: problemId })
+      .execute();
   }
 }

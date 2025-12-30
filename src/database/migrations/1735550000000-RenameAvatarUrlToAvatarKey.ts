@@ -5,10 +5,15 @@ export class RenameAvatarUrlToAvatarKey1735550000000 implements MigrationInterfa
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Rename column from avatar_url to avatar_key
-    await queryRunner.query(`
-      ALTER TABLE "users"
-      RENAME COLUMN "avatar_url" TO "avatar_key"
-    `);
+    const hasAvatarUrl = await queryRunner.hasColumn('users', 'avatar_url');
+    const hasAvatarKey = await queryRunner.hasColumn('users', 'avatar_key');
+
+    if (hasAvatarUrl && !hasAvatarKey) {
+      await queryRunner.query(`
+          ALTER TABLE "users"
+          RENAME COLUMN "avatar_url" TO "avatar_key"
+        `);
+    }
 
     // Update comment to reflect that it stores S3 keys
     await queryRunner.query(`

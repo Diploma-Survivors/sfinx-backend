@@ -6,14 +6,16 @@ export class AddContestModule1735000000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Create contest_status_enum
     await queryRunner.query(`
-      CREATE TYPE "contest_status_enum" AS ENUM (
-        'Draft', 'Scheduled', 'Running', 'Ended', 'Cancelled'
-      )
+      DO $$ BEGIN
+        CREATE TYPE "contest_status_enum" AS ENUM ('Draft', 'Scheduled', 'Running', 'Ended', 'Cancelled');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
     `);
 
     // Create contests table
     await queryRunner.query(`
-      CREATE TABLE "contests" (
+      CREATE TABLE IF NOT EXISTS "contests" (
         "id" SERIAL NOT NULL,
         "title" VARCHAR(255) NOT NULL,
         "slug" VARCHAR(255) NOT NULL,
@@ -37,18 +39,18 @@ export class AddContestModule1735000000000 implements MigrationInterface {
 
     // Create indexes for contests
     await queryRunner.query(`
-      CREATE INDEX "IDX_contests_status" ON "contests" ("status")
+      CREATE INDEX IF NOT EXISTS "IDX_contests_status" ON "contests" ("status")
     `);
     await queryRunner.query(`
-      CREATE INDEX "IDX_contests_start_time" ON "contests" ("start_time")
+      CREATE INDEX IF NOT EXISTS "IDX_contests_start_time" ON "contests" ("start_time")
     `);
     await queryRunner.query(`
-      CREATE INDEX "IDX_contests_slug" ON "contests" ("slug")
+      CREATE INDEX IF NOT EXISTS "IDX_contests_slug" ON "contests" ("slug")
     `);
 
     // Create contest_problems junction table
     await queryRunner.query(`
-      CREATE TABLE "contest_problems" (
+      CREATE TABLE IF NOT EXISTS "contest_problems" (
         "contest_id" INTEGER NOT NULL,
         "problem_id" INTEGER NOT NULL,
         "points" INTEGER NOT NULL DEFAULT 100,
@@ -63,12 +65,12 @@ export class AddContestModule1735000000000 implements MigrationInterface {
     `);
 
     await queryRunner.query(`
-      CREATE INDEX "IDX_contest_problems_contest" ON "contest_problems" ("contest_id")
+      CREATE INDEX IF NOT EXISTS "IDX_contest_problems_contest" ON "contest_problems" ("contest_id")
     `);
 
     // Create contest_participants table
     await queryRunner.query(`
-      CREATE TABLE "contest_participants" (
+      CREATE TABLE IF NOT EXISTS "contest_participants" (
         "contest_id" INTEGER NOT NULL,
         "user_id" INTEGER NOT NULL,
         "total_score" DECIMAL(10,2) NOT NULL DEFAULT 0,
@@ -87,29 +89,35 @@ export class AddContestModule1735000000000 implements MigrationInterface {
     `);
 
     await queryRunner.query(`
-      CREATE INDEX "IDX_contest_participants_contest" ON "contest_participants" ("contest_id")
+      CREATE INDEX IF NOT EXISTS "IDX_contest_participants_contest" ON "contest_participants" ("contest_id")
     `);
     await queryRunner.query(`
-      CREATE INDEX "IDX_contest_participants_user" ON "contest_participants" ("user_id")
+      CREATE INDEX IF NOT EXISTS "IDX_contest_participants_user" ON "contest_participants" ("user_id")
     `);
     await queryRunner.query(`
-      CREATE INDEX "IDX_contest_participants_rank" ON "contest_participants" ("contest_id", "rank")
+      CREATE INDEX IF NOT EXISTS "IDX_contest_participants_rank" ON "contest_participants" ("contest_id", "rank")
     `);
     await queryRunner.query(`
-      CREATE INDEX "IDX_contest_participants_score" ON "contest_participants" ("contest_id", "total_score" DESC)
+      CREATE INDEX IF NOT EXISTS "IDX_contest_participants_score" ON "contest_participants" ("contest_id", "total_score" DESC)
     `);
 
     // Add contest_id to submissions table
-    await queryRunner.query(`
-      ALTER TABLE "submissions" ADD COLUMN "contest_id" INTEGER
-    `);
-    await queryRunner.query(`
-      ALTER TABLE "submissions" ADD CONSTRAINT "FK_submissions_contest"
-        FOREIGN KEY ("contest_id") REFERENCES "contests"("id") ON DELETE SET NULL
-    `);
-    await queryRunner.query(`
-      CREATE INDEX "IDX_submissions_contest" ON "submissions" ("contest_id")
-    `);
+    const hasContestId = await queryRunner.hasColumn(
+      'submissions',
+      'contest_id',
+    );
+    if (!hasContestId) {
+      await queryRunner.query(`
+          ALTER TABLE "submissions" ADD COLUMN "contest_id" INTEGER
+        `);
+      await queryRunner.query(`
+          ALTER TABLE "submissions" ADD CONSTRAINT "FK_submissions_contest"
+            FOREIGN KEY ("contest_id") REFERENCES "contests"("id") ON DELETE SET NULL
+        `);
+      await queryRunner.query(`
+          CREATE INDEX "IDX_submissions_contest" ON "submissions" ("contest_id")
+        `);
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
