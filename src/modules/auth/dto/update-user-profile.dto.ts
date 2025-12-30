@@ -21,11 +21,17 @@ export class UpdateUserProfileDto {
   @MaxLength(500)
   bio?: string;
 
-  @ApiPropertyOptional({ description: 'User location', maxLength: 100 })
+  @ApiPropertyOptional({ description: 'User address', maxLength: 255 })
   @IsOptional()
   @IsString()
-  @MaxLength(100)
-  location?: string;
+  @MaxLength(255)
+  address?: string;
+
+  @ApiPropertyOptional({ description: 'Phone number', maxLength: 20 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  phone?: string;
 
   @ApiPropertyOptional({ description: 'GitHub username', maxLength: 39 })
   @IsOptional()

@@ -310,9 +310,9 @@ export class AuthController {
     status: 401,
     description: 'Unauthorized',
   })
-  // eslint-disable-next-line @typescript-eslint/require-await
   async getCurrentUser(@GetUser() user: User): Promise<UserProfileResponseDto> {
-    return this.authService.transformUserResponse(user);
+    const fetchUser = await this.authService.getUserProfile(user.id);
+    return this.authService.transformUserResponse(fetchUser);
   }
 
   @Throttle({

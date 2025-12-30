@@ -24,6 +24,15 @@ export class FilterProblemDto extends PaginationQueryDto {
 
   @ApiPropertyOptional({
     description:
+      'Filter problems based on a specific user progress. If provided, status filtering applies to this user. Defaults to current user if not provided.',
+    type: Number,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  userId?: number;
+
+  @ApiPropertyOptional({
+    description:
       'Field to sort by. Defaults to "id". Options: "id", "difficulty", "acceptanceRate", "createdAt", "updatedAt". Note: If "search" is provided, results are automatically sorted by relevance first.',
     enum: SortBy,
     default: SortBy.ID,
@@ -48,6 +57,15 @@ export class FilterProblemDto extends PaginationQueryDto {
   @IsBoolean()
   @Type(() => Boolean)
   isPremium?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Filter by active status. true = active only, false = inactive only.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  isActive?: boolean;
 
   @ApiPropertyOptional({
     description:

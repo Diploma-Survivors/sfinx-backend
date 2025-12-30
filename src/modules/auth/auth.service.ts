@@ -270,6 +270,19 @@ export class AuthService {
     return user;
   }
 
+  async getUserProfile(userId: number): Promise<User> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['role', 'role.permissions'],
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
+
   private async generateAuthResponse(
     user: User,
     ipAddress?: string,
@@ -551,7 +564,11 @@ export class AuthService {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
-    if (!ALLOWED_AVATAR_MIME_TYPES.includes(contentType as any)) {
+    if (
+      !ALLOWED_AVATAR_MIME_TYPES.includes(
+        contentType as (typeof ALLOWED_AVATAR_MIME_TYPES)[number],
+      )
+    ) {
       throw new BadRequestException(
         `Invalid content type. Allowed: ${ALLOWED_AVATAR_MIME_TYPES.join(', ')}`,
       );
@@ -560,7 +577,9 @@ export class AuthService {
     const fileExtension = fileName.split('.').pop()?.toLowerCase();
     if (
       !fileExtension ||
-      !ALLOWED_AVATAR_EXTENSIONS.includes(fileExtension as any)
+      !ALLOWED_AVATAR_EXTENSIONS.includes(
+        fileExtension as (typeof ALLOWED_AVATAR_EXTENSIONS)[number],
+      )
     ) {
       throw new BadRequestException(
         `Invalid file extension. Allowed: ${ALLOWED_AVATAR_EXTENSIONS.join(', ')}`,
@@ -693,9 +712,8 @@ export class AuthService {
     const dto = plainToInstance(UserProfileResponseDto, user);
 
     if (dto.avatarKey && this.isS3Key(dto.avatarKey)) {
-      (dto as any).avatarUrl = this.storageService.getCloudFrontUrl(
-        dto.avatarKey,
-      );
+      (dto as UserProfileResponseDto & { avatarUrl?: string }).avatarUrl =
+        this.storageService.getCloudFrontUrl(dto.avatarKey);
     }
 
     return dto;

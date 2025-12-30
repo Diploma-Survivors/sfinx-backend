@@ -14,13 +14,11 @@ import {
   Cacheable,
   CacheInvalidate,
 } from '../../../common/decorators/cacheable.decorator';
-import {
-  PaginatedResultDto,
-  PaginationQueryDto,
-  SortOrder,
-} from '../../../common/dto';
+import { PaginatedResultDto, SortOrder } from '../../../common/dto';
+import { FindOptionsWhere } from 'typeorm';
 import { CacheKeys } from '../../redis/utils/cache-key.builder';
 import { Tag } from '../entities/tag.entity';
+import { FilterTagDto } from '../dto/filter-tag.dto';
 
 @Injectable()
 export class TagService {
@@ -47,11 +45,17 @@ export class TagService {
    * Get paginated tags for admin
    */
   async findAllPaginated(
-    query: PaginationQueryDto,
+    query: FilterTagDto,
   ): Promise<PaginatedResultDto<Tag>> {
-    const { skip, take, sortBy, sortOrder } = query;
+    const { skip, take, sortBy, sortOrder, isActive } = query;
+
+    const where: FindOptionsWhere<Tag> = {};
+    if (isActive !== undefined) {
+      where.isActive = isActive;
+    }
 
     const result = await this.tagRepository.findAndCount({
+      where,
       skip,
       take,
       order: sortBy ? { [sortBy]: sortOrder } : { name: SortOrder.ASC },

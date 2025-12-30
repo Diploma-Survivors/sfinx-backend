@@ -19,14 +19,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import {
-  CheckAbility,
-  PaginatedResultDto,
-  PaginationQueryDto,
-} from '../../common';
+import { CheckAbility, PaginatedResultDto } from '../../common';
 import { CaslGuard } from '../auth/guards/casl.guard';
 import { Action } from '../rbac/casl/casl-ability.factory';
 import { CreateTagDto } from './dto/create-tag.dto';
+import { FilterTagDto } from './dto/filter-tag.dto';
 import { UpdateTagDto } from './dto/update-tag.dto';
 import { Tag } from './entities/tag.entity';
 import { TagService } from './services/tag.service';
@@ -64,7 +61,7 @@ export class TagsController {
     type: PaginatedResultDto<Tag>,
   })
   async getPaginatedTags(
-    @Query() query: PaginationQueryDto,
+    @Query() query: FilterTagDto,
   ): Promise<PaginatedResultDto<Tag>> {
     return this.tagService.findAllPaginated(query);
   }

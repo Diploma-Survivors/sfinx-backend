@@ -168,15 +168,21 @@ export class ProblemsService {
       queryBuilder.select(commonFields);
     }
 
-    // Join user progress if needed (Authenticated user AND (not admin OR filtering by status))
-    const shouldJoinProgress = user && (!canReadAll || !!status);
+    const targetUserId = filterDto.userId ?? user?.id;
+
+    // Join user progress if needed:
+    // 1. Filtering by status (requires progress)
+    // 2. Explicitly requesting specific user's progress (userId provided)
+    // 3. Authenticated normal user viewing list (needs to see their own progress)
+    const shouldJoinProgress =
+      targetUserId && (!!status || !!filterDto.userId || !canReadAll);
 
     if (shouldJoinProgress) {
       queryBuilder.leftJoinAndSelect(
         'problem.userProgress',
         'user_progress',
         'user_progress.userId = :userId',
-        { userId: user.id },
+        { userId: targetUserId },
       );
 
       if (status) {
@@ -202,6 +208,10 @@ export class ProblemsService {
     // Only apply active filters if user doesn't have read_all permission
     if (!canReadAll) {
       queryBuilder.andWhere('problem.isActive = :isActive', { isActive: true });
+    } else if (filterDto.isActive !== undefined) {
+      queryBuilder.andWhere('problem.isActive = :isActive', {
+        isActive: filterDto.isActive,
+      });
     }
 
     if (difficulty) {
@@ -260,7 +270,13 @@ export class ProblemsService {
   async findProblemEntityById(id: number): Promise<Problem> {
     const problem = await this.problemRepository.findOne({
       where: { id },
-      relations: ['topics', 'tags', 'createdBy', 'updatedBy'],
+      relations: [
+        'topics',
+        'tags',
+        'createdBy',
+        'updatedBy',
+        'sampleTestcases',
+      ],
     });
 
     if (!problem) {

@@ -65,12 +65,27 @@ export class User {
   bio: string;
 
   @ApiProperty({
-    description: 'User location',
+    description: 'User address',
     required: false,
-    example: 'New York, NY',
+    example: '123 Street, City',
   })
-  @Column({ nullable: true, length: 100 })
-  location: string;
+  @Column({ nullable: true, length: 255 })
+  address: string;
+
+  @ApiProperty({
+    description: 'Phone number',
+    required: false,
+    example: '0901234567',
+  })
+  @Column({ nullable: true, length: 20 })
+  phone: string;
+
+  @ApiProperty({
+    description: 'User rank',
+    example: 0,
+  })
+  @Column({ default: 0 })
+  rank: number;
 
   @ApiProperty({
     description: 'Website URL',

@@ -19,14 +19,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import {
-  CheckAbility,
-  PaginatedResultDto,
-  PaginationQueryDto,
-} from '../../common';
+import { CheckAbility, PaginatedResultDto } from '../../common';
 import { CaslGuard } from '../auth/guards/casl.guard';
 import { Action } from '../rbac/casl/casl-ability.factory';
 import { CreateTopicDto } from './dto/create-topic.dto';
+import { FilterTopicDto } from './dto/filter-topic.dto';
 import { UpdateTopicDto } from './dto/update-topic.dto';
 import { Topic } from './entities/topic.entity';
 import { TopicService } from './services/topic.service';
@@ -65,7 +62,7 @@ export class TopicsController {
     type: PaginatedResultDto<Topic>,
   })
   async getPaginatedTopics(
-    @Query() query: PaginationQueryDto,
+    @Query() query: FilterTopicDto,
   ): Promise<PaginatedResultDto<Topic>> {
     return this.topicService.findAllPaginated(query);
   }

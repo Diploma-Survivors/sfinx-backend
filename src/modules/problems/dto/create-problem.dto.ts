@@ -20,7 +20,7 @@ import {
   JsonTransformToObject,
   TESTCASE_FILE_FIELD_NAME,
 } from 'src/common';
-import { ProblemHint } from '../entities/problem.entity';
+
 import { ProblemDifficulty } from '../enums/problem-difficulty.enum';
 
 export class SampleTestcaseDto {
@@ -36,6 +36,21 @@ export class SampleTestcaseDto {
   @IsOptional()
   @IsString()
   explanation?: string;
+}
+
+export class CreateProblemHintDto {
+  @ApiProperty({ description: 'Hint order', example: 1 })
+  @IsInt()
+  @IsNotEmpty()
+  order: number;
+
+  @ApiProperty({
+    description: 'Hint content',
+    example: 'Think about using a hash map',
+  })
+  @IsString()
+  @IsNotEmpty()
+  content: string;
 }
 
 export class CreateProblemDto {
@@ -122,14 +137,14 @@ export class CreateProblemDto {
 
   @ApiPropertyOptional({
     description: 'Hints array',
-    type: () => [ProblemHint],
+    type: () => [CreateProblemHintDto],
     example: [{ order: 1, content: 'Think about using a hash map' }],
   })
   @IsOptional()
-  @JsonTransformToInstance(ProblemHint)
+  @JsonTransformToInstance(CreateProblemHintDto)
   @IsArray()
   @ValidateNested({ each: true })
-  hints?: ProblemHint[];
+  hints?: CreateProblemHintDto[];
 
   @ApiPropertyOptional({ description: 'Official solution content' })
   @IsOptional()
