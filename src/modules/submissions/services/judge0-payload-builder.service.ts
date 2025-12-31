@@ -64,7 +64,7 @@ export class Judge0PayloadBuilderService {
     try {
       testcaseSource = useAWS
         ? await this.storageService.getPresignedUrl(problem.testcaseFileKey)
-        : `${TESTCASE_DESTINATION_FOLDER}/${problem.testcaseFileKey}`;
+        : `${TESTCASE_DESTINATION_FOLDER}/local.json`;
     } catch (error) {
       this.logger.error(
         `Failed to get testcase source for problem ${problem.id}:`,
@@ -221,16 +221,9 @@ export class Judge0PayloadBuilderService {
     expectedOutput: string | undefined,
     isSubmit: boolean,
   ): Judge0SubmissionPayload {
-    const encodedSource = encodeBase64(sourceCode);
-    if (!encodedSource) {
-      this.logger.error(
-        `Encoded source code is empty! Original length: ${sourceCode.length}`,
-      );
-    }
-
     return {
       language_id: judge0LanguageId,
-      source_code: encodedSource,
+      source_code: encodeBase64(sourceCode),
       stdin: stdinRaw ? encodeBase64(stdinRaw) : undefined,
       expected_output: expectedOutput
         ? encodeBase64(expectedOutput)
