@@ -69,6 +69,14 @@ export class LanguageInfoDto {
   name: string;
 }
 
+export class ContestInfoDto {
+  @ApiProperty({ description: 'Contest ID' })
+  id: number;
+
+  @ApiProperty({ description: 'Contest title' })
+  title: string;
+}
+
 export class SubmissionResponseDto {
   @ApiProperty({ description: 'Submission ID', type: Number })
   id: number;
@@ -136,6 +144,12 @@ export class SubmissionResponseDto {
   })
   user?: AuthorDto;
 
+  @ApiPropertyOptional({
+    description: 'Contest information (if submission is in contest)',
+    type: ContestInfoDto,
+  })
+  contest?: ContestInfoDto;
+
   @ApiPropertyOptional({ description: 'Source code (own submissions only)' })
   sourceCode?: string;
 }
@@ -185,4 +199,10 @@ export class SubmissionListResponseDto {
     type: AuthorDto,
   })
   author?: AuthorDto;
+
+  @ApiPropertyOptional({
+    description: 'Contest information (if submission is in contest)',
+    type: ContestInfoDto,
+  })
+  contest?: ContestInfoDto;
 }

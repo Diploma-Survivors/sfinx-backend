@@ -1,5 +1,6 @@
 import { Submission } from '../entities/submission.entity';
 import {
+  ContestInfoDto,
   FailedResultDto,
   LanguageInfoDto,
   ProblemInfoDto,
@@ -73,6 +74,14 @@ export class SubmissionMapper {
           }
         : undefined;
 
+    // Build contest info if loaded
+    const contest: ContestInfoDto | undefined = submission.contest
+      ? {
+          id: submission.contest.id,
+          title: submission.contest.title,
+        }
+      : undefined;
+
     return {
       id: submission.id,
       status: submission.status,
@@ -90,6 +99,7 @@ export class SubmissionMapper {
       problem,
       language,
       user,
+      contest,
       sourceCode: includeSourceCode
         ? (submission.sourceCode ?? undefined)
         : undefined,
@@ -133,6 +143,14 @@ export class SubmissionMapper {
           }
         : undefined;
 
+    // Build contest info if loaded
+    const contest: ContestInfoDto | undefined = submission.contest
+      ? {
+          id: submission.contest.id,
+          title: submission.contest.title,
+        }
+      : undefined;
+
     return {
       id: submission.id,
       status: submission.status,
@@ -146,6 +164,7 @@ export class SubmissionMapper {
       problem,
       language,
       author,
+      contest,
     };
   }
 
