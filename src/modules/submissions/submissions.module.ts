@@ -30,6 +30,7 @@ import {
   SubmissionSseService,
   SubmissionStatsCalculatorService,
   SubmissionTrackerService,
+  TestcaseReaderService,
   UserProgressService,
   UserStatisticsService,
 } from './services';
@@ -93,6 +94,7 @@ import { SubmissionsService } from './submissions.service';
     ResultDescriptionGeneratorService,
     Judge0PayloadBuilderService,
     SubmissionTrackerService,
+    TestcaseReaderService,
     UserProgressService,
     UserStatisticsService,
 

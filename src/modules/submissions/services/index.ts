@@ -8,5 +8,6 @@ export * from './submission-retrieval.service';
 export * from './submission-sse.service';
 export * from './submission-stats-calculator.service';
 export * from './submission-tracker.service';
+export * from './testcase-reader.service';
 export * from './user-progress.service';
 export * from './user-statistics.service';
