@@ -2,20 +2,14 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PaginatedResultDto, SortOrder } from '../../../common';
-import { getAvatarUrl } from '../../../common/utils';
-import { CacheService } from '../../redis/services/cache.service';
-import { PubSubService } from '../../redis/services/pubsub.service';
+import { getAvatarUrl } from '../../../common';
+import { CacheService } from '../../redis';
+import { PubSubService } from '../../redis';
 import { StorageService } from '../../storage/storage.service';
-import { CacheKeys } from '../../redis/utils/cache-key.builder';
-import {
-  LeaderboardEntryDto,
-  ProblemScoreDto,
-} from '../dto/leaderboard-entry.dto';
-import {
-  ContestParticipant,
-  ProblemScore,
-} from '../entities/contest-participant.entity';
-import { ContestProblem } from '../entities/contest-problem.entity';
+import { CacheKeys } from '../../redis';
+import { LeaderboardEntryDto, ProblemScoreDto } from '../dto';
+import { ContestParticipant, ProblemScore } from '../entities';
+import { ContestProblem } from '../entities';
 import { ILeaderboardEntry, ILeaderboardUpdateEvent } from '../interfaces';
 
 /** Cache TTL for leaderboard (30 seconds for near-real-time) */

@@ -3,20 +3,22 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../../auth/entities/user.entity';
 import { Problem } from '../../problems/entities/problem.entity';
-import { Contest } from '../../contest/entities/contest.entity';
+import { Contest } from '../../contest/entities';
 import { Submission } from '../../submissions/entities/submission.entity';
 import {
   PaymentTransaction,
   PaymentStatus,
 } from '../../payments/entities/payment-transaction.entity';
-import { Cacheable } from '../../../common/decorators/cacheable.decorator';
-import { CACHE_TTL } from '../../../common/constants/cache.constant';
+import { Cacheable } from '../../../common';
+import { CACHE_TTL } from '../../../common';
 import {
   PlatformStatisticsDto,
   PlatformMetricsDto,
   GrowthMetricsDto,
   EngagementMetricsDto,
   RevenueMetricsDto,
+  TimeSeriesMetricsDto,
+  TimeSeriesDataPointDto,
 } from '../dto/platform-statistics.dto';
 
 @Injectable()
@@ -336,5 +338,166 @@ export class PlatformStatisticsService {
       newPremiumThisMonth,
       averageRevenuePerUser: Math.round(averageRevenuePerUser * 100) / 100,
     };
+  }
+
+  /**
+   * Get time series metrics for the last 30 days
+   */
+  @Cacheable({
+    key: () => 'platform:timeseries',
+    ttl: CACHE_TTL.FIVE_MINUTES,
+  })
+  async getTimeSeriesMetrics(): Promise<TimeSeriesMetricsDto> {
+    this.logger.log('Fetching time series metrics for last 30 days');
+
+    const [
+      dailyNewUsers,
+      dailySubmissions,
+      dailyActiveUsers,
+      dailyRevenue,
+      dailyAcceptedSubmissions,
+    ] = await Promise.all([
+      this.getDailyNewUsers(),
+      this.getDailySubmissions(),
+      this.getDailyActiveUsers(),
+      this.getDailyRevenue(),
+      this.getDailyAcceptedSubmissions(),
+    ]);
+
+    return {
+      dailyNewUsers,
+      dailySubmissions,
+      dailyActiveUsers,
+      dailyRevenue,
+      dailyAcceptedSubmissions,
+    };
+  }
+
+  /**
+   * Get daily new user registrations for last 30 days
+   */
+  private async getDailyNewUsers(): Promise<TimeSeriesDataPointDto[]> {
+    const results = await this.userRepository
+      .createQueryBuilder('user')
+      .select("DATE(user.createdAt AT TIME ZONE 'UTC')", 'date')
+      .addSelect('COUNT(*)', 'value')
+      .where("user.createdAt >= NOW() - INTERVAL '30 days'")
+      .andWhere('user.isBanned = false')
+      .groupBy("DATE(user.createdAt AT TIME ZONE 'UTC')")
+      .orderBy('date', 'ASC')
+      .getRawMany<{ date: string; value: string }>();
+
+    return this.fillMissingDates(results);
+  }
+
+  /**
+   * Get daily submission counts for last 30 days
+   */
+  private async getDailySubmissions(): Promise<TimeSeriesDataPointDto[]> {
+    const results = await this.submissionRepository
+      .createQueryBuilder('submission')
+      .select("DATE(submission.createdAt AT TIME ZONE 'UTC')", 'date')
+      .addSelect('COUNT(*)', 'value')
+      .where("submission.createdAt >= NOW() - INTERVAL '30 days'")
+      .groupBy("DATE(submission.createdAt AT TIME ZONE 'UTC')")
+      .orderBy('date', 'ASC')
+      .getRawMany<{ date: string; value: string }>();
+
+    return this.fillMissingDates(results);
+  }
+
+  /**
+   * Get daily active users for last 30 days
+   */
+  private async getDailyActiveUsers(): Promise<TimeSeriesDataPointDto[]> {
+    const results = await this.userRepository
+      .createQueryBuilder('user')
+      .select("DATE(user.lastActiveAt AT TIME ZONE 'UTC')", 'date')
+      .addSelect('COUNT(DISTINCT user.id)', 'value')
+      .where("user.lastActiveAt >= NOW() - INTERVAL '30 days'")
+      .andWhere('user.isBanned = false')
+      .groupBy("DATE(user.lastActiveAt AT TIME ZONE 'UTC')")
+      .orderBy('date', 'ASC')
+      .getRawMany<{ date: string; value: string }>();
+
+    return this.fillMissingDates(results);
+  }
+
+  /**
+   * Get daily revenue for last 30 days
+   */
+  private async getDailyRevenue(): Promise<TimeSeriesDataPointDto[]> {
+    const results = await this.paymentRepository
+      .createQueryBuilder('payment')
+      .select("DATE(payment.paymentDate AT TIME ZONE 'UTC')", 'date')
+      .addSelect('COALESCE(SUM(payment.amount), 0)', 'value')
+      .where("payment.paymentDate >= NOW() - INTERVAL '30 days'")
+      .andWhere('payment.status = :status', { status: PaymentStatus.SUCCESS })
+      .groupBy("DATE(payment.paymentDate AT TIME ZONE 'UTC')")
+      .orderBy('date', 'ASC')
+      .getRawMany<{ date: string; value: string }>();
+
+    return this.fillMissingDates(results, true);
+  }
+
+  /**
+   * Get daily accepted submissions for last 30 days
+   */
+  private async getDailyAcceptedSubmissions(): Promise<
+    TimeSeriesDataPointDto[]
+  > {
+    const results = await this.submissionRepository
+      .createQueryBuilder('submission')
+      .select("DATE(submission.createdAt AT TIME ZONE 'UTC')", 'date')
+      .addSelect('COUNT(*)', 'value')
+      .where("submission.createdAt >= NOW() - INTERVAL '30 days'")
+      .andWhere('submission.status = :status', { status: 'ACCEPTED' })
+      .groupBy("DATE(submission.createdAt AT TIME ZONE 'UTC')")
+      .orderBy('date', 'ASC')
+      .getRawMany<{ date: string; value: string }>();
+
+    return this.fillMissingDates(results);
+  }
+
+  /**
+   * Fill missing dates with zero values for continuous time series
+   */
+  private fillMissingDates(
+    results: { date: string; value: string }[],
+    isDecimal = false,
+  ): TimeSeriesDataPointDto[] {
+    const dataMap = new Map<string, number>();
+
+    // Convert results to map
+    results.forEach((r) => {
+      const dateValue = r.date as unknown;
+      const dateStr =
+        dateValue instanceof Date
+          ? dateValue.toISOString().split('T')[0]
+          : String(r.date).split('T')[0];
+      dataMap.set(
+        dateStr,
+        isDecimal ? parseFloat(r.value) : parseInt(r.value, 10),
+      );
+    });
+
+    // Generate all dates for last 30 days
+    const filledData: TimeSeriesDataPointDto[] = [];
+    const today = new Date();
+
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+
+      filledData.push({
+        date: dateStr,
+        value: isDecimal
+          ? Math.round((dataMap.get(dateStr) ?? 0) * 100) / 100
+          : (dataMap.get(dateStr) ?? 0),
+      });
+    }
+
+    return filledData;
   }
 }

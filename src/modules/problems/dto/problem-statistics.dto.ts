@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { SubmissionStatus } from '../../submissions/enums/submission-status.enum';
+import { SubmissionStatus } from '../../submissions/enums';
 
 export class LanguageBreakdownDto {
   @ApiProperty({ description: 'Programming language ID' })

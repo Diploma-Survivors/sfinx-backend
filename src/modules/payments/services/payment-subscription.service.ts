@@ -5,7 +5,7 @@ import { CronJob } from 'cron';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../../auth/entities/user.entity';
-import { PaymentConfig } from '../../../config/payment.config';
+import { PaymentConfig } from '../../../config';
 
 @Injectable()
 export class PaymentSubscriptionService implements OnModuleInit {
@@ -34,7 +34,7 @@ export class PaymentSubscriptionService implements OnModuleInit {
     this.logger.log('Current time: ' + new Date().toISOString());
 
     const job = new CronJob(cronSchedule, () => {
-      this.handleExpiredPremiumSubscriptions();
+      void this.handleExpiredPremiumSubscriptions();
     });
 
     this.schedulerRegistry.addCronJob('premium-expiration-check', job);

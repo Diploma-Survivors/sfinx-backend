@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 
 import { Submission } from '../../submissions/entities/submission.entity';
-import { SubmissionStatus } from '../../submissions/enums/submission-status.enum';
+import { SubmissionStatus } from '../../submissions/enums';
 import {
   LanguageBreakdownDto,
   ProblemStatisticsDto,

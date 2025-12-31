@@ -3,15 +3,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 
 import { Submission } from '../../submissions/entities/submission.entity';
-import { SubmissionStatus } from '../../submissions/enums/submission-status.enum';
+import { SubmissionStatus } from '../../submissions/enums';
 import {
   ContestProblemStatsDto,
   ContestStatisticsDto,
   ContestStatusDistributionDto,
 } from '../dto/contest-statistics.dto';
-import { Contest } from '../entities/contest.entity';
-import { ContestParticipant } from '../entities/contest-participant.entity';
-import { ContestProblem } from '../entities/contest-problem.entity';
+import { Contest, ContestParticipant, ContestProblem } from '../entities';
 
 @Injectable()
 export class ContestStatisticsService {

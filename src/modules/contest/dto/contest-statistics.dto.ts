@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { SubmissionStatus } from '../../submissions/enums/submission-status.enum';
-import { ContestStatus } from '../enums/contest-status.enum';
+import { SubmissionStatus } from '../../submissions/enums';
+import { ContestStatus } from '../enums';
 
 export class ContestStatusDistributionDto {
   @ApiProperty({

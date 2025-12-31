@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CommentType } from '../enums';
-import { BaseCommentResponseDto } from '../../../comments-base/dto/base-comment-response.dto';
+import { BaseCommentResponseDto } from '../../../comments-base/dto';
 import { AuthorDto } from '../../../users/dtos/author.dto';
 
 export class CommentResponseDto extends BaseCommentResponseDto {

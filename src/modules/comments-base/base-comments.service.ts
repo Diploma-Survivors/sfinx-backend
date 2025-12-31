@@ -13,12 +13,12 @@ import { BaseComment } from './entities/base-comment.entity';
 import { BaseCommentVote } from './entities/base-comment-vote.entity';
 import { StorageService } from '../storage/storage.service';
 
-import { BaseCreateCommentDto } from './dto/base-create-comment.dto';
-import { BaseUpdateCommentDto } from './dto/base-update-comment.dto';
-import { BaseCommentResponseDto } from './dto/base-comment-response.dto';
+import { BaseCreateCommentDto } from './dto';
+import { BaseUpdateCommentDto } from './dto';
+import { BaseCommentResponseDto } from './dto';
 import { AuthorDto } from '../users/dtos/author.dto';
-import { VoteType } from './enums/vote-type.enum';
-import { getAvatarUrl } from '../../common/utils';
+import { VoteType } from './enums';
+import { getAvatarUrl } from '../../common';
 
 export abstract class BaseCommentsService<
   CommentEntity extends BaseComment,

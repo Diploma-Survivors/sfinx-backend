@@ -9,7 +9,7 @@ import {
 } from '../dto/submission-response.dto';
 import { AuthorDto } from '../../users/dtos/author.dto';
 import { StorageService } from '../../storage/storage.service';
-import { getAvatarUrl } from '../../../common/utils';
+import { getAvatarUrl } from '../../../common';
 
 export interface MapperOptions {
   includeSourceCode?: boolean;

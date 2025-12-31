@@ -6,9 +6,9 @@ import { Submission } from '../submissions/entities/submission.entity';
 import { ContestController } from './controllers/contest.controller';
 import { ContestLeaderboardController } from './controllers/contest-leaderboard.controller';
 import { ContestProblemsController } from './controllers/contest-problems.controller';
-import { Contest } from './entities/contest.entity';
-import { ContestParticipant } from './entities/contest-participant.entity';
-import { ContestProblem } from './entities/contest-problem.entity';
+import { Contest } from './entities';
+import { ContestParticipant } from './entities';
+import { ContestProblem } from './entities';
 import {
   ContestLeaderboardService,
   ContestService,

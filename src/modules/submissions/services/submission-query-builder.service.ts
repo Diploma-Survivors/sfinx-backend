@@ -4,7 +4,7 @@ import { SelectQueryBuilder } from 'typeorm';
 import { SortOrder } from 'src/common';
 import { FilterSubmissionDto } from '../dto/filter-submission.dto';
 import { Submission } from '../entities/submission.entity';
-import { SubmissionStatus } from '../enums/submission-status.enum';
+import { SubmissionStatus } from '../enums';
 
 /**
  * Service for building complex submission queries

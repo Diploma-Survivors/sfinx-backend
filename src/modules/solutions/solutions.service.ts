@@ -1,24 +1,26 @@
 import {
+  ForbiddenException,
   Injectable,
   NotFoundException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, EntityManager, DeepPartial } from 'typeorm';
-import { PaginatedResultDto } from '../../common/dto/paginated-result.dto';
+import { DataSource, DeepPartial, EntityManager, Repository } from 'typeorm';
+import { PaginatedResultDto } from '../../common';
 import { Solution } from './entities/solution.entity';
-import { CreateSolutionDto } from './dto/create-solution.dto';
-import { UpdateSolutionDto } from './dto/update-solution.dto';
-import { FilterSolutionDto, SolutionSortBy } from './dto/filter-solution.dto';
-import { VoteType } from '../comments-base/enums/vote-type.enum';
+import {
+  CreateSolutionDto,
+  FilterSolutionDto,
+  SolutionSortBy,
+  UpdateSolutionDto,
+} from './dto';
+import { VoteType } from '../comments-base/enums';
 import { SolutionVote } from './entities/solution-vote.entity';
-import { ProgrammingLanguage } from '../programming-language/entities/programming-language.entity';
+import { ProgrammingLanguage } from '../programming-language';
 import { Tag } from '../problems/entities/tag.entity';
 import { Problem } from '../problems/entities/problem.entity';
-// import { User } from '../auth/entities/user.entity';
 import { StorageService } from '../storage/storage.service';
-import { SolutionResponseDto } from './dto/solution-response.dto';
-import { getAvatarUrl } from '../../common/utils';
+import { SolutionResponseDto } from './dto';
+import { getAvatarUrl } from '../../common';
 
 @Injectable()
 export class SolutionsService {
@@ -211,11 +213,10 @@ export class SolutionsService {
 
     const dtos = await Promise.all(
       items.map(async (item) => {
-        let voteType: 'up_vote' | 'down_vote' | null = null;
         const vote = await this.solutionVoteRepo.findOne({
           where: { solutionId: item.id, userId },
         });
-        voteType = vote
+        const voteType: 'up_vote' | 'down_vote' | null = vote
           ? vote.voteType === VoteType.UPVOTE
             ? 'up_vote'
             : 'down_vote'

@@ -4,13 +4,13 @@ import { Repository, DataSource } from 'typeorm';
 import { BaseCommentsService } from '../../comments-base/base-comments.service';
 import { Solution } from '../entities/solution.entity';
 import { AuthorDto } from '../../users/dtos/author.dto';
-import { SolutionCommentResponseDto } from '../dto/solution-comment-response.dto';
+import { SolutionCommentResponseDto } from '../dto';
 import { SolutionComment } from '../entities/solution-comment.entity';
 import { SolutionCommentVote } from '../entities/solution-comment-vote.entity';
 import { StorageService } from '../../storage/storage.service';
-import { VoteType } from '../../comments-base/enums/vote-type.enum';
-import { BaseCreateCommentDto } from '../../comments-base/dto/base-create-comment.dto';
-import { getAvatarUrl } from '../../../common/utils';
+import { VoteType } from '../../comments-base/enums';
+import { BaseCreateCommentDto } from '../../comments-base/dto';
+import { getAvatarUrl } from '../../../common';
 
 @Injectable()
 export class SolutionCommentsService extends BaseCommentsService<

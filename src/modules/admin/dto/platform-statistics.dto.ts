@@ -83,6 +83,49 @@ export class EngagementMetricsDto {
   avgSubmissionsPerUser: number;
 }
 
+export class TimeSeriesDataPointDto {
+  @ApiProperty({
+    description: 'Date for this data point',
+    example: '2025-12-25',
+  })
+  date: string;
+
+  @ApiProperty({ description: 'Value for this data point' })
+  value: number;
+}
+
+export class TimeSeriesMetricsDto {
+  @ApiProperty({
+    description: 'Daily new user registrations (last 30 days)',
+    type: [TimeSeriesDataPointDto],
+  })
+  dailyNewUsers: TimeSeriesDataPointDto[];
+
+  @ApiProperty({
+    description: 'Daily submission counts (last 30 days)',
+    type: [TimeSeriesDataPointDto],
+  })
+  dailySubmissions: TimeSeriesDataPointDto[];
+
+  @ApiProperty({
+    description: 'Daily active users (last 30 days)',
+    type: [TimeSeriesDataPointDto],
+  })
+  dailyActiveUsers: TimeSeriesDataPointDto[];
+
+  @ApiProperty({
+    description: 'Daily revenue in USD (last 30 days)',
+    type: [TimeSeriesDataPointDto],
+  })
+  dailyRevenue: TimeSeriesDataPointDto[];
+
+  @ApiProperty({
+    description: 'Daily accepted submissions (last 30 days)',
+    type: [TimeSeriesDataPointDto],
+  })
+  dailyAcceptedSubmissions: TimeSeriesDataPointDto[];
+}
+
 export class PlatformStatisticsDto {
   @ApiProperty({
     description: 'Platform-wide metrics',

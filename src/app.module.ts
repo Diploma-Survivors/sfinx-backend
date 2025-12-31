@@ -46,7 +46,7 @@ import { Judge0Module } from './modules/judge0/judge0.module';
 import { ProblemsModule } from './modules/problems/problems.module';
 import { ProgrammingLanguageModule } from './modules/programming-language';
 import { RbacModule } from './modules/rbac/rbac.module';
-import { RedisModule } from './modules/redis/redis.module';
+import { RedisModule } from './modules/redis';
 import { SubmissionsModule } from './modules/submissions/submissions.module';
 import { ContestModule } from './modules/contest/contest.module';
 import { UsersModule } from './modules/users/users.module';

@@ -9,8 +9,8 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../common';
-import { SortBy } from '../enums/sort-by.enum';
-import { SubmissionStatus } from '../enums/submission-status.enum';
+import { SortBy } from '../enums';
+import { SubmissionStatus } from '../enums';
 import { ToBoolean } from '../../../common/decorators/transform.decorators';
 
 export class FilterSubmissionDto extends PaginationQueryDto {
