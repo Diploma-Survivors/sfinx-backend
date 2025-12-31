@@ -15,7 +15,6 @@ import { PaginatedResultDto } from '../../common';
 import { User } from '../auth/entities/user.entity';
 import { Action, CaslAbilityFactory } from '../rbac/casl/casl-ability.factory';
 import { StorageService } from '../storage/storage.service';
-import { UserProblemProgress } from '../submissions/entities/user-problem-progress.entity';
 import { ProgressStatus } from '../submissions/enums/progress-status.enum';
 import { CreateProblemDto } from './dto/create-problem.dto';
 import { FilterProblemDto } from './dto/filter-problem.dto';
@@ -32,7 +31,6 @@ export class ProblemsService {
   constructor(
     @InjectRepository(Problem)
     private readonly problemRepository: Repository<Problem>,
-    @InjectRepository(UserProblemProgress)
     private readonly testcaseService: TestcaseFileService,
     private readonly caslAbilityFactory: CaslAbilityFactory,
     private readonly topicService: TopicService,
