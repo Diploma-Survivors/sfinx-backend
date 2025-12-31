@@ -59,6 +59,15 @@ export class FilterSubmissionDto extends PaginationQueryDto {
   userId?: number;
 
   @ApiPropertyOptional({
+    description: 'Filter by contest ID (admin only)',
+    type: Number,
+  })
+  @IsInt()
+  @IsOptional()
+  @Type(() => Number)
+  contestId?: number;
+
+  @ApiPropertyOptional({
     description: 'Filter submissions from this date',
     type: Date,
     example: '2024-01-01T00:00:00.000Z',

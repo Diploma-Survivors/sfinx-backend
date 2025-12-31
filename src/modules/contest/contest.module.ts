@@ -15,6 +15,7 @@ import {
   ContestSseService,
   ContestSubmissionService,
 } from './services';
+import { ContestStatisticsService } from './services/contest-statistics.service';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import {
   ],
   providers: [
     ContestService,
+    ContestStatisticsService,
     ContestLeaderboardService,
     ContestSubmissionService,
     ContestSseService,

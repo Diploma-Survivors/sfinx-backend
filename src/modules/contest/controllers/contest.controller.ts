@@ -33,10 +33,12 @@ import { CreateSubmissionDto } from '../../submissions/dto/create-submission.dto
 import { FilterSubmissionDto } from '../../submissions/dto/filter-submission.dto';
 import { SubmissionListResponseDto } from '../../submissions/dto/submission-response.dto';
 import { CreateContestDto } from '../dto/create-contest.dto';
+import { ContestStatisticsDto } from '../dto/contest-statistics.dto';
 import { FilterContestDto } from '../dto/filter-contest.dto';
 import { UpdateContestDto } from '../dto/update-contest.dto';
 import { ContestParticipant } from '../entities/contest-participant.entity';
 import { Contest } from '../entities/contest.entity';
+import { ContestStatisticsService } from '../services/contest-statistics.service';
 import { ContestSubmissionService } from '../services/contest-submission.service';
 import { ContestService } from '../services/contest.service';
 
@@ -45,6 +47,7 @@ import { ContestService } from '../services/contest.service';
 export class ContestController {
   constructor(
     private readonly contestService: ContestService,
+    private readonly contestStatisticsService: ContestStatisticsService,
     private readonly contestSubmissionService: ContestSubmissionService,
   ) {}
 
@@ -119,6 +122,28 @@ export class ContestController {
   })
   async deleteContest(@Param('id') id: string): Promise<void> {
     return this.contestService.deleteContest(+id);
+  }
+
+  @Get(':id/statistics')
+  @UseGuards(CaslGuard)
+  @CheckPolicies(new ManageContestsPolicy())
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Get contest statistics (Admin only)',
+    description:
+      'Get comprehensive statistics for a contest including submission counts, participant counts, and per-problem breakdown',
+  })
+  @ApiParam({ name: 'id', description: 'Contest ID', type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'Contest statistics retrieved successfully',
+    type: ContestStatisticsDto,
+  })
+  @ApiResponse({ status: 404, description: 'Contest not found' })
+  async getContestStatistics(
+    @Param('id') id: string,
+  ): Promise<ContestStatisticsDto> {
+    return this.contestStatisticsService.getContestStatistics(+id);
   }
 
   @Post(':id/register')

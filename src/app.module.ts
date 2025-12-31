@@ -53,6 +53,7 @@ import { UsersModule } from './modules/users/users.module';
 import { SolutionsModule } from './modules/solutions/solutions.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -133,6 +134,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     UsersModule,
     SolutionsModule,
     PaymentsModule,
+    AdminModule,
     // AiModule,
     // CommunityModule,
   ],

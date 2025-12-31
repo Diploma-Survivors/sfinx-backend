@@ -68,6 +68,23 @@ export class ProgrammingLanguageController {
     return languages;
   }
 
+  @Get('all')
+  @ApiOperation({
+    summary: 'Get all programming languages without pagination',
+    description:
+      'Retrieve all programming languages (including inactive) for admin filters and dropdowns',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'All programming languages retrieved successfully',
+    type: [ProgrammingLanguage],
+  })
+  async findAllWithoutPagination() {
+    const languages =
+      await this.programmingLanguageService.findAllWithoutPagination();
+    return languages;
+  }
+
   @Get(':id')
   @ApiOperation({
     summary: 'Get programming language by ID',
