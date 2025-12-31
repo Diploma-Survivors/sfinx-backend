@@ -1,59 +1,72 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { SchedulerRegistry } from '@nestjs/schedule';
+import { CronJob } from 'cron';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThan, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { User } from '../../auth/entities/user.entity';
-import { PAYMENT_CRON_SCHEDULE } from '../../../config';
+import { PaymentConfig } from '../../../config/payment.config';
 
 @Injectable()
-export class PaymentSubscriptionService {
+export class PaymentSubscriptionService implements OnModuleInit {
   private readonly logger = new Logger(PaymentSubscriptionService.name);
 
   constructor(
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    private readonly configService: ConfigService,
+    private readonly schedulerRegistry: SchedulerRegistry,
   ) {}
 
-  @Cron(PAYMENT_CRON_SCHEDULE)
-  async handleExpiredPremiumSubscriptions(): Promise<void> {
-    this.logger.log('Running premium expiration check...');
+  onModuleInit() {
+    const paymentConfig = this.configService.get<PaymentConfig>('payment');
+    const cronSchedule = paymentConfig?.cronSchedule || '0 0 * * *';
+    const cronEnabled = paymentConfig?.cronEnabled ?? false;
 
-    const expiredUsers = await this.findExpiredPremiumUsers();
-
-    if (expiredUsers.length === 0) {
-      this.logger.log('No expired premium subscriptions found.');
+    if (!cronEnabled) {
+      this.logger.log('Premium expiration cron job is DISABLED');
       return;
     }
 
     this.logger.log(
-      `Found ${expiredUsers.length} expired premium subscriptions.`,
+      `Premium expiration cron job initialized with schedule: ${cronSchedule}`,
     );
+    this.logger.log('Current time: ' + new Date().toISOString());
 
-    await this.downgradeToPlan(expiredUsers);
+    const job = new CronJob(cronSchedule, () => {
+      this.handleExpiredPremiumSubscriptions();
+    });
 
+    this.schedulerRegistry.addCronJob('premium-expiration-check', job);
+    job.start();
+  }
+
+  async handleExpiredPremiumSubscriptions(): Promise<void> {
+    this.logger.log('Running premium expiration check...');
+
+    const result = await this.userRepo
+      .createQueryBuilder()
+      .update()
+      .set({
+        isPremium: false,
+        premiumStartedAt: null,
+        premiumExpiresAt: null,
+      })
+      .where('isPremium = :isPremium', { isPremium: true })
+      .andWhere('premiumExpiresAt < :now', { now: new Date() })
+      .returning(['id', 'username'])
+      .execute();
+
+    const affectedUsers = result.raw as Array<{ id: number; username: string }>;
+
+    if (affectedUsers.length === 0) {
+      this.logger.log('No expired premium subscriptions found.');
+      return;
+    }
+
+    const userIds = affectedUsers.map((u) => u.id).join(', ');
     this.logger.log(
-      `Successfully downgraded ${expiredUsers.length} users to free plan.`,
+      `Successfully downgraded ${affectedUsers.length} users to free plan. IDs: [${userIds}]`,
     );
-  }
-
-  private async findExpiredPremiumUsers(): Promise<User[]> {
-    return this.userRepo.find({
-      where: {
-        isPremium: true,
-        premiumExpiresAt: LessThan(new Date()),
-      },
-    });
-  }
-
-  private async downgradeToPlan(users: User[]): Promise<void> {
-    const userIds = users.map((user) => user.id);
-
-    await this.userRepo.update(userIds, {
-      isPremium: false,
-      premiumStartedAt: null,
-      premiumExpiresAt: null,
-    });
-
-    this.logger.log(`Downgraded users: ${userIds.join(', ')}`);
   }
 }

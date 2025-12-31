@@ -1,12 +1,10 @@
 import { registerAs } from '@nestjs/config';
 
-export const PAYMENT_CRON_SCHEDULE =
-  process.env.PAYMENT_CRON_SCHEDULE || '0 0 * * *';
-
 export interface PaymentConfig {
   exchangeRateApiUrl: string;
   exchangeRateApiKey: string;
   cronSchedule: string;
+  cronEnabled: boolean;
 }
 
 export const paymentConfig = registerAs(
@@ -15,6 +13,7 @@ export const paymentConfig = registerAs(
     exchangeRateApiUrl:
       process.env.EXCHANGE_RATE_API_URL || 'https://v6.exchangerate-api.com/v6',
     exchangeRateApiKey: process.env.EXCHANGE_RATE_API_KEY || '',
-    cronSchedule: PAYMENT_CRON_SCHEDULE,
+    cronSchedule: process.env.PAYMENT_CRON_SCHEDULE || '0 0 * * *',
+    cronEnabled: process.env.PAYMENT_CRON_ENABLED === 'true',
   }),
 );
