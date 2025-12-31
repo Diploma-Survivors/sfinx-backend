@@ -8,13 +8,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import { Transactional } from 'typeorm-transactional';
 import {
+  getAvatarUrl,
   MarkdownService,
   PaginatedResultDto,
   SortOrder,
 } from '../../../../common';
 import { StorageService } from '../../../storage/storage.service';
 import {
-  CommentAuthorDto,
+  AuthorDto,
   CommentResponseDto,
   CommentSortBy,
   CreateCommentDto,
@@ -446,10 +447,12 @@ export class ProblemCommentsService extends BaseCommentsService<
     comment: ProblemComment,
     userVotes?: Map<number, number> | null,
   ): CommentResponseDto {
-    const author: CommentAuthorDto = {
+    const author: AuthorDto = {
       id: comment.author?.id,
       username: comment.author?.username,
-      avatarUrl: this.getAvatarUrl(comment.author?.avatarKey) ?? undefined,
+      avatarUrl:
+        getAvatarUrl(comment.author?.avatarKey, this.storageService) ??
+        undefined,
       isPremium: comment.author?.isPremium,
     };
 

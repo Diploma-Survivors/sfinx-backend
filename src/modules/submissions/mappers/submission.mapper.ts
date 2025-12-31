@@ -5,12 +5,15 @@ import {
   ProblemInfoDto,
   SubmissionListResponseDto,
   SubmissionResponseDto,
-  UserInfoDto,
 } from '../dto/submission-response.dto';
+import { AuthorDto } from '../../users/dtos/author.dto';
+import { StorageService } from '../../storage/storage.service';
+import { getAvatarUrl } from '../../../common/utils';
 
 export interface MapperOptions {
   includeSourceCode?: boolean;
   includeUser?: boolean;
+  storageService?: StorageService;
 }
 
 /**
@@ -25,7 +28,11 @@ export class SubmissionMapper {
     submission: Submission,
     options: MapperOptions = {},
   ): SubmissionResponseDto {
-    const { includeSourceCode = false, includeUser = false } = options;
+    const {
+      includeSourceCode = false,
+      includeUser = false,
+      storageService,
+    } = options;
 
     // Extract error data from JSONB structure
     const compileError = submission.resultDescription?.compileOutput;
@@ -54,11 +61,15 @@ export class SubmissionMapper {
       : undefined;
 
     // Build user info if loaded and requested
-    const user: UserInfoDto | undefined =
-      includeUser && submission.user
+    const user: AuthorDto | undefined =
+      includeUser && submission.user && storageService
         ? {
             id: submission.user.id,
             username: submission.user.username,
+            avatarUrl:
+              getAvatarUrl(submission.user.avatarKey, storageService) ??
+              undefined,
+            isPremium: submission.user.isPremium,
           }
         : undefined;
 
@@ -88,7 +99,10 @@ export class SubmissionMapper {
   /**
    * Map Submission entity to SubmissionListResponseDto (lightweight)
    */
-  static toListResponseDto(submission: Submission): SubmissionListResponseDto {
+  static toListResponseDto(
+    submission: Submission,
+    storageService?: StorageService,
+  ): SubmissionListResponseDto {
     // Build problem info if loaded
     const problem: ProblemInfoDto | undefined = submission.problem
       ? {
@@ -106,6 +120,19 @@ export class SubmissionMapper {
         }
       : undefined;
 
+    // Build author info if loaded
+    const author: AuthorDto | undefined =
+      submission.user && storageService
+        ? {
+            id: submission.user.id,
+            username: submission.user.username,
+            avatarUrl:
+              getAvatarUrl(submission.user.avatarKey, storageService) ??
+              undefined,
+            isPremium: submission.user.isPremium,
+          }
+        : undefined;
+
     return {
       id: submission.id,
       status: submission.status,
@@ -118,6 +145,7 @@ export class SubmissionMapper {
       languageId: submission.language?.id ?? 0,
       problem,
       language,
+      author,
     };
   }
 
@@ -142,8 +170,9 @@ export class SubmissionMapper {
    */
   static toListResponseDtos(
     submissions: Submission[],
+    storageService?: StorageService,
   ): SubmissionListResponseDto[] {
-    return submissions.map((s) => this.toListResponseDto(s));
+    return submissions.map((s) => this.toListResponseDto(s, storageService));
   }
 
   /**

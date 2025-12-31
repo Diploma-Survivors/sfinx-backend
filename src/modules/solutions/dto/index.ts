@@ -5,4 +5,4 @@ export * from './solution-comment-response.dto';
 export * from './solution-response.dto';
 export * from './update-solution-comment.dto';
 export * from './update-solution.dto';
-export { CommentAuthorDto as SolutionCommentAuthorDto } from '../../comments-base/dto/comment-author.dto';
+export { AuthorDto as SolutionCommentAuthorDto } from '../../users/dtos/author.dto';

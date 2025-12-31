@@ -3,6 +3,7 @@ import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThan, Repository } from 'typeorm';
 import { User } from '../../auth/entities/user.entity';
+import { PAYMENT_CRON_SCHEDULE } from '../../../config';
 
 @Injectable()
 export class PaymentSubscriptionService {
@@ -13,19 +14,11 @@ export class PaymentSubscriptionService {
     private readonly userRepo: Repository<User>,
   ) {}
 
-  @Cron(process.env.PAYMENT_CRON_SCHEDULE || '0 0 * * *')
-  async handlePremiumExpiration() {
+  @Cron(PAYMENT_CRON_SCHEDULE)
+  async handleExpiredPremiumSubscriptions(): Promise<void> {
     this.logger.log('Running premium expiration check...');
 
-    const now = new Date();
-
-    // Find users who are premium but expired
-    const expiredUsers = await this.userRepo.find({
-      where: {
-        isPremium: true,
-        premiumExpiresAt: LessThan(now),
-      },
-    });
+    const expiredUsers = await this.findExpiredPremiumUsers();
 
     if (expiredUsers.length === 0) {
       this.logger.log('No expired premium subscriptions found.');
@@ -33,16 +26,34 @@ export class PaymentSubscriptionService {
     }
 
     this.logger.log(
-      `Found ${expiredUsers.length} expired subscriptions. Downgrading...`,
+      `Found ${expiredUsers.length} expired premium subscriptions.`,
     );
 
-    for (const user of expiredUsers) {
-      user.isPremium = false;
-      // distinct from premiumExpiresAt, we might want to keep history,
-      // but effectively they are not premium anymore.
+    await this.downgradeToPlan(expiredUsers);
 
-      await this.userRepo.save(user);
-      this.logger.log(`User ${user.id} downgraded to free plan.`);
-    }
+    this.logger.log(
+      `Successfully downgraded ${expiredUsers.length} users to free plan.`,
+    );
+  }
+
+  private async findExpiredPremiumUsers(): Promise<User[]> {
+    return this.userRepo.find({
+      where: {
+        isPremium: true,
+        premiumExpiresAt: LessThan(new Date()),
+      },
+    });
+  }
+
+  private async downgradeToPlan(users: User[]): Promise<void> {
+    const userIds = users.map((user) => user.id);
+
+    await this.userRepo.update(userIds, {
+      isPremium: false,
+      premiumStartedAt: null,
+      premiumExpiresAt: null,
+    });
+
+    this.logger.log(`Downgraded users: ${userIds.join(', ')}`);
   }
 }

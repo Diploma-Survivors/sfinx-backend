@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
 import { Tag } from '../../problems/entities/tag.entity';
-import { CommentAuthorDto } from '../../comments-base/dto/comment-author.dto';
+import { AuthorDto } from '../../users/dtos/author.dto';
 
 export class SolutionResponseDto {
   @ApiProperty()
@@ -24,10 +24,10 @@ export class SolutionResponseDto {
   @Expose()
   authorId: number;
 
-  @ApiProperty({ type: () => CommentAuthorDto })
+  @ApiProperty({ type: () => AuthorDto })
   @Expose()
-  @Type(() => CommentAuthorDto)
-  author: CommentAuthorDto;
+  @Type(() => AuthorDto)
+  author: AuthorDto;
 
   @ApiProperty()
   @Expose()

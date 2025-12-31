@@ -18,6 +18,7 @@ import { Problem } from '../problems/entities/problem.entity';
 // import { User } from '../auth/entities/user.entity';
 import { StorageService } from '../storage/storage.service';
 import { SolutionResponseDto } from './dto/solution-response.dto';
+import { getAvatarUrl } from '../../common/utils';
 
 @Injectable()
 export class SolutionsService {
@@ -35,12 +36,6 @@ export class SolutionsService {
     private readonly dataSource: DataSource,
     private readonly storageService: StorageService,
   ) {}
-
-  private getAvatarUrl(avatarKey: string | null): string | undefined {
-    if (!avatarKey) return undefined;
-    if (avatarKey.startsWith('http')) return avatarKey;
-    return this.storageService.getCloudFrontUrl(avatarKey);
-  }
 
   private mapToResponseDto(
     solution: Solution,
@@ -66,7 +61,9 @@ export class SolutionsService {
         id: solution.author.id,
         username: solution.author.username,
         isPremium: solution.author.isPremium,
-        avatarUrl: this.getAvatarUrl(solution.author.avatarKey),
+        avatarUrl:
+          getAvatarUrl(solution.author.avatarKey, this.storageService) ??
+          undefined,
       };
     }
 

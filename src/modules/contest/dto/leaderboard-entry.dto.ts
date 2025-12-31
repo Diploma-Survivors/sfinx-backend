@@ -25,7 +25,7 @@ export class LeaderboardEntryDto {
   username: string;
 
   @ApiPropertyOptional({ description: 'User avatar URL' })
-  avatarUrl: string | null;
+  avatarUrl?: string;
 
   @ApiProperty({ description: 'Total score (sum of best scores per problem)' })
   totalScore: number;

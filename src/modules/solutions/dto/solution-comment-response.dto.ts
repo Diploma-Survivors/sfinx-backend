@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { CommentAuthorDto } from '../../comments-base/dto/comment-author.dto';
+import { AuthorDto } from '../../users/dtos/author.dto';
 
 export class SolutionCommentResponseDto {
   @ApiProperty({ description: 'Unique identifier', example: 1 })
@@ -44,9 +44,9 @@ export class SolutionCommentResponseDto {
 
   @ApiProperty({
     description: 'Comment author',
-    type: () => CommentAuthorDto,
+    type: () => AuthorDto,
   })
-  author: CommentAuthorDto;
+  author: AuthorDto;
 
   @ApiPropertyOptional({
     description:

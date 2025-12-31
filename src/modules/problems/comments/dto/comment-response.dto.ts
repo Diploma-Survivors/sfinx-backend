@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CommentType } from '../enums';
 import { BaseCommentResponseDto } from '../../../comments-base/dto/base-comment-response.dto';
-import { CommentAuthorDto } from '../../../comments-base/dto/comment-author.dto';
+import { AuthorDto } from '../../../users/dtos/author.dto';
 
 export class CommentResponseDto extends BaseCommentResponseDto {
   @ApiProperty({ description: 'Problem ID', example: 1 })
@@ -50,9 +50,9 @@ export class CommentResponseDto extends BaseCommentResponseDto {
 
   @ApiProperty({
     description: 'Comment author',
-    type: () => CommentAuthorDto,
+    type: () => AuthorDto,
   })
-  declare author: CommentAuthorDto;
+  declare author: AuthorDto;
 
   @ApiPropertyOptional({
     description:

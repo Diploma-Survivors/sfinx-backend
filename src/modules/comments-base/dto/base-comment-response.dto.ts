@@ -1,4 +1,4 @@
-import { CommentAuthorDto } from './comment-author.dto';
+import { AuthorDto } from '../../users/dtos/author.dto';
 
 export class BaseCommentResponseDto {
   id: number;
@@ -9,7 +9,7 @@ export class BaseCommentResponseDto {
   replyCount: number;
   createdAt: Date;
   updatedAt: Date;
-  author: CommentAuthorDto;
+  author: AuthorDto;
   myVote?: 'up_vote' | 'down_vote' | null;
   replyCounts?: number;
   replies?: BaseCommentResponseDto[];

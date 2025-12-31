@@ -1,4 +1,4 @@
-export { CommentAuthorDto } from '../../../comments-base/dto/comment-author.dto';
+export { AuthorDto } from '../../../users/dtos/author.dto';
 export { CommentResponseDto } from './comment-response.dto';
 export { CreateCommentDto } from './create-comment.dto';
 export { FilterCommentDto, CommentSortBy } from './filter-comment.dto';

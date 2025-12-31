@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { AuthorDto } from '../../users/dtos/author.dto';
 
 export class TestcaseResultDto {
   @ApiProperty({ description: 'Testcase ID', type: Number })
@@ -47,14 +48,6 @@ export class FailedResultDto {
 
   @ApiPropertyOptional({ description: 'Compilation output/error' })
   compileOutput?: string;
-}
-
-export class UserInfoDto {
-  @ApiProperty({ description: 'User ID' })
-  id: number;
-
-  @ApiProperty({ description: 'Username' })
-  username: string;
 }
 
 export class ProblemInfoDto {
@@ -139,9 +132,9 @@ export class SubmissionResponseDto {
 
   @ApiPropertyOptional({
     description: 'User information (admin only)',
-    type: UserInfoDto,
+    type: AuthorDto,
   })
-  user?: UserInfoDto;
+  user?: AuthorDto;
 
   @ApiPropertyOptional({ description: 'Source code (own submissions only)' })
   sourceCode?: string;
@@ -186,4 +179,10 @@ export class SubmissionListResponseDto {
     type: LanguageInfoDto,
   })
   language?: LanguageInfoDto;
+
+  @ApiProperty({
+    description: 'User information (admin only)',
+    type: AuthorDto,
+  })
+  author?: AuthorDto;
 }

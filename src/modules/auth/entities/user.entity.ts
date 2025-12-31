@@ -170,7 +170,7 @@ export class User {
     example: '2025-12-19T11:22:11.000Z',
   })
   @Column({ name: 'premium_started_at', type: 'timestamptz', nullable: true })
-  premiumStartedAt: Date;
+  premiumStartedAt: Date | null;
 
   @ApiProperty({
     description: 'Premium subscription expiry date',
@@ -178,7 +178,7 @@ export class User {
     example: '2025-12-19T11:22:11.000Z',
   })
   @Column({ name: 'premium_expires_at', type: 'timestamptz', nullable: true })
-  premiumExpiresAt: Date;
+  premiumExpiresAt: Date | null;
 
   // Metadata
   @ApiProperty({

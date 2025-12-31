@@ -3,13 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { BaseCommentsService } from '../../comments-base/base-comments.service';
 import { Solution } from '../entities/solution.entity';
-import { CommentAuthorDto } from '../../comments-base/dto/comment-author.dto';
+import { AuthorDto } from '../../users/dtos/author.dto';
 import { SolutionCommentResponseDto } from '../dto/solution-comment-response.dto';
 import { SolutionComment } from '../entities/solution-comment.entity';
 import { SolutionCommentVote } from '../entities/solution-comment-vote.entity';
 import { StorageService } from '../../storage/storage.service';
 import { VoteType } from '../../comments-base/enums/vote-type.enum';
 import { BaseCreateCommentDto } from '../../comments-base/dto/base-create-comment.dto';
+import { getAvatarUrl } from '../../../common/utils';
 
 @Injectable()
 export class SolutionCommentsService extends BaseCommentsService<
@@ -82,10 +83,12 @@ export class SolutionCommentsService extends BaseCommentsService<
   protected mapToResponseDto(
     comment: SolutionComment,
   ): SolutionCommentResponseDto {
-    const author: CommentAuthorDto = {
+    const author: AuthorDto = {
       id: comment.author?.id,
       username: comment.author?.username,
-      avatarUrl: this.getAvatarUrl(comment.author?.avatarKey) ?? undefined,
+      avatarUrl:
+        getAvatarUrl(comment.author?.avatarKey, this.storageService) ??
+        undefined,
       isPremium: comment.author?.isPremium,
     };
 

@@ -16,8 +16,9 @@ import { StorageService } from '../storage/storage.service';
 import { BaseCreateCommentDto } from './dto/base-create-comment.dto';
 import { BaseUpdateCommentDto } from './dto/base-update-comment.dto';
 import { BaseCommentResponseDto } from './dto/base-comment-response.dto';
-import { CommentAuthorDto } from './dto/comment-author.dto';
+import { AuthorDto } from '../users/dtos/author.dto';
 import { VoteType } from './enums/vote-type.enum';
+import { getAvatarUrl } from '../../common/utils';
 
 export abstract class BaseCommentsService<
   CommentEntity extends BaseComment,
@@ -241,10 +242,12 @@ export abstract class BaseCommentsService<
   }
 
   protected mapToResponseDto(comment: BaseComment): BaseCommentResponseDto {
-    const author: CommentAuthorDto = {
+    const author: AuthorDto = {
       id: comment.author.id,
       username: comment.author.username,
-      avatarUrl: this.getAvatarUrl(comment.author.avatarKey) ?? undefined,
+      avatarUrl:
+        getAvatarUrl(comment.author.avatarKey, this.storageService) ??
+        undefined,
       isPremium: comment.author.isPremium,
     };
 
@@ -261,13 +264,5 @@ export abstract class BaseCommentsService<
       myVote: comment.myVote,
       replyCounts: comment.replyCount,
     };
-  }
-
-  protected getAvatarUrl(avatarKey: string | null | undefined): string | null {
-    if (!avatarKey) return null;
-    if (avatarKey.startsWith('http://') || avatarKey.startsWith('https://')) {
-      return avatarKey;
-    }
-    return this.storageService.getCloudFrontUrl(avatarKey);
   }
 }

@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export class CommentAuthorDto {
+export class AuthorDto {
   @ApiProperty({ description: 'User ID', example: 1 })
   id: number;
 
