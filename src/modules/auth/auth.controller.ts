@@ -25,7 +25,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 
 import { GetUser } from '../../common';
-import { AppConfig } from '../../config/app.config';
+import { AppConfig } from '../../config';
 import { AuthService } from './auth.service';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { AvatarUploadUrlResponseDto } from './dto/avatar-upload-url-response.dto';
@@ -293,7 +293,7 @@ export class AuthController {
 
   @Throttle({
     default: {
-      limit: 3,
+      limit: 10,
       ttl: 60000,
     },
   })
