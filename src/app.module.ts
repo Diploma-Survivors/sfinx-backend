@@ -39,6 +39,7 @@ import {
   redisConfig,
   submissionConfig,
   vnpayConfig,
+  paymentConfig,
 } from './config';
 import { AuthModule } from './modules/auth/auth.module';
 import { Judge0Module } from './modules/judge0/judge0.module';
@@ -50,6 +51,7 @@ import { SubmissionsModule } from './modules/submissions/submissions.module';
 import { ContestModule } from './modules/contest/contest.module';
 import { UsersModule } from './modules/users/users.module';
 import { SolutionsModule } from './modules/solutions/solutions.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
@@ -68,6 +70,7 @@ import { ScheduleModule } from '@nestjs/schedule';
         redisConfig,
         submissionConfig,
         vnpayConfig,
+        paymentConfig,
       ],
       validationSchema: environmentValidation,
       envFilePath: '.env',
@@ -129,7 +132,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     ContestModule,
     UsersModule,
     SolutionsModule,
-    // PaymentsModule,
+    PaymentsModule,
     // AiModule,
     // CommunityModule,
   ],

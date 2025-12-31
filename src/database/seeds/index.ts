@@ -5,6 +5,7 @@ import { seedProgrammingLanguages } from './2-programming-languages.seed';
 import { seedTopics } from './3-topics.seed';
 import { seedTags } from './4-tags.seed';
 import { seedProblems } from './5-problems.seed';
+import { CreateSubscriptionPlans } from './create-subscription-plans.seed';
 
 // Load environment variables
 config();
@@ -23,6 +24,7 @@ async function runSeeds() {
     await seedTopics(dataSource);
     await seedTags(dataSource);
     await seedProblems(dataSource);
+    await CreateSubscriptionPlans(dataSource);
 
     console.log('🎉 All seeds completed successfully!');
   } catch (error) {

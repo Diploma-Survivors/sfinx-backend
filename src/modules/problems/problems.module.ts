@@ -10,12 +10,10 @@ import { Tag } from './entities/tag.entity';
 import { Topic } from './entities/topic.entity';
 import { ProblemsController } from './problems.controller';
 import { ProblemsService } from './problems.service';
-import {
-  SampleTestcaseService,
-  TagService,
-  TestcaseFileService,
-  TopicService,
-} from './services';
+import { SampleTestcaseService } from './services/sample-testcase.service';
+import { TagService } from './services/tag.service';
+import { TestcaseFileService } from './services/testcase-file.service';
+import { TopicService } from './services/topic.service';
 import { TestcaseTransformService } from './services/testcase-transform.service';
 import { TestcaseValidationService } from './services/testcase-validation.service';
 import { TagsController } from './tags.controller';

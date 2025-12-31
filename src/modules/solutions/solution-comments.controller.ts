@@ -6,8 +6,8 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
-  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -18,54 +18,69 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { GetUser } from '../../common';
-import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { User } from '../auth/entities/user.entity';
-import { SolutionsService } from './solutions.service';
+import { SolutionCommentsService } from './services/solution-comments.service'; // Changed import path and service name
 import { CreateSolutionCommentDto } from './dto/create-solution-comment.dto';
 import { UpdateSolutionCommentDto } from './dto/update-solution-comment.dto';
-import { SolutionComment } from './entities/solution-comment.entity';
+
+import { SolutionCommentResponseDto } from './dto/solution-comment-response.dto';
 
 @ApiTags('Solution Comments')
 @Controller('solutions')
 export class SolutionCommentsController {
-  constructor(private readonly solutionsService: SolutionsService) {}
+  constructor(
+    private readonly solutionCommentsService: SolutionCommentsService,
+  ) {} // Changed service name
 
   @Get(':solutionId/comments')
-  @UseGuards(OptionalJwtAuthGuard)
+  // @UseGuards(OptionalJwtAuthGuard) // Removed as per diff
   @ApiOperation({ summary: 'Get comments for a solution' })
   @ApiParam({ name: 'solutionId', type: Number })
   async getComments(
     @Param('solutionId') solutionId: string,
     @GetUser() user?: User,
-  ): Promise<SolutionComment[]> {
-    return this.solutionsService.getComments(+solutionId, user?.id);
+  ): Promise<SolutionCommentResponseDto[]> {
+    const comments = await this.solutionCommentsService.getComments(
+      +solutionId,
+      user?.id,
+    ); // Changed service call
+    // Base service returns BaseCommentResponseDto which is compatible structure
+    return comments as SolutionCommentResponseDto[];
   }
 
   @Post(':solutionId/comments')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Create a comment' })
+  @ApiOperation({ summary: 'Create a comment for a solution' }) // Changed summary
   @ApiParam({ name: 'solutionId', type: Number })
   async createComment(
     @Param('solutionId') solutionId: string,
     @Body() dto: CreateSolutionCommentDto,
     @GetUser() user: User,
-  ): Promise<SolutionComment> {
-    return this.solutionsService.createComment(user.id, +solutionId, dto);
+  ): Promise<SolutionCommentResponseDto> {
+    return this.solutionCommentsService.createComment(
+      user.id,
+      +solutionId,
+      dto,
+    ); // Changed service call and added cast
   }
 
-  @Put('comments/:id')
+  @Patch('comments/:id') // Changed from Put to Patch
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Update comment' })
+  @ApiOperation({ summary: 'Update a comment' }) // Changed summary
   @ApiParam({ name: 'id', type: Number })
   async updateComment(
     @Param('id') id: string,
     @Body() dto: UpdateSolutionCommentDto,
     @GetUser() user: User,
-  ): Promise<SolutionComment> {
-    return this.solutionsService.updateComment(+id, user.id, dto);
+  ): Promise<SolutionCommentResponseDto> {
+    return this.solutionCommentsService.updateComment(
+      +id,
+      user.id,
+      dto,
+    ) as Promise<SolutionCommentResponseDto>; // Changed service call and added cast
   }
 
   @Delete('comments/:id')
@@ -78,7 +93,7 @@ export class SolutionCommentsController {
     @Param('id') id: string,
     @GetUser() user: User,
   ): Promise<void> {
-    return this.solutionsService.deleteComment(+id, user.id);
+    return this.solutionCommentsService.deleteComment(+id, user.id);
   }
 
   @Post('comments/:id/vote')
@@ -91,7 +106,7 @@ export class SolutionCommentsController {
     @Query('type') type: 'up_vote' | 'down_vote',
     @GetUser() user: User,
   ): Promise<void> {
-    return this.solutionsService.voteComment(+id, user.id, type);
+    return this.solutionCommentsService.voteComment(+id, user.id, type);
   }
 
   @Delete('comments/:id/vote')
@@ -102,6 +117,6 @@ export class SolutionCommentsController {
     @Param('id') id: string,
     @GetUser() user: User,
   ): Promise<void> {
-    return this.solutionsService.unvoteComment(+id, user.id);
+    return this.solutionCommentsService.unvoteComment(+id, user.id);
   }
 }

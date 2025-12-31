@@ -10,7 +10,7 @@ import {
 
 import { Solution } from './solution.entity';
 import { User } from '../../auth/entities/user.entity';
-import { VoteType } from '../enums/vote-type.enum';
+import { VoteType } from '../../comments-base/enums/vote-type.enum';
 
 @Entity('solution_votes')
 export class SolutionVote {

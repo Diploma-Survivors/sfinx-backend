@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { StorageModule } from '../storage/storage.module';
 import { SolutionsController } from './solutions.controller';
 import { SolutionCommentsController } from './solution-comments.controller';
 import { SolutionsService } from './solutions.service';
@@ -13,8 +14,11 @@ import { ProgrammingLanguage } from '../programming-language/entities/programmin
 import { User } from '../auth/entities/user.entity';
 import { AuthModule } from '../auth/auth.module';
 
+import { SolutionCommentsService } from './services/solution-comments.service';
+
 @Module({
   imports: [
+    StorageModule,
     TypeOrmModule.forFeature([
       Solution,
       SolutionComment,
@@ -28,6 +32,7 @@ import { AuthModule } from '../auth/auth.module';
     AuthModule,
   ],
   controllers: [SolutionsController, SolutionCommentsController],
-  providers: [SolutionsService],
+  providers: [SolutionsService, SolutionCommentsService],
+  exports: [SolutionsService, SolutionCommentsService],
 })
 export class SolutionsModule {}

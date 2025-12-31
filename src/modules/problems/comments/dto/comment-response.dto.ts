@@ -1,26 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CommentType } from '../enums';
-import { CommentAuthorDto } from './comment-author.dto';
+import { BaseCommentResponseDto } from '../../../comments-base/dto/base-comment-response.dto';
+import { CommentAuthorDto } from '../../../comments-base/dto/comment-author.dto';
 
-export class CommentResponseDto {
-  @ApiProperty({ description: 'Unique identifier', example: 1 })
-  id: number;
-
+export class CommentResponseDto extends BaseCommentResponseDto {
   @ApiProperty({ description: 'Problem ID', example: 1 })
   problemId: number;
-
-  @ApiPropertyOptional({
-    description: 'Parent comment ID for nested replies',
-    example: 42,
-    nullable: true,
-  })
-  parentId: number | null;
-
-  @ApiProperty({
-    description: 'Comment content in markdown format',
-    example: '**Great problem!** I used two pointers approach.',
-  })
-  content: string;
 
   @ApiProperty({
     description: 'Comment type for categorization',
@@ -47,20 +32,11 @@ export class CommentResponseDto {
   })
   isDeleted: boolean;
 
-  @ApiProperty({ description: 'Total upvotes count', example: 42 })
-  upvoteCount: number;
-
-  @ApiProperty({ description: 'Total downvotes count', example: 3 })
-  downvoteCount: number;
-
   @ApiProperty({
     description: 'Net vote score (upvotes - downvotes)',
     example: 39,
   })
   voteScore: number;
-
-  @ApiProperty({ description: 'Total number of replies', example: 5 })
-  replyCount: number;
 
   @ApiProperty({ description: 'Number of reports on this comment', example: 0 })
   reportCount: number;
@@ -73,22 +49,10 @@ export class CommentResponseDto {
   editedAt: Date | null;
 
   @ApiProperty({
-    description: 'Creation timestamp',
-    example: '2025-01-15T09:00:00Z',
-  })
-  createdAt: Date;
-
-  @ApiProperty({
-    description: 'Last update timestamp',
-    example: '2025-01-15T10:30:00Z',
-  })
-  updatedAt: Date;
-
-  @ApiProperty({
     description: 'Comment author',
     type: () => CommentAuthorDto,
   })
-  author: CommentAuthorDto;
+  declare author: CommentAuthorDto;
 
   @ApiPropertyOptional({
     description:
@@ -103,5 +67,5 @@ export class CommentResponseDto {
     type: () => [CommentResponseDto],
     isArray: true,
   })
-  replies?: CommentResponseDto[];
+  declare replies?: CommentResponseDto[];
 }

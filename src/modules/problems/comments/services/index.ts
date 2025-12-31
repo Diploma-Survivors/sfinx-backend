@@ -1,3 +1,3 @@
-export { CommentsService } from './comments.service';
-export { CommentVotesService } from './comment-votes.service';
+export { ProblemCommentsService } from './problem-comments.service';
+
 export { CommentReportsService } from './comment-reports.service';

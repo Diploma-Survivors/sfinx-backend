@@ -22,7 +22,9 @@ import { ProblemDetailDto } from './dto/problem-detail.dto';
 import { ProblemListItemDto } from './dto/problem-list-item.dto';
 import { UpdateProblemDto } from './dto/update-problem.dto';
 import { Problem } from './entities/problem.entity';
-import { TagService, TestcaseFileService, TopicService } from './services';
+import { TagService } from './services/tag.service';
+import { TestcaseFileService } from './services/testcase-file.service';
+import { TopicService } from './services/topic.service';
 
 @Injectable()
 export class ProblemsService {

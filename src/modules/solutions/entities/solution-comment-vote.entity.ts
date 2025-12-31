@@ -10,22 +10,24 @@ import {
 
 import { SolutionComment } from './solution-comment.entity';
 import { User } from '../../auth/entities/user.entity';
-import { VoteType } from '../enums/vote-type.enum';
+import { VoteType } from '../../comments-base/enums/vote-type.enum';
+
+import { BaseCommentVote } from '../../comments-base/entities/base-comment-vote.entity';
 
 @Entity('solution_comment_votes')
-export class SolutionCommentVote {
+export class SolutionCommentVote extends BaseCommentVote {
   @PrimaryColumn({ name: 'comment_id' })
-  commentId: number;
+  commentId!: number;
 
   @PrimaryColumn({ name: 'user_id' })
-  userId: number;
+  userId!: number;
 
   @Column({
     type: 'enum',
     enum: VoteType,
     name: 'vote_type',
   })
-  voteType: VoteType;
+  declare voteType: VoteType;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp with time zone' })
   createdAt: Date;

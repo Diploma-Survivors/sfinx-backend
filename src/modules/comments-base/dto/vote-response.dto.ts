@@ -27,6 +27,7 @@ export class VoteResponseDto {
   @ApiProperty({
     description: 'Net vote score (upvotes - downvotes)',
     example: 39,
+    required: false,
   })
-  voteScore: number;
+  voteScore?: number;
 }

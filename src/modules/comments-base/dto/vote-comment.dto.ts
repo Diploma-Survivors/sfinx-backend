@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsInt, IsIn } from 'class-validator';
-import { VoteType } from '../enums';
+import { VoteType } from '../enums/vote-type.enum';
 
 export class VoteCommentDto {
   @ApiProperty({

@@ -4,7 +4,7 @@
  */
 export interface Judge0SubmissionPayload {
   language_id: number;
-  source_code?: string;
+  source_code: string;
   stdin?: string;
   expected_output?: string;
   additional_files?: string;

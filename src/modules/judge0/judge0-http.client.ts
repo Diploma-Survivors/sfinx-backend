@@ -1,13 +1,14 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 
 import { Judge0Config } from 'src/config';
 import { JUDGE0_HEADERS } from './constants';
+import { ConfigService } from '@nestjs/config';
 
 /**
  * HTTP client for Judge0 API communication.
@@ -94,6 +95,15 @@ export class Judge0HttpClient {
       );
       return response.data;
     } catch (error) {
+      const axiosError = error as AxiosError;
+      if (axiosError.response?.status === 422) {
+        const validationErrors = JSON.stringify(axiosError.response.data);
+        this.logger.warn(`Judge0 Validation Error: ${validationErrors}`);
+        throw new BadRequestException(
+          `Judge0 Validation Error: ${validationErrors}`,
+        );
+      }
+
       this.logger.error(`${errorMessage}: ${error}`);
       throw new InternalServerErrorException(errorMessage);
     }

@@ -34,7 +34,13 @@ export class Judge0Service {
     return this.httpClient.post<
       { submissions: Judge0SubmissionPayload[] },
       Judge0BatchResponse
-    >(endpoint, { submissions: items }, 'Failed to create batch submission');
+    >(
+      endpoint,
+      {
+        submissions: items,
+      },
+      'Failed to create batch submission',
+    );
   }
 
   /**

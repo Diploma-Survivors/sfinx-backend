@@ -26,7 +26,7 @@ import { SolutionsService } from './solutions.service';
 import { CreateSolutionDto } from './dto/create-solution.dto';
 import { UpdateSolutionDto } from './dto/update-solution.dto';
 import { FilterSolutionDto } from './dto/filter-solution.dto';
-import { Solution } from './entities/solution.entity';
+import { SolutionResponseDto } from './dto/solution-response.dto';
 
 @ApiTags('Solutions')
 @Controller('solutions')
@@ -40,12 +40,12 @@ export class SolutionsController {
   @ApiResponse({
     status: 201,
     description: 'Solution created',
-    type: Solution,
+    type: SolutionResponseDto,
   })
   async createSolution(
     @Body() dto: CreateSolutionDto,
     @GetUser() user: User,
-  ): Promise<Solution> {
+  ): Promise<SolutionResponseDto> {
     return this.solutionsService.create(user.id, dto);
   }
 
@@ -61,7 +61,7 @@ export class SolutionsController {
   async getSolutions(
     @Query() query: FilterSolutionDto,
     @GetUser() user?: User,
-  ): Promise<PaginatedResultDto<Solution>> {
+  ): Promise<PaginatedResultDto<SolutionResponseDto>> {
     return this.solutionsService.findAll(query, user?.id);
   }
 
@@ -73,7 +73,7 @@ export class SolutionsController {
     @Param('userId') userId: string,
     @Query('page') page = 1,
     @Query('limit') limit = 10,
-  ): Promise<PaginatedResultDto<Solution>> {
+  ): Promise<PaginatedResultDto<SolutionResponseDto>> {
     return this.solutionsService.findAllByUser(+userId, +page, +limit);
   }
 
@@ -84,7 +84,7 @@ export class SolutionsController {
   async getSolution(
     @Param('id') id: string,
     @GetUser() user?: User,
-  ): Promise<Solution> {
+  ): Promise<SolutionResponseDto> {
     return this.solutionsService.findOne(+id, user?.id);
   }
 
@@ -96,7 +96,7 @@ export class SolutionsController {
     @Param('id') id: string,
     @Body() dto: UpdateSolutionDto,
     @GetUser() user: User,
-  ): Promise<Solution> {
+  ): Promise<SolutionResponseDto> {
     return this.solutionsService.update(+id, user.id, dto);
   }
 
@@ -108,7 +108,7 @@ export class SolutionsController {
   async deleteSolution(
     @Param('id') id: string,
     @GetUser() user: User,
-  ): Promise<Solution | void> {
+  ): Promise<void> {
     return this.solutionsService.remove(+id, user.id);
   }
 

@@ -32,20 +32,15 @@ import {
   VoteCommentDto,
   VoteResponseDto,
 } from '../dto';
-import { Comment } from '../entities';
+import { ProblemComment } from '../entities';
 import { EmailVerifiedGuard } from '../guards';
-import {
-  CommentsService,
-  CommentVotesService,
-  CommentReportsService,
-} from '../services';
+import { ProblemCommentsService, CommentReportsService } from '../services';
 
 @ApiTags('Problem Comments')
 @Controller()
 export class CommentsController {
   constructor(
-    private readonly commentsService: CommentsService,
-    private readonly votesService: CommentVotesService,
+    private readonly commentsService: ProblemCommentsService,
     private readonly reportsService: CommentReportsService,
   ) {}
 
@@ -72,7 +67,7 @@ export class CommentsController {
     @GetUser('id') userId: number,
   ): Promise<CommentResponseDto> {
     dto.problemId = +problemId;
-    return this.commentsService.createComment(dto, userId);
+    return this.commentsService.createComment(userId, +problemId, dto);
   }
 
   @Get('problems/:problemId/comments')
@@ -94,7 +89,7 @@ export class CommentsController {
     @GetUser('id') userId?: number,
   ): Promise<PaginatedResultDto<CommentResponseDto>> {
     query.problemId = +problemId;
-    return this.commentsService.getComments(query, userId);
+    return this.commentsService.getPaginatedComments(query, userId);
   }
 
   @Get('problems/:problemId/comments/tree')
@@ -155,7 +150,7 @@ export class CommentsController {
     @Body() dto: UpdateCommentDto,
     @GetUser('id') userId: number,
   ): Promise<CommentResponseDto> {
-    return this.commentsService.updateComment(+id, dto, userId);
+    return this.commentsService.updateComment(+id, userId, dto);
   }
 
   @Delete('problems/comments/:id')
@@ -180,7 +175,7 @@ export class CommentsController {
 
   @Patch('problems/comments/:id/pin')
   @UseGuards(CaslGuard)
-  @CheckAbility({ action: Action.Update, subject: Comment })
+  @CheckAbility({ action: Action.Update, subject: ProblemComment })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Pin a problem comment (Admin/Moderator only)',
@@ -201,7 +196,7 @@ export class CommentsController {
 
   @Patch('problems/comments/:id/unpin')
   @UseGuards(CaslGuard)
-  @CheckAbility({ action: Action.Update, subject: Comment })
+  @CheckAbility({ action: Action.Update, subject: ProblemComment })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Unpin a problem comment (Admin/Moderator only)',
@@ -241,7 +236,7 @@ export class CommentsController {
     @Body() dto: VoteCommentDto,
     @GetUser('id') userId: number,
   ): Promise<VoteResponseDto> {
-    return this.votesService.voteComment(+id, userId, dto.voteType);
+    return this.commentsService.voteProblemComment(+id, userId, dto.voteType);
   }
 
   @Delete('problems/comments/:id/vote')
@@ -259,7 +254,7 @@ export class CommentsController {
     @Param('id') id: string,
     @GetUser('id') userId: number,
   ): Promise<void> {
-    return this.votesService.removeVote(+id, userId);
+    return this.commentsService.removeVote(+id, userId);
   }
 
   @Post('problems/comments/:id/report')
