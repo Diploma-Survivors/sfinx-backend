@@ -32,7 +32,7 @@ import {
 import { User } from '../auth/entities/user.entity';
 import { CaslGuard } from '../auth/guards/casl.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ViewAllSubmissionsPolicy } from '../rbac/casl/policies';
+import { ViewAllSubmissionsPolicy } from '../rbac/casl';
 import { SUBMISSION_SSE } from './constants/submission.constants';
 import { CreateSubmissionResponseDto } from './dto/create-submission-response.dto';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
@@ -41,7 +41,8 @@ import {
   SubmissionListResponseDto,
   SubmissionResponseDto,
 } from './dto/submission-response.dto';
-import { UserProblemProgress } from './entities/user-problem-progress.entity';
+import { UserPracticeHistoryDto } from './dto/user-practice-history.dto';
+import { UserStatisticsDto } from './dto/user-statistics.dto';
 import { SubmissionEvent } from './enums';
 import {
   MessageEvent,
@@ -145,8 +146,9 @@ export class SubmissionsController {
   @ApiResponse({
     status: 200,
     description: 'User statistics retrieved successfully',
+    type: UserStatisticsDto,
   })
-  async getUserStatistics(@GetUser() user: User) {
+  async getUserStatistics(@GetUser() user: User): Promise<UserStatisticsDto> {
     return this.submissionsService.getUserStatistics(user.id);
   }
 
@@ -155,13 +157,13 @@ export class SubmissionsController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get current user problem progress' })
   @ApiPaginatedResponse(
-    UserProblemProgress,
+    UserPracticeHistoryDto,
     'User problem progress retrieved successfully',
   )
   async getUserAllProgress(
     @GetUser() user: User,
     @Query() paginationDto: PaginationQueryDto,
-  ): Promise<PaginatedResultDto<UserProblemProgress>> {
+  ): Promise<PaginatedResultDto<UserPracticeHistoryDto>> {
     return this.submissionsService.getUserAllProgress(user.id, paginationDto);
   }
 

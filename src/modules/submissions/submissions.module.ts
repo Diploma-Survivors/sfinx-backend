@@ -103,7 +103,13 @@ import { SubmissionsService } from './submissions.service';
 
     // Processors
     SubmissionFinalizeProcessor,
+    SubmissionFinalizeProcessor,
   ],
-  exports: [SubmissionsService, CallbackProcessorService],
+  exports: [
+    SubmissionsService,
+    CallbackProcessorService,
+    UserStatisticsService,
+    UserProgressService,
+  ],
 })
 export class SubmissionsModule {}

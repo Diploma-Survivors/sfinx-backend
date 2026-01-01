@@ -13,18 +13,18 @@ import { Transactional } from 'typeorm-transactional';
 
 import { PaginatedResultDto } from '../../common';
 import { User } from '../auth/entities/user.entity';
-import { Action, CaslAbilityFactory } from '../rbac/casl/casl-ability.factory';
+import { Action, CaslAbilityFactory } from '../rbac/casl';
 import { StorageService } from '../storage/storage.service';
-import { ProgressStatus } from '../submissions/enums/progress-status.enum';
+import { ProgressStatus } from '../submissions/enums';
 import { CreateProblemDto } from './dto/create-problem.dto';
 import { FilterProblemDto } from './dto/filter-problem.dto';
 import { ProblemDetailDto } from './dto/problem-detail.dto';
 import { ProblemListItemDto } from './dto/problem-list-item.dto';
 import { UpdateProblemDto } from './dto/update-problem.dto';
 import { Problem } from './entities/problem.entity';
-import { TagService } from './services/tag.service';
-import { TestcaseFileService } from './services/testcase-file.service';
-import { TopicService } from './services/topic.service';
+import { TagService } from './services';
+import { TestcaseFileService } from './services';
+import { TopicService } from './services';
 
 @Injectable()
 export class ProblemsService {

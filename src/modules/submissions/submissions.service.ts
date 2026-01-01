@@ -22,8 +22,9 @@ import {
   SubmissionListResponseDto,
   SubmissionResponseDto,
 } from './dto/submission-response.dto';
+import { UserPracticeHistoryDto } from './dto/user-practice-history.dto';
+import { UserStatisticsDto } from './dto/user-statistics.dto';
 import { Submission } from './entities/submission.entity';
-import { UserProblemProgress } from './entities/user-problem-progress.entity';
 import { ProgressStatus } from './enums/progress-status.enum';
 import { SubmissionStatus } from './enums/submission-status.enum';
 import { ResultDescription } from './interfaces/result-description.interface';
@@ -400,14 +401,14 @@ export class SubmissionsService {
   async getUserAllProgress(
     userId: number,
     paginationDto: PaginationQueryDto,
-  ): Promise<PaginatedResultDto<UserProblemProgress>> {
+  ): Promise<PaginatedResultDto<UserPracticeHistoryDto>> {
     return this.userProgress.getAllUserProgress(userId, paginationDto);
   }
 
   /**
    * Get user statistics (delegates to statistics service)
    */
-  async getUserStatistics(userId: number) {
+  async getUserStatistics(userId: number): Promise<UserStatisticsDto> {
     return this.userStatistics.getUserStatistics(userId);
   }
 

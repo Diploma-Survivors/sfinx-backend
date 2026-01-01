@@ -136,18 +136,6 @@ export class ProblemStatisticsService {
   }
 
   /**
-   * Get count of unique users who attempted the problem
-   */
-  private async getUniqueUsers(
-    queryBuilder: SelectQueryBuilder<Submission>,
-  ): Promise<number> {
-    const result = await queryBuilder
-      .select('COUNT(DISTINCT submission.user.id)', 'count')
-      .getRawOne<{ count: string }>();
-    return parseInt(result?.count ?? '0', 10);
-  }
-
-  /**
    * Get count of unique users who solved the problem
    */
   private async getUniqueSolvers(

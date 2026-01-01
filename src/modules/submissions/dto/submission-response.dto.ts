@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { AuthorDto } from '../../users/dtos/author.dto';
+import { ProblemDifficulty } from '../../problems/enums/problem-difficulty.enum';
 
 export class TestcaseResultDto {
   @ApiProperty({ description: 'Testcase ID', type: Number })
@@ -59,6 +60,9 @@ export class ProblemInfoDto {
 
   @ApiPropertyOptional({ description: 'Problem slug' })
   slug?: string;
+
+  @ApiProperty({ enum: ProblemDifficulty })
+  difficulty?: ProblemDifficulty;
 }
 
 export class LanguageInfoDto {
