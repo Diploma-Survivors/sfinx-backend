@@ -1,0 +1,1 @@
+export const WIDTH_BUCKET_STATISTIC = 5;

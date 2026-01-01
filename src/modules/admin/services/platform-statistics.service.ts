@@ -144,13 +144,13 @@ export class PlatformStatisticsService {
       // Submissions today
       this.submissionRepository
         .createQueryBuilder('submission')
-        .where('submission.createdAt >= CURRENT_DATE')
+        .where('submission.submittedAt >= CURRENT_DATE')
         .getCount(),
 
       // Submissions this week
       this.submissionRepository
         .createQueryBuilder('submission')
-        .where("submission.createdAt >= NOW() - INTERVAL '7 days'")
+        .where("submission.submittedAt >= NOW() - INTERVAL '7 days'")
         .getCount(),
     ]);
 
@@ -194,7 +194,7 @@ export class PlatformStatisticsService {
           return subQuery
             .select('COUNT(*)', 'sub_count')
             .from(Submission, 'submission')
-            .groupBy('submission.userId');
+            .groupBy('submission.user_id');
         }, 'grouped')
         .getRawOne(),
     ]);
@@ -402,10 +402,10 @@ export class PlatformStatisticsService {
   private async getDailySubmissions(): Promise<TimeSeriesDataPointDto[]> {
     const results = await this.submissionRepository
       .createQueryBuilder('submission')
-      .select("DATE(submission.createdAt AT TIME ZONE 'UTC')", 'date')
+      .select("DATE(submission.submittedAt AT TIME ZONE 'UTC')", 'date')
       .addSelect('COUNT(*)', 'value')
-      .where("submission.createdAt >= NOW() - INTERVAL '30 days'")
-      .groupBy("DATE(submission.createdAt AT TIME ZONE 'UTC')")
+      .where("submission.submittedAt >= NOW() - INTERVAL '30 days'")
+      .groupBy("DATE(submission.submittedAt AT TIME ZONE 'UTC')")
       .orderBy('date', 'ASC')
       .getRawMany<{ date: string; value: string }>();
 
@@ -454,11 +454,11 @@ export class PlatformStatisticsService {
   > {
     const results = await this.submissionRepository
       .createQueryBuilder('submission')
-      .select("DATE(submission.createdAt AT TIME ZONE 'UTC')", 'date')
+      .select("DATE(submission.submittedAt AT TIME ZONE 'UTC')", 'date')
       .addSelect('COUNT(*)', 'value')
-      .where("submission.createdAt >= NOW() - INTERVAL '30 days'")
+      .where("submission.submittedAt >= NOW() - INTERVAL '30 days'")
       .andWhere('submission.status = :status', { status: 'ACCEPTED' })
-      .groupBy("DATE(submission.createdAt AT TIME ZONE 'UTC')")
+      .groupBy("DATE(submission.submittedAt AT TIME ZONE 'UTC')")
       .orderBy('date', 'ASC')
       .getRawMany<{ date: string; value: string }>();
 

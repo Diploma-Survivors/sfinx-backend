@@ -10,15 +10,19 @@ import {
 import { User } from '../../auth/entities/user.entity';
 import { Contest } from '../../contest/entities/contest.entity';
 import { Problem } from '../../problems/entities/problem.entity';
-import { ProgrammingLanguage } from '../../programming-language/entities/programming-language.entity';
-import { SubmissionStatus } from '../enums/submission-status.enum';
-import type { ResultDescription } from '../interfaces/result-description.interface';
+import { ProgrammingLanguage } from '../../programming-language';
+import { SubmissionStatus } from '../enums';
+import type { ResultDescription } from '../interfaces';
 
 @Entity('submissions')
 export class Submission {
   @ApiProperty({ description: 'Unique identifier' })
   @PrimaryGeneratedColumn('increment')
   id: number;
+
+  @ApiProperty({ description: 'User ID who made the submission' })
+  @Column({ name: 'user_id' })
+  userId: number;
 
   @ApiProperty({
     description: 'User who made the submission',

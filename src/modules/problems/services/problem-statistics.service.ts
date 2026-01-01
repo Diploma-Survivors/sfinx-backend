@@ -11,6 +11,7 @@ import {
   VerdictCountDto,
 } from '../dto/problem-statistics.dto';
 import { Problem } from '../entities/problem.entity';
+import { WIDTH_BUCKET_STATISTIC } from '../../../common';
 
 @Injectable()
 export class ProblemStatisticsService {
@@ -242,36 +243,12 @@ export class ProblemStatisticsService {
   private async getRuntimeDistribution(
     queryBuilder: SelectQueryBuilder<Submission>,
   ): Promise<DistributionBucketDto[]> {
-    // Note: In real scenarios, you might want to dynamically calculate bucket sizes (e.g., using percentiles)
-    // Here we use fixed ranges for simplicity: 0-10ms, 10-50ms, 50-100ms, 100-500ms, >500ms
-    const results = await queryBuilder
-      .select(
-        `
-        CASE
-          WHEN submission.runtimeMs <= 10 THEN '0-10ms'
-          WHEN submission.runtimeMs <= 50 THEN '10-50ms'
-          WHEN submission.runtimeMs <= 100 THEN '50-100ms'
-          WHEN submission.runtimeMs <= 500 THEN '100-500ms'
-          ELSE '>500ms'
-        END
-      `,
-        'range',
-      )
-      .addSelect('MIN(submission.runtimeMs)', 'value')
-      .addSelect('COUNT(*)', 'count')
-      .andWhere('submission.status = :status', {
-        status: SubmissionStatus.ACCEPTED,
-      }) // Usually distribution is for accepted solutions
-      .groupBy('range')
-      .orderBy('value', 'ASC')
-      .getRawMany<{ range: string; value: string; count: string }>();
-
-    return results.map((r) => ({
-      range: r.range,
-      value: parseFloat(r.value ?? '0'),
-      count: parseInt(r.count, 10),
-      percentile: 0, // Simplified
-    }));
+    return this.getNumericDistribution(
+      queryBuilder,
+      'submission.runtimeMs',
+      'ms',
+      WIDTH_BUCKET_STATISTIC,
+    );
   }
 
   /**
@@ -280,34 +257,108 @@ export class ProblemStatisticsService {
   private async getMemoryDistribution(
     queryBuilder: SelectQueryBuilder<Submission>,
   ): Promise<DistributionBucketDto[]> {
-    // Fixed ranges: 0-5MB, 5-10MB, 10-50MB, >50MB
-    // Note: DB stores KB
-    const results = await queryBuilder
-      .select(
-        `
-        CASE
-          WHEN submission.memoryKb <= 5120 THEN '0-5MB'
-          WHEN submission.memoryKb <= 10240 THEN '5-10MB'
-          WHEN submission.memoryKb <= 51200 THEN '10-50MB'
-          ELSE '>50MB'
-        END
-      `,
-        'range',
-      )
-      .addSelect('MIN(submission.memoryKb)', 'value')
-      .addSelect('COUNT(*)', 'count')
+    return this.getNumericDistribution(
+      queryBuilder,
+      'submission.memoryKb',
+      'KB',
+      WIDTH_BUCKET_STATISTIC,
+    );
+  }
+
+  /**
+   * Helper to generate dynamic distribution buckets
+   */
+  private async getNumericDistribution(
+    baseQuery: SelectQueryBuilder<Submission>,
+    column: string,
+    unit: string,
+    bucketCount = 20,
+  ): Promise<DistributionBucketDto[]> {
+    // 1. Get min and max values first
+    const stats = await baseQuery
       .andWhere('submission.status = :status', {
         status: SubmissionStatus.ACCEPTED,
       })
-      .groupBy('range')
-      .orderBy('value', 'ASC')
-      .getRawMany<{ range: string; value: string; count: string }>();
+      .select(`MIN(${column})`, 'minVal')
+      .addSelect(`MAX(${column})`, 'maxVal')
+      .addSelect('COUNT(*)', 'totalCount')
+      .getRawOne<{ minVal: string; maxVal: string; totalCount: string }>();
 
-    return results.map((r) => ({
-      range: r.range,
-      value: parseFloat(r.value ?? '0'),
-      count: parseInt(r.count, 10),
-      percentile: 0, // Simplified
-    }));
+    if (!stats || !stats.totalCount || parseInt(stats.totalCount, 10) === 0) {
+      return [];
+    }
+
+    const minVal = parseFloat(stats.minVal ?? '0');
+    const maxVal = parseFloat(stats.maxVal ?? '0');
+    const totalCount = parseInt(stats.totalCount, 10);
+
+    // Handle single value case
+    if (Math.abs(maxVal - minVal) < 0.01) {
+      return [
+        {
+          range: `${minVal}${unit}`,
+          value: minVal,
+          count: totalCount,
+          percentile: 100,
+        },
+      ];
+    }
+
+    // 2. Use width_bucket to group data
+    // Note: We cast width_bucket result to integer
+    const results = await baseQuery
+      .select(
+        `width_bucket(${column}, ${minVal}, ${maxVal}, ${bucketCount})`,
+        'bucket',
+      )
+      .addSelect(`MIN(${column})`, 'bucketMin')
+      .addSelect(`MAX(${column})`, 'bucketMax')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy('bucket')
+      .orderBy('bucket', 'ASC')
+      .getRawMany<{
+        bucket: string;
+        bucketMin: string;
+        bucketMax: string;
+        count: string;
+      }>();
+
+    // 3. Process results to calculate percentiles and format output
+    let accumulatedCount = 0;
+    const bucketSize = (maxVal - minVal) / bucketCount;
+
+    return results.map((row) => {
+      const count = parseInt(row.count, 10);
+      accumulatedCount += count;
+
+      const bucketIdx = parseInt(row.bucket, 10);
+      const start = minVal + (bucketIdx - 1) * bucketSize;
+      const end = minVal + bucketIdx * bucketSize;
+
+      // Calculate percentile: percentage of users slower/worse than this bucket (or accumulated up to this?)
+      // Typically "beat X%" means X% have value > current.
+      // Lower runtime is better. "Beats 80%" = 80% have runtime > mine.
+      // Here we just return cumulative distribution for simplicity
+      const cumulativePercent = (accumulatedCount / totalCount) * 100;
+
+      // Format range depending on unit and size
+      // For KB, convert to MB if large? Sticking to unit passing for now.
+      // If unit is KB and value > 1024, maybe format? but spec says memoryDistribution ...
+      // Let's keep it simple as requested: "dynamic calculation"
+
+      let rangeLabel = '';
+      if (unit === 'KB' && start >= 1024) {
+        rangeLabel = `${(start / 1024).toFixed(1)}-${(end / 1024).toFixed(1)}MB`;
+      } else {
+        rangeLabel = `${start.toFixed(0)}-${end.toFixed(0)}${unit}`;
+      }
+
+      return {
+        range: rangeLabel,
+        value: parseFloat(row.bucketMin), // Use actual min in bucket as plotting value
+        count,
+        percentile: Number(cumulativePercent.toFixed(2)),
+      };
+    });
   }
 }

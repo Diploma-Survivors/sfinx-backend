@@ -10,7 +10,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../auth/entities/user.entity';
-import { ContestStatus } from '../enums/contest-status.enum';
+import { ContestStatus } from '../enums';
 import { ContestParticipant } from './contest-participant.entity';
 import { ContestProblem } from './contest-problem.entity';
 
