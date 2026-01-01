@@ -1,32 +1,56 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SubmissionStatus } from '../../submissions/enums';
+import { LanguageInfoDto } from '../../submissions/dto/submission-response.dto';
 
-export class LanguageBreakdownDto {
-  @ApiProperty({ description: 'Programming language ID' })
-  languageId: number;
-
-  @ApiProperty({ description: 'Programming language name' })
-  languageName: string;
+export class LanguageStatDto {
+  @ApiProperty({
+    description: 'Programming language',
+    type: LanguageInfoDto,
+  })
+  language: LanguageInfoDto;
 
   @ApiProperty({ description: 'Total submissions in this language' })
-  submissionCount: number;
+  submissions: number;
 
   @ApiProperty({ description: 'Accepted submissions in this language' })
-  acceptedCount: number;
+  acceptedSubmissions: number;
+
+  @ApiProperty({ description: 'Acceptance rate percentage' })
+  acceptanceRate: number;
+
+  @ApiProperty({ description: 'Average runtime in ms' })
+  averageRuntime: number;
+
+  @ApiProperty({ description: 'Average memory in KB' })
+  averageMemory: number;
 }
 
-export class StatusDistributionDto {
+export class VerdictCountDto {
   @ApiProperty({
-    description: 'Submission status',
+    description: 'Submission verdict/status',
     enum: SubmissionStatus,
   })
-  status: SubmissionStatus;
+  verdict: SubmissionStatus;
 
-  @ApiProperty({ description: 'Number of submissions with this status' })
+  @ApiProperty({ description: 'Number of submissions with this verdict' })
   count: number;
 
   @ApiProperty({ description: 'Percentage of total submissions' })
   percentage: number;
+}
+
+export class DistributionBucketDto {
+  @ApiProperty({ description: 'Range label (e.g., "0-10ms")' })
+  range: string;
+
+  @ApiProperty({ description: 'Start value for sorting' })
+  value: number;
+
+  @ApiProperty({ description: 'Count of submissions in this range' })
+  count: number;
+
+  @ApiPropertyOptional({ description: 'Percentile value' })
+  percentile?: number;
 }
 
 export class ProblemStatisticsDto {
@@ -45,21 +69,36 @@ export class ProblemStatisticsDto {
   @ApiProperty({ description: 'Acceptance rate as percentage' })
   acceptanceRate: number;
 
-  @ApiProperty({ description: 'Number of unique users who attempted' })
-  uniqueUsers: number;
+  @ApiProperty({ description: 'Total number of attempts' })
+  totalAttempts: number;
 
-  @ApiProperty({ description: 'Number of unique users who solved' })
-  uniqueSolvers: number;
+  @ApiProperty({ description: 'Total solved count' })
+  totalSolved: number;
+
+  @ApiProperty({ description: 'Average time to solve in ms' })
+  averageTimeToSolve: number;
 
   @ApiProperty({
     description: 'Submission breakdown by programming language',
-    type: [LanguageBreakdownDto],
+    type: [LanguageStatDto],
   })
-  languageBreakdown: LanguageBreakdownDto[];
+  languageStats: LanguageStatDto[];
 
   @ApiProperty({
-    description: 'Distribution of submission statuses',
-    type: [StatusDistributionDto],
+    description: 'Distribution of submission verdicts',
+    type: [VerdictCountDto],
   })
-  statusDistribution: StatusDistributionDto[];
+  verdicts: VerdictCountDto[];
+
+  @ApiProperty({
+    description: 'Runtime distribution',
+    type: [DistributionBucketDto],
+  })
+  runtimeDistribution: DistributionBucketDto[];
+
+  @ApiProperty({
+    description: 'Memory distribution',
+    type: [DistributionBucketDto],
+  })
+  memoryDistribution: DistributionBucketDto[];
 }

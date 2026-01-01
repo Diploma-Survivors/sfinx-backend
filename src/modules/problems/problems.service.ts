@@ -524,13 +524,6 @@ export class ProblemsService {
     await this.problemRepository.remove(problem);
   }
 
-  @Transactional()
-  async toggleStatusProblem(id: number): Promise<Problem> {
-    const problem = await this.findProblemEntityById(id);
-    problem.isActive = !problem.isActive;
-    return this.problemRepository.save(problem);
-  }
-
   private generateSlug(title: string): string {
     return slugify(title, { lower: true, strict: true });
   }

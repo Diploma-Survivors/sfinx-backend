@@ -26,7 +26,6 @@ import {
 import {
   ApiPaginatedResponse,
   CheckAbility,
-  CheckPolicies,
   FileRequiredPipe,
   GetUser,
   PaginatedResultDto,
@@ -35,7 +34,6 @@ import { User } from '../auth/entities/user.entity';
 import { CaslGuard } from '../auth/guards/casl.guard';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { Action } from '../rbac/casl';
-import { ManageProblemsPolicy } from '../rbac/casl';
 import { CreateProblemDto } from './dto/create-problem.dto';
 import { CreateSampleTestcaseDto } from './dto/create-sample-testcase.dto';
 import { UploadTestcaseDto } from './dto/create-testcase.dto';
@@ -216,21 +214,6 @@ export class ProblemsController {
   @ApiResponse({ status: 404, description: 'Problem not found' })
   async deleteProblem(@Param('id') id: string): Promise<void> {
     return this.problemsService.deleteProblem(+id);
-  }
-
-  @Post(':id/toggle')
-  @UseGuards(CaslGuard)
-  @CheckPolicies(new ManageProblemsPolicy())
-  @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Toggle problem publish status (Admin only)' })
-  @ApiParam({ name: 'id', description: 'Problem ID', type: Number })
-  @ApiResponse({
-    status: 200,
-    description: 'Problem publish status toggled',
-    type: Problem,
-  })
-  async togglePublishProblem(@Param('id') id: string): Promise<Problem> {
-    return this.problemsService.toggleStatusProblem(+id);
   }
 
   @Get(':id/statistics')

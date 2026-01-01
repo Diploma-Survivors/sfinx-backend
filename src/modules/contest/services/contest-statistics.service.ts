@@ -7,7 +7,7 @@ import { SubmissionStatus } from '../../submissions/enums';
 import {
   ContestProblemStatsDto,
   ContestStatisticsDto,
-  ContestStatusDistributionDto,
+  ContestVerdictDto,
 } from '../dto/contest-statistics.dto';
 import { Contest, ContestParticipant, ContestProblem } from '../entities';
 
@@ -51,14 +51,14 @@ export class ContestStatisticsService {
       totalParticipants,
       totalSubmissions,
       totalAccepted,
-      statusDistribution,
+      verdicts,
       problemStats,
     ] = await Promise.all([
       this.getTotalRegistered(contestId),
       this.getTotalParticipants(queryBuilder.clone()),
       this.getTotalSubmissions(queryBuilder.clone()),
       this.getTotalAccepted(queryBuilder.clone()),
-      this.getStatusDistribution(queryBuilder.clone()),
+      this.getVerdicts(queryBuilder.clone()),
       this.getProblemStats(contestId),
     ]);
 
@@ -68,8 +68,8 @@ export class ContestStatisticsService {
         ? Number(((totalAccepted / totalSubmissions) * 100).toFixed(2))
         : 0;
 
-    // Add percentages to status distribution
-    const statusDistributionWithPercentage = statusDistribution.map((item) => ({
+    // Add percentages to verdicts
+    const verdictsWithPercentage = verdicts.map((item) => ({
       ...item,
       percentage:
         totalSubmissions > 0
@@ -83,12 +83,13 @@ export class ContestStatisticsService {
       status: contest.status,
       startTime: contest.startTime.toISOString(),
       endTime: contest.endTime.toISOString(),
+      activeUsers: totalParticipants, // Uses totalParticipants (unique submitters) as active users
       totalRegistered,
       totalParticipants,
       totalSubmissions,
       totalAccepted,
       acceptanceRate,
-      statusDistribution: statusDistributionWithPercentage,
+      verdicts: verdictsWithPercentage,
       problemStats,
     };
   }
@@ -137,11 +138,11 @@ export class ContestStatisticsService {
   }
 
   /**
-   * Get distribution of submission statuses
+   * Get verdicts (status distribution)
    */
-  private async getStatusDistribution(
+  private async getVerdicts(
     queryBuilder: SelectQueryBuilder<Submission>,
-  ): Promise<ContestStatusDistributionDto[]> {
+  ): Promise<ContestVerdictDto[]> {
     const results = await queryBuilder
       .select(['submission.status as status', 'COUNT(*) as count'])
       .groupBy('submission.status')
@@ -149,7 +150,7 @@ export class ContestStatisticsService {
       .getRawMany<{ status: string; count: string }>();
 
     return results.map((row) => ({
-      status: row.status as SubmissionStatus,
+      verdict: row.status as SubmissionStatus,
       count: parseInt(row.count, 10),
       percentage: 0, // Will be calculated later
     }));
@@ -158,9 +159,7 @@ export class ContestStatisticsService {
   /**
    * Get per-problem statistics
    */
-  private async getProblemStats(
-    contestId: number,
-  ): Promise<ContestProblemStatsDto[]> {
+  async getProblemStats(contestId: number): Promise<ContestProblemStatsDto[]> {
     // Get contest problems with ordering
     const contestProblems = await this.contestProblemRepository.find({
       where: { contest: { id: contestId } },
@@ -207,8 +206,11 @@ export class ContestStatisticsService {
           problemId: cp.problem.id,
           problemOrder: cp.orderIndex,
           problemLabel: cp.label ?? 'N/A',
+          title: cp.problem.title,
+          difficulty: cp.problem.difficulty,
           totalSubmissions,
           solvedCount,
+          totalParticipants,
           solvedPercentage,
         };
       }),

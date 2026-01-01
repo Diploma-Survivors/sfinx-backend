@@ -20,10 +20,11 @@ import { GetUser } from '../../common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { User } from '../auth/entities/user.entity';
 import { SolutionCommentsService } from './services/solution-comments.service'; // Changed import path and service name
-import { CreateSolutionCommentDto } from './dto/create-solution-comment.dto';
-import { UpdateSolutionCommentDto } from './dto/update-solution-comment.dto';
-
-import { SolutionCommentResponseDto } from './dto/solution-comment-response.dto';
+import {
+  CreateSolutionCommentDto,
+  SolutionCommentResponseDto,
+  UpdateSolutionCommentDto,
+} from './dto';
 import { VoteCommentDto } from '../comments-base/dto';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 

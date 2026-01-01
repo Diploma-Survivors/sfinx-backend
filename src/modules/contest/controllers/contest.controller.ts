@@ -34,6 +34,7 @@ import { FilterSubmissionDto } from '../../submissions/dto/filter-submission.dto
 import { SubmissionListResponseDto } from '../../submissions/dto/submission-response.dto';
 import { CreateContestDto } from '../dto';
 import { ContestStatisticsDto } from '../dto/contest-statistics.dto';
+import { ContestProblemStatsDto } from '../dto/contest-statistics.dto';
 import { FilterContestDto } from '../dto';
 import { UpdateContestDto } from '../dto';
 import { ContestParticipant } from '../entities';
@@ -144,6 +145,27 @@ export class ContestController {
     @Param('id') id: string,
   ): Promise<ContestStatisticsDto> {
     return this.contestStatisticsService.getContestStatistics(+id);
+  }
+
+  @Get(':id/problems-health')
+  @UseGuards(CaslGuard)
+  @CheckPolicies(new ManageContestsPolicy())
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Get contest problem health stats (Admin only)',
+    description: 'Get per-problem statistics and health metrics for a contest',
+  })
+  @ApiParam({ name: 'id', description: 'Contest ID', type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'Problem health stats retrieved',
+    type: [ContestProblemStatsDto],
+  })
+  @ApiResponse({ status: 404, description: 'Contest not found' })
+  async getProblemHealth(
+    @Param('id') id: string,
+  ): Promise<ContestProblemStatsDto[]> {
+    return this.contestStatisticsService.getProblemStats(+id);
   }
 
   @Post(':id/register')

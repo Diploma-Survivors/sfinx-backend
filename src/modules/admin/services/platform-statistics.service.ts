@@ -71,10 +71,7 @@ export class PlatformStatisticsService {
       totalSubmissions,
       totalContests,
     ] = await Promise.all([
-      // Total users (excluding banned)
-      this.userRepository.count({
-        where: { isBanned: false },
-      }),
+      this.userRepository.count(),
 
       // Active users (active in calculated threshold)
       this.getActiveUsersCount(ACTIVE_USER_THRESHOLD_DAYS),

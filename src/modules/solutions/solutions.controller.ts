@@ -23,10 +23,12 @@ import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { User } from '../auth/entities/user.entity';
 import { SolutionsService } from './solutions.service';
-import { CreateSolutionDto } from './dto/create-solution.dto';
-import { UpdateSolutionDto } from './dto/update-solution.dto';
-import { FilterSolutionDto } from './dto/filter-solution.dto';
-import { SolutionResponseDto } from './dto/solution-response.dto';
+import {
+  CreateSolutionDto,
+  FilterSolutionDto,
+  SolutionResponseDto,
+  UpdateSolutionDto,
+} from './dto';
 import { VoteCommentDto } from '../comments-base/dto';
 
 @ApiTags('Solutions')

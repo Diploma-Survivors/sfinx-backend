@@ -98,15 +98,6 @@ export class ProgrammingLanguageService {
   }
 
   /**
-   * Get all programming languages without pagination (for admin filters)
-   */
-  async findAllWithoutPagination(): Promise<ProgrammingLanguage[]> {
-    return this.languageRepository.find({
-      order: { orderIndex: SortOrder.ASC, name: SortOrder.ASC },
-    });
-  }
-
-  /**
    * Get programming language by ID
    * Cached per language ID
    */

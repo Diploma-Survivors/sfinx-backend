@@ -22,11 +22,11 @@ import { CheckAbility, GetUser, PaginatedResultDto } from '../../../../common';
 import { JwtAuthGuard } from '../../../auth/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../../auth/guards/optional-jwt-auth.guard';
 import { CaslGuard } from '../../../auth/guards/casl.guard';
-import { Action } from '../../../rbac/casl/casl-ability.factory';
+import { Action } from '../../../rbac/casl';
 import {
-  ProblemCommentResponseDto,
   CreateCommentDto,
   FilterCommentDto,
+  ProblemCommentResponseDto,
   ReportCommentDto,
   UpdateCommentDto,
   VoteCommentDto,
@@ -34,7 +34,7 @@ import {
 } from '../dto';
 import { ProblemComment } from '../entities';
 import { EmailVerifiedGuard } from '../guards';
-import { ProblemCommentsService, CommentReportsService } from '../services';
+import { CommentReportsService, ProblemCommentsService } from '../services';
 
 @ApiTags('Problem Comments')
 @Controller()

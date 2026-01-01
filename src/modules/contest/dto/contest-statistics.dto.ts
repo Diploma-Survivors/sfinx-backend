@@ -2,14 +2,14 @@ import { ApiProperty } from '@nestjs/swagger';
 import { SubmissionStatus } from '../../submissions/enums';
 import { ContestStatus } from '../enums';
 
-export class ContestStatusDistributionDto {
+export class ContestVerdictDto {
   @ApiProperty({
-    description: 'Submission status',
+    description: 'Submission verdict',
     enum: SubmissionStatus,
   })
-  status: SubmissionStatus;
+  verdict: SubmissionStatus;
 
-  @ApiProperty({ description: 'Number of submissions with this status' })
+  @ApiProperty({ description: 'Number of submissions with this verdict' })
   count: number;
 
   @ApiProperty({ description: 'Percentage of total submissions' })
@@ -26,11 +26,20 @@ export class ContestProblemStatsDto {
   @ApiProperty({ description: 'Problem label (A, B, C, etc.)' })
   problemLabel: string;
 
+  @ApiProperty({ description: 'Problem title' })
+  title: string;
+
+  @ApiProperty({ description: 'Problem difficulty' })
+  difficulty: string;
+
   @ApiProperty({ description: 'Total submissions for this problem' })
   totalSubmissions: number;
 
   @ApiProperty({ description: 'Number of users who solved this problem' })
   solvedCount: number;
+
+  @ApiProperty({ description: 'Number of participants' })
+  totalParticipants: number;
 
   @ApiProperty({ description: 'Percentage of participants who solved' })
   solvedPercentage: number;
@@ -55,6 +64,9 @@ export class ContestStatisticsDto {
   @ApiProperty({ description: 'Contest end time (ISO 8601)' })
   endTime: string;
 
+  @ApiProperty({ description: 'Total number of active users (participants)' })
+  activeUsers: number;
+
   @ApiProperty({ description: 'Total number of registered users' })
   totalRegistered: number;
 
@@ -73,10 +85,10 @@ export class ContestStatisticsDto {
   acceptanceRate: number;
 
   @ApiProperty({
-    description: 'Distribution of submission statuses',
-    type: [ContestStatusDistributionDto],
+    description: 'Distribution of submission verdicts',
+    type: [ContestVerdictDto],
   })
-  statusDistribution: ContestStatusDistributionDto[];
+  verdicts: ContestVerdictDto[];
 
   @ApiProperty({
     description: 'Per-problem statistics',

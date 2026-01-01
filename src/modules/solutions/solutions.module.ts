@@ -10,7 +10,7 @@ import { SolutionVote } from './entities/solution-vote.entity';
 import { SolutionCommentVote } from './entities/solution-comment-vote.entity';
 import { Problem } from '../problems/entities/problem.entity';
 import { Tag } from '../problems/entities/tag.entity';
-import { ProgrammingLanguage } from '../programming-language/entities/programming-language.entity';
+import { ProgrammingLanguage } from '../programming-language';
 import { User } from '../auth/entities/user.entity';
 import { AuthModule } from '../auth/auth.module';
 import { SolutionCommentsService } from './services/solution-comments.service';
