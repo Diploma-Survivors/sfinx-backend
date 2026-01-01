@@ -1,21 +1,23 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import {
-  Repository,
   DataSource,
-  EntityManager,
-  FindOptionsWhere,
-  FindOptionsOrder,
   DeepPartial,
+  EntityManager,
   FindOneOptions,
+  FindOptionsOrder,
+  FindOptionsWhere,
+  Repository,
 } from 'typeorm';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import { BaseComment } from './entities/base-comment.entity';
 import { BaseCommentVote } from './entities/base-comment-vote.entity';
 import { StorageService } from '../storage/storage.service';
 
-import { BaseCreateCommentDto } from './dto';
-import { BaseUpdateCommentDto } from './dto';
-import { BaseCommentResponseDto } from './dto';
+import {
+  BaseCommentResponseDto,
+  BaseCreateCommentDto,
+  BaseUpdateCommentDto,
+} from './dto';
 import { AuthorDto } from '../users/dtos/author.dto';
 import { VoteType } from './enums';
 import { getAvatarUrl } from '../../common';
@@ -57,25 +59,32 @@ export abstract class BaseCommentsService<
       relations: ['author'],
       order: { createdAt: 'ASC' } as unknown as FindOptionsOrder<CommentEntity>,
     });
+    let userVotes: Map<number, number> | null = null;
+    if (userId) {
+      const ids = comments.map((c) => c.id);
+      userVotes = await this.getUserVotes(ids, userId);
+    }
 
-    return Promise.all(
-      comments.map(async (c) => {
-        if (userId) {
-          const vote = await this.voteRepo
-            .createQueryBuilder('vote')
-            .where(`vote.commentId = :commentId`, { commentId: c.id })
-            .andWhere(`vote.userId = :userId`, { userId })
-            .getOne();
+    return comments.map((c) => this.mapToResponseDto(c, userVotes));
+  }
 
-          c.myVote = vote
-            ? vote.voteType === VoteType.UPVOTE
-              ? 'up_vote'
-              : 'down_vote'
-            : null;
-        }
-        return this.mapToResponseDto(c);
-      }),
-    );
+  // Optimized batch fetch of votes
+  async getUserVotes(
+    commentIds: number[],
+    userId: number,
+  ): Promise<Map<number, number>> {
+    if (commentIds.length === 0) return new Map();
+
+    const votes = await this.voteRepo
+      .createQueryBuilder('v')
+      .where('v.commentId IN (:...commentIds)', { commentIds })
+      .andWhere('v.userId = :userId', { userId })
+      .select(['v.commentId', 'v.voteType'])
+      .getMany();
+
+    const map = new Map<number, number>();
+    votes.forEach((v) => map.set(v.commentId, v.voteType as unknown as number)); // Cast enum
+    return map;
   }
 
   async createComment(
@@ -120,6 +129,7 @@ export abstract class BaseCommentsService<
     return this.mapToResponseDto(createdComment);
   }
 
+  // Override update for validation
   async updateComment(
     id: number,
     userId: number,
@@ -132,6 +142,10 @@ export abstract class BaseCommentsService<
 
     if (!comment) throw new NotFoundException('Comment not found');
 
+    if (comment.isDeleted) {
+      throw new ForbiddenException('Cannot edit a deleted comment');
+    }
+
     if (comment.authorId !== userId) {
       throw new ForbiddenException(
         'You are not allowed to update this comment',
@@ -140,24 +154,35 @@ export abstract class BaseCommentsService<
 
     if (dto.content) {
       comment.content = dto.content;
+      comment.isEdited = true;
+      comment.editedAt = new Date();
     }
 
     const saved = await this.commentRepo.save(comment);
     return this.mapToResponseDto(saved);
   }
 
-  async deleteComment(id: number, userId: number): Promise<void> {
+  async deleteComment(
+    id: number,
+    userId: number,
+    isAdmin = false,
+  ): Promise<void> {
     const comment = await this.commentRepo.findOneBy({
       id,
     } as unknown as FindOptionsWhere<CommentEntity>);
     if (!comment) throw new NotFoundException('Comment not found');
 
-    if (comment.authorId !== userId) {
+    if (!isAdmin && comment.authorId !== userId) {
       throw new ForbiddenException(
         'You are not allowed to delete this comment',
       );
     }
 
+    // Soft delete
+    comment.isDeleted = true;
+    await this.commentRepo.save(comment);
+
+    // Update parent reply count if exists
     if (comment.parentId) {
       await this.commentRepo
         .createQueryBuilder()
@@ -168,17 +193,13 @@ export abstract class BaseCommentsService<
         .where('id = :id', { id: comment.parentId })
         .execute();
     }
-
-    await this.commentRepo.remove(comment);
   }
 
   async voteComment(
     commentId: number,
     userId: number,
-    type: 'up_vote' | 'down_vote',
+    voteType: VoteType,
   ): Promise<void> {
-    const voteType = type === 'up_vote' ? VoteType.UPVOTE : VoteType.DOWNVOTE;
-
     const existingVote = await this.voteRepo
       .createQueryBuilder('vote')
       .where('vote.commentId = :commentId', { commentId })
@@ -238,10 +259,14 @@ export abstract class BaseCommentsService<
     await manager.getRepository(this.getCommentEntityName()).update(commentId, {
       upvoteCount: upvotes,
       downvoteCount: downvotes,
+      voteScore: upvotes - downvotes,
     } as unknown as QueryDeepPartialEntity<CommentEntity>);
   }
 
-  protected mapToResponseDto(comment: BaseComment): BaseCommentResponseDto {
+  protected mapToResponseDto(
+    comment: BaseComment,
+    userVotes?: Map<number, number> | null,
+  ): BaseCommentResponseDto {
     const author: AuthorDto = {
       id: comment.author.id,
       username: comment.author.username,
@@ -258,11 +283,17 @@ export abstract class BaseCommentsService<
       upvoteCount: comment.upvoteCount,
       downvoteCount: comment.downvoteCount,
       replyCount: comment.replyCount,
+      isPinned: comment.isPinned,
+      isEdited: comment.isEdited,
+      isDeleted: comment.isDeleted,
+      voteScore: comment.voteScore,
+      editedAt: comment.editedAt,
       createdAt: comment.createdAt,
       updatedAt: comment.updatedAt,
       author,
-      myVote: comment.myVote,
       replyCounts: comment.replyCount,
+      userVote: userVotes ? (userVotes.get(comment.id) ?? null) : null,
+      myVote: comment.myVote,
     };
   }
 }

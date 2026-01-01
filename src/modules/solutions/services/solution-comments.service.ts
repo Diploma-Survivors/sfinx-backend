@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
+import { Transactional } from 'typeorm-transactional';
 import { BaseCommentsService } from '../../comments-base/base-comments.service';
 import { Solution } from '../entities/solution.entity';
 import { AuthorDto } from '../../users/dtos/author.dto';
@@ -11,6 +12,7 @@ import { StorageService } from '../../storage/storage.service';
 import { VoteType } from '../../comments-base/enums';
 import { BaseCreateCommentDto } from '../../comments-base/dto';
 import { getAvatarUrl } from '../../../common';
+import { VoteResponseDto } from '../../comments-base/dto';
 
 @Injectable()
 export class SolutionCommentsService extends BaseCommentsService<
@@ -41,21 +43,65 @@ export class SolutionCommentsService extends BaseCommentsService<
     userId: number,
     voteType: VoteType,
   ): SolutionCommentVote {
-    // We must manually satisfy properties if they are redundant or specific
     const vote = new SolutionCommentVote();
     vote.commentId = commentId;
     vote.userId = userId;
     vote.voteType = voteType;
     return vote;
-    // OR return this.voteRepo.create({ commentId, userId, voteType });
-    // but TS might complain about abstract BaseCommentVote mismatches if not careful.
-    // Using create() is safer if properties match.
   }
 
   protected getParentRelationIdField(): string {
     return 'solutionId';
   }
 
+  @Transactional()
+  async voteSolutionComment(
+    commentId: number,
+    userId: number,
+    voteType: VoteType,
+  ): Promise<VoteResponseDto> {
+    const comment = await this.commentRepo.findOne({
+      where: { id: commentId },
+    });
+    if (!comment)
+      throw new NotFoundException(`Comment with ID ${commentId} not found`);
+
+    const existingVote = await this.voteRepo.findOne({
+      where: { commentId, userId },
+    });
+
+    if (existingVote) {
+      if (existingVote.voteType === voteType) {
+        // No change
+      } else {
+        // Update
+        existingVote.voteType = voteType;
+        await this.voteRepo.save(existingVote);
+        await this.updateCommentVoteCounts(this.commentRepo.manager, commentId);
+      }
+    } else {
+      // New
+      const newVote = this.createVoteEntity(commentId, userId, voteType);
+      await this.voteRepo.save(newVote);
+      await this.updateCommentVoteCounts(this.commentRepo.manager, commentId);
+    }
+
+    const updated = await this.commentRepo.findOne({
+      where: { id: commentId },
+    });
+    return {
+      voteType,
+      upvoteCount: updated!.upvoteCount,
+      downvoteCount: updated!.downvoteCount,
+      voteScore: updated!.voteScore,
+    };
+  }
+
+  async removeVote(commentId: number, userId: number): Promise<void> {
+    return this.unvoteComment(commentId, userId);
+  }
+
+  @Transactional()
   async createComment(
     userId: number,
     solutionId: number,
@@ -70,18 +116,50 @@ export class SolutionCommentsService extends BaseCommentsService<
     return result as SolutionCommentResponseDto;
   }
 
-  async deleteComment(id: number, userId: number): Promise<void> {
+  @Transactional()
+  async deleteComment(
+    id: number,
+    userId: number,
+    isAdmin = false,
+  ): Promise<void> {
     const comment = await this.commentRepo.findOne({ where: { id } });
     if (comment) {
-      await super.deleteComment(id, userId);
+      await super.deleteComment(id, userId, isAdmin);
       await this.dataSource
         .getRepository(Solution)
         .decrement({ id: comment.solutionId }, 'commentCount', 1);
     }
   }
 
+  @Transactional()
+  async pinComment(id: number): Promise<SolutionCommentResponseDto> {
+    const comment = await this.commentRepo.findOne({
+      where: { id },
+      relations: ['author'],
+    });
+    if (!comment)
+      throw new NotFoundException(`Comment with ID ${id} not found`);
+    comment.isPinned = true;
+    const updated = await this.commentRepo.save(comment);
+    return this.mapToResponseDto(updated);
+  }
+
+  @Transactional()
+  async unpinComment(id: number): Promise<SolutionCommentResponseDto> {
+    const comment = await this.commentRepo.findOne({
+      where: { id },
+      relations: ['author'],
+    });
+    if (!comment)
+      throw new NotFoundException(`Comment with ID ${id} not found`);
+    comment.isPinned = false;
+    const updated = await this.commentRepo.save(comment);
+    return this.mapToResponseDto(updated);
+  }
+
   protected mapToResponseDto(
     comment: SolutionComment,
+    userVotes?: Map<number, number> | null,
   ): SolutionCommentResponseDto {
     const author: AuthorDto = {
       id: comment.author?.id,
@@ -100,11 +178,17 @@ export class SolutionCommentsService extends BaseCommentsService<
       upvoteCount: comment.upvoteCount,
       downvoteCount: comment.downvoteCount,
       replyCount: comment.replyCount,
-      replyCounts: comment.replyCount, // Duplicate property in DTO
+      isPinned: comment.isPinned,
+      isEdited: comment.isEdited,
+      isDeleted: comment.isDeleted,
+      voteScore: comment.voteScore,
+      editedAt: comment.editedAt,
+      replyCounts: comment.replyCount,
       createdAt: comment.createdAt,
       updatedAt: comment.updatedAt,
       author,
       myVote: comment.myVote,
+      userVote: userVotes ? (userVotes.get(comment.id) ?? null) : null,
     };
   }
 }

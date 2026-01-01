@@ -8,7 +8,6 @@ import {
   Param,
   Patch,
   Post,
-  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -25,6 +24,8 @@ import { CreateSolutionCommentDto } from './dto/create-solution-comment.dto';
 import { UpdateSolutionCommentDto } from './dto/update-solution-comment.dto';
 
 import { SolutionCommentResponseDto } from './dto/solution-comment-response.dto';
+import { VoteCommentDto } from '../comments-base/dto';
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 
 @ApiTags('Solution Comments')
 @Controller('solutions')
@@ -34,9 +35,10 @@ export class SolutionCommentsController {
   ) {} // Changed service name
 
   @Get(':solutionId/comments')
-  // @UseGuards(OptionalJwtAuthGuard) // Removed as per diff
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get comments for a solution' })
   @ApiParam({ name: 'solutionId', type: Number })
+  @ApiBearerAuth('JWT-auth')
   async getComments(
     @Param('solutionId') solutionId: string,
     @GetUser() user?: User,
@@ -103,10 +105,10 @@ export class SolutionCommentsController {
   @ApiParam({ name: 'id', type: Number })
   async voteComment(
     @Param('id') id: string,
-    @Query('type') type: 'up_vote' | 'down_vote',
     @GetUser() user: User,
+    @Body() dto: VoteCommentDto,
   ): Promise<void> {
-    return this.solutionCommentsService.voteComment(+id, user.id, type);
+    return this.solutionCommentsService.voteComment(+id, user.id, dto.voteType);
   }
 
   @Delete('comments/:id/vote')

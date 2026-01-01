@@ -3,7 +3,7 @@ import { CommentType } from '../enums';
 import { BaseCommentResponseDto } from '../../../comments-base/dto';
 import { AuthorDto } from '../../../users/dtos/author.dto';
 
-export class CommentResponseDto extends BaseCommentResponseDto {
+export class ProblemCommentResponseDto extends BaseCommentResponseDto {
   @ApiProperty({ description: 'Problem ID', example: 1 })
   problemId: number;
 
@@ -18,25 +18,25 @@ export class CommentResponseDto extends BaseCommentResponseDto {
     description: 'Whether this comment is pinned by moderators',
     example: false,
   })
-  isPinned: boolean;
+  declare isPinned: boolean;
 
   @ApiProperty({
     description: 'Whether this comment has been edited',
     example: false,
   })
-  isEdited: boolean;
+  declare isEdited: boolean;
 
   @ApiProperty({
     description: 'Soft delete flag',
     example: false,
   })
-  isDeleted: boolean;
+  declare isDeleted: boolean;
 
   @ApiProperty({
     description: 'Net vote score (upvotes - downvotes)',
     example: 39,
   })
-  voteScore: number;
+  declare voteScore: number;
 
   @ApiProperty({ description: 'Number of reports on this comment', example: 0 })
   reportCount: number;
@@ -46,7 +46,7 @@ export class CommentResponseDto extends BaseCommentResponseDto {
     example: '2025-01-15T10:30:00Z',
     nullable: true,
   })
-  editedAt: Date | null;
+  declare editedAt: Date | null;
 
   @ApiProperty({
     description: 'Comment author',
@@ -60,12 +60,12 @@ export class CommentResponseDto extends BaseCommentResponseDto {
     example: 1,
     nullable: true,
   })
-  userVote?: number | null;
+  declare userVote?: number | null;
 
   @ApiPropertyOptional({
     description: 'Nested replies to this comment',
-    type: () => [CommentResponseDto],
+    type: () => [ProblemCommentResponseDto],
     isArray: true,
   })
-  declare replies?: CommentResponseDto[];
+  declare replies?: ProblemCommentResponseDto[];
 }

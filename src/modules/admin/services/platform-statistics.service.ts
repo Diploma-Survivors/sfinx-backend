@@ -21,6 +21,8 @@ import {
   TimeSeriesDataPointDto,
 } from '../dto/platform-statistics.dto';
 
+const ACTIVE_USER_THRESHOLD_DAYS = 30;
+
 @Injectable()
 export class PlatformStatisticsService {
   private readonly logger = new Logger(PlatformStatisticsService.name);
@@ -62,7 +64,7 @@ export class PlatformStatisticsService {
 
   private async getPlatformMetrics(): Promise<PlatformMetricsDto> {
     const [
-      totalUsers,
+      totalUsers, // Added back to capture the first promise result
       activeUsers,
       totalProblems,
       activeProblems,
@@ -74,12 +76,8 @@ export class PlatformStatisticsService {
         where: { isBanned: false },
       }),
 
-      // Active users (last 30 days)
-      this.userRepository
-        .createQueryBuilder('user')
-        .where("user.lastActiveAt >= NOW() - INTERVAL '30 days'")
-        .andWhere('user.isBanned = false')
-        .getCount(),
+      // Active users (active in calculated threshold)
+      this.getActiveUsersCount(ACTIVE_USER_THRESHOLD_DAYS),
 
       // Total problems
       this.problemRepository.count(),
@@ -104,6 +102,17 @@ export class PlatformStatisticsService {
       totalSubmissions,
       totalContests,
     };
+  }
+
+  /**
+   * Get active users count based on days threshold
+   */
+  private async getActiveUsersCount(days: number): Promise<number> {
+    return this.userRepository
+      .createQueryBuilder('user')
+      .where(`user.lastActiveAt >= NOW() - INTERVAL '${days} days'`)
+      .andWhere('user.isBanned = false')
+      .getCount();
   }
 
   private async getGrowthMetrics(): Promise<GrowthMetricsDto> {

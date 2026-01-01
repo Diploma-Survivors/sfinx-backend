@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, DeepPartial, EntityManager, Repository } from 'typeorm';
+import { DataSource, DeepPartial, Repository } from 'typeorm';
 import { PaginatedResultDto } from '../../common';
 import { Solution } from './entities/solution.entity';
 import {
@@ -14,21 +14,19 @@ import {
   UpdateSolutionDto,
 } from './dto';
 import { VoteType } from '../comments-base/enums';
-import { SolutionVote } from './entities/solution-vote.entity';
 import { ProgrammingLanguage } from '../programming-language';
 import { Tag } from '../problems/entities/tag.entity';
 import { Problem } from '../problems/entities/problem.entity';
 import { StorageService } from '../storage/storage.service';
 import { SolutionResponseDto } from './dto';
 import { getAvatarUrl } from '../../common';
+import { SolutionVotesService } from './services/solution-votes.service';
 
 @Injectable()
 export class SolutionsService {
   constructor(
     @InjectRepository(Solution)
     private readonly solutionRepo: Repository<Solution>,
-    @InjectRepository(SolutionVote)
-    private readonly solutionVoteRepo: Repository<SolutionVote>,
     @InjectRepository(ProgrammingLanguage)
     private readonly languageRepo: Repository<ProgrammingLanguage>,
     @InjectRepository(Tag)
@@ -37,11 +35,12 @@ export class SolutionsService {
     private readonly problemRepo: Repository<Problem>,
     private readonly dataSource: DataSource,
     private readonly storageService: StorageService,
+    private readonly solutionVotesService: SolutionVotesService,
   ) {}
 
   private mapToResponseDto(
     solution: Solution,
-    voteType: 'up_vote' | 'down_vote' | null = null,
+    userVote: number | null = null,
   ): SolutionResponseDto {
     const dto = new SolutionResponseDto();
     dto.id = solution.id;
@@ -51,12 +50,13 @@ export class SolutionsService {
     dto.authorId = solution.authorId;
     dto.upvoteCount = solution.upvoteCount;
     dto.downvoteCount = solution.downvoteCount;
+    dto.voteScore = solution.voteScore;
     dto.commentCount = solution.commentCount;
     dto.createdAt = solution.createdAt;
     dto.updatedAt = solution.updatedAt;
     dto.tags = solution.tags || [];
     dto.languageIds = solution.languages?.map((l) => l.id) || [];
-    dto.myVote = voteType;
+    dto.userVote = userVote;
 
     if (solution.author) {
       dto.author = {
@@ -151,22 +151,21 @@ export class SolutionsService {
 
     const [items, total] = await qb.getManyAndCount();
 
-    const dtos = await Promise.all(
-      items.map(async (item) => {
-        let voteType: 'up_vote' | 'down_vote' | null = null;
-        if (userId) {
-          const vote = await this.solutionVoteRepo.findOne({
-            where: { solutionId: item.id, userId },
-          });
-          voteType = vote
-            ? vote.voteType === VoteType.UPVOTE
-              ? 'up_vote'
-              : 'down_vote'
-            : null;
-        }
-        return this.mapToResponseDto(item, voteType);
-      }),
-    );
+    let userVotesMap: Map<number, number> | null = null;
+    if (userId) {
+      const solutionIds = items.map((s) => s.id);
+      userVotesMap = await this.solutionVotesService.getUserVotes(
+        solutionIds,
+        userId,
+      );
+    }
+
+    const dtos = items.map((item) => {
+      const userVote = userVotesMap
+        ? (userVotesMap.get(item.id) ?? null)
+        : null;
+      return this.mapToResponseDto(item, userVote);
+    });
 
     return new PaginatedResultDto(dtos, {
       page,
@@ -183,19 +182,12 @@ export class SolutionsService {
 
     if (!solution) throw new NotFoundException('Solution not found');
 
-    let voteType: 'up_vote' | 'down_vote' | null = null;
+    let userVote: number | null = null;
     if (userId) {
-      const vote = await this.solutionVoteRepo.findOne({
-        where: { solutionId: id, userId },
-      });
-      voteType = vote
-        ? vote.voteType === VoteType.UPVOTE
-          ? 'up_vote'
-          : 'down_vote'
-        : null;
+      userVote = await this.solutionVotesService.getUserVote(id, userId);
     }
 
-    return this.mapToResponseDto(solution, voteType);
+    return this.mapToResponseDto(solution, userVote);
   }
 
   async findAllByUser(
@@ -211,19 +203,16 @@ export class SolutionsService {
       take: limit,
     });
 
-    const dtos = await Promise.all(
-      items.map(async (item) => {
-        const vote = await this.solutionVoteRepo.findOne({
-          where: { solutionId: item.id, userId },
-        });
-        const voteType: 'up_vote' | 'down_vote' | null = vote
-          ? vote.voteType === VoteType.UPVOTE
-            ? 'up_vote'
-            : 'down_vote'
-          : null;
-        return this.mapToResponseDto(item, voteType);
-      }),
+    const solutionIds = items.map((s) => s.id);
+    const userVotesMap = await this.solutionVotesService.getUserVotes(
+      solutionIds,
+      userId,
     );
+
+    const dtos = items.map((item) => {
+      const userVote = userVotesMap.get(item.id) ?? null;
+      return this.mapToResponseDto(item, userVote);
+    });
 
     return new PaginatedResultDto(dtos, { page, limit, total });
   }
@@ -280,59 +269,12 @@ export class SolutionsService {
   async voteSolution(
     solutionId: number,
     userId: number,
-    type: 'up_vote' | 'down_vote',
+    voteType: VoteType,
   ): Promise<void> {
-    const voteType = type === 'up_vote' ? VoteType.UPVOTE : VoteType.DOWNVOTE;
-
-    const existingVote = await this.solutionVoteRepo.findOne({
-      where: { solutionId, userId },
-    });
-
-    await this.dataSource.transaction(async (manager) => {
-      if (existingVote) {
-        if (existingVote.voteType === voteType) {
-          // remove vote (toggle off)
-          await manager.delete(SolutionVote, { solutionId, userId });
-          await this.updateSolutionVoteCounts(manager, solutionId);
-        } else {
-          // change vote
-          existingVote.voteType = voteType;
-          await manager.save(existingVote);
-          await this.updateSolutionVoteCounts(manager, solutionId);
-        }
-      } else {
-        // new vote
-        const newVote = this.solutionVoteRepo.create({
-          solutionId,
-          userId,
-          voteType,
-        });
-        await manager.save(newVote);
-        await this.updateSolutionVoteCounts(manager, solutionId);
-      }
-    });
+    await this.solutionVotesService.vote(solutionId, userId, voteType);
   }
 
   async unvoteSolution(solutionId: number, userId: number): Promise<void> {
-    await this.dataSource.transaction(async (manager) => {
-      await manager.delete(SolutionVote, { solutionId, userId });
-      await this.updateSolutionVoteCounts(manager, solutionId);
-    });
-  }
-
-  private async updateSolutionVoteCounts(
-    manager: EntityManager,
-    solutionId: number,
-  ) {
-    const upvotes = await manager.count(SolutionVote, {
-      where: { solutionId, voteType: VoteType.UPVOTE },
-    });
-    const downvotes = await manager.count(SolutionVote, {
-      where: { solutionId, voteType: VoteType.DOWNVOTE },
-    });
-    await manager.update(Solution, solutionId, {
-      upvoteCount: upvotes,
-      downvoteCount: downvotes,
-    });
+    await this.solutionVotesService.unvote(solutionId, userId);
   }
 }

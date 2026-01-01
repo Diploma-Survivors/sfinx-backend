@@ -7,10 +7,16 @@ export class BaseCommentResponseDto {
   upvoteCount: number;
   downvoteCount: number;
   replyCount: number;
+  isPinned: boolean;
+  isEdited: boolean;
+  isDeleted: boolean;
+  voteScore: number;
+  editedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   author: AuthorDto;
-  myVote?: 'up_vote' | 'down_vote' | null;
   replyCounts?: number;
+  userVote?: number | null;
+  myVote?: 'up_vote' | 'down_vote' | null;
   replies?: BaseCommentResponseDto[];
 }

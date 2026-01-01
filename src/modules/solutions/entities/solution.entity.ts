@@ -46,6 +46,13 @@ export class Solution {
   @Column({ name: 'downvote_count', default: 0 })
   downvoteCount: number;
 
+  @ApiProperty({
+    description: 'Net vote score (upvotes - downvotes)',
+    default: 0,
+  })
+  @Column({ name: 'vote_score', default: 0 })
+  voteScore: number;
+
   @ApiProperty({ description: 'Creation timestamp' })
   @CreateDateColumn({ name: 'created_at', type: 'timestamp with time zone' })
   createdAt: Date;
@@ -85,11 +92,12 @@ export class Solution {
 
   // Non-column properties (filled manually)
   @ApiProperty({
-    description: 'Current user vote status',
-    enum: ['up_vote', 'down_vote', null],
+    description:
+      'Current user vote (1 for upvote, -1 for downvote, null if not voted)',
+    enum: [1, -1, null],
     nullable: true,
   })
-  myVote: 'up_vote' | 'down_vote' | null;
+  userVote: number | null;
 
   @ApiProperty({ description: 'Total comments count', default: 0 })
   @Column({ name: 'comment_count', default: 0 })

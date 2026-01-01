@@ -16,7 +16,7 @@ import {
 import { StorageService } from '../../../storage/storage.service';
 import {
   AuthorDto,
-  CommentResponseDto,
+  ProblemCommentResponseDto,
   CommentSortBy,
   CreateCommentDto,
   FilterCommentDto,
@@ -143,7 +143,7 @@ export class ProblemCommentsService extends BaseCommentsService<
     userId: number,
     problemId: number,
     dto: CreateCommentDto,
-  ): Promise<CommentResponseDto> {
+  ): Promise<ProblemCommentResponseDto> {
     const validation = this.markdownService.validateMarkdown(dto.content);
     if (!validation.isValid) {
       throw new BadRequestException({
@@ -176,7 +176,7 @@ export class ProblemCommentsService extends BaseCommentsService<
       extraFields,
     );
 
-    return result as CommentResponseDto;
+    return result as ProblemCommentResponseDto;
   }
 
   // Override update for validation
@@ -185,7 +185,7 @@ export class ProblemCommentsService extends BaseCommentsService<
     id: number,
     userId: number,
     dto: UpdateCommentDto,
-  ): Promise<CommentResponseDto> {
+  ): Promise<ProblemCommentResponseDto> {
     if (dto.content !== undefined) {
       const validation = this.markdownService.validateMarkdown(dto.content);
       if (!validation.isValid) {
@@ -264,7 +264,7 @@ export class ProblemCommentsService extends BaseCommentsService<
   async getPaginatedComments(
     filterDto: FilterCommentDto,
     userId?: number,
-  ): Promise<PaginatedResultDto<CommentResponseDto>> {
+  ): Promise<PaginatedResultDto<ProblemCommentResponseDto>> {
     const { skip, take, problemId, type, parentId, sortBy } = filterDto;
 
     const queryBuilder = this.commentRepo
@@ -315,7 +315,7 @@ export class ProblemCommentsService extends BaseCommentsService<
   async getCommentById(
     id: number,
     userId?: number,
-  ): Promise<CommentResponseDto> {
+  ): Promise<ProblemCommentResponseDto> {
     // 1. Fetch the comment and all its descendants using recursive CTE
     const query = `
       WITH RECURSIVE comment_tree AS (
@@ -350,14 +350,14 @@ export class ProblemCommentsService extends BaseCommentsService<
     }
 
     // 4. Build Tree
-    const commentMap = new Map<number, CommentResponseDto>();
+    const commentMap = new Map<number, ProblemCommentResponseDto>();
     comments.forEach((c) => {
       const dto = this.mapToResponseDto(c, userVotes);
       dto.replies = [];
       commentMap.set(c.id, dto);
     });
 
-    let rootDto: CommentResponseDto | null = null;
+    let rootDto: ProblemCommentResponseDto | null = null;
 
     comments.forEach((c) => {
       const dto = commentMap.get(c.id)!;
@@ -377,7 +377,7 @@ export class ProblemCommentsService extends BaseCommentsService<
   async buildCommentTree(
     problemId: number,
     userId?: number,
-  ): Promise<CommentResponseDto[]> {
+  ): Promise<ProblemCommentResponseDto[]> {
     const allComments = await this.commentRepo.find({
       where: { problemId },
       relations: ['author'],
@@ -394,14 +394,14 @@ export class ProblemCommentsService extends BaseCommentsService<
       userVotes = await this.getUserVotes(ids, userId);
     }
 
-    const commentMap = new Map<number, CommentResponseDto>();
+    const commentMap = new Map<number, ProblemCommentResponseDto>();
     allComments.forEach((comment) => {
       const dto = this.mapToResponseDto(comment, userVotes);
       dto.replies = [];
       commentMap.set(comment.id, dto);
     });
 
-    const rootComments: CommentResponseDto[] = [];
+    const rootComments: ProblemCommentResponseDto[] = [];
     allComments.forEach((comment) => {
       const commentDto = commentMap.get(comment.id)!;
       if (comment.parentId) {
@@ -418,7 +418,7 @@ export class ProblemCommentsService extends BaseCommentsService<
   }
 
   @Transactional()
-  async pinComment(id: number): Promise<CommentResponseDto> {
+  async pinComment(id: number): Promise<ProblemCommentResponseDto> {
     const comment = await this.commentRepo.findOne({
       where: { id },
       relations: ['author'],
@@ -431,7 +431,7 @@ export class ProblemCommentsService extends BaseCommentsService<
   }
 
   @Transactional()
-  async unpinComment(id: number): Promise<CommentResponseDto> {
+  async unpinComment(id: number): Promise<ProblemCommentResponseDto> {
     const comment = await this.commentRepo.findOne({
       where: { id },
       relations: ['author'],
@@ -446,7 +446,7 @@ export class ProblemCommentsService extends BaseCommentsService<
   protected mapToResponseDto(
     comment: ProblemComment,
     userVotes?: Map<number, number> | null,
-  ): CommentResponseDto {
+  ): ProblemCommentResponseDto {
     const author: AuthorDto = {
       id: comment.author?.id,
       username: comment.author?.username,
@@ -475,13 +475,6 @@ export class ProblemCommentsService extends BaseCommentsService<
       updatedAt: comment.updatedAt,
       author,
       userVote: userVotes ? (userVotes.get(comment.id) ?? null) : null,
-      myVote: userVotes
-        ? userVotes.get(comment.id) === VoteType.UPVOTE
-          ? 'up_vote'
-          : userVotes.get(comment.id) === VoteType.DOWNVOTE
-            ? 'down_vote'
-            : null
-        : null,
     };
   }
 }

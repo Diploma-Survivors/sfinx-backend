@@ -27,6 +27,7 @@ import { CreateSolutionDto } from './dto/create-solution.dto';
 import { UpdateSolutionDto } from './dto/update-solution.dto';
 import { FilterSolutionDto } from './dto/filter-solution.dto';
 import { SolutionResponseDto } from './dto/solution-response.dto';
+import { VoteCommentDto } from '../comments-base/dto';
 
 @ApiTags('Solutions')
 @Controller('solutions')
@@ -118,10 +119,10 @@ export class SolutionsController {
   @ApiOperation({ summary: 'Vote on solution' })
   async voteSolution(
     @Param('id') id: string,
-    @Query('type') type: 'up_vote' | 'down_vote',
     @GetUser() user: User,
+    @Body() dto: VoteCommentDto,
   ): Promise<void> {
-    return this.solutionsService.voteSolution(+id, user.id, type);
+    return this.solutionsService.voteSolution(+id, user.id, dto.voteType);
   }
 
   @Delete(':id/vote')

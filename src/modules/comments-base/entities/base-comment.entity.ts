@@ -17,6 +17,7 @@ export abstract class BaseComment {
 
   @Column({ name: 'parent_id', nullable: true })
   parentId: number | null;
+
   @Column('text')
   content: string;
 
@@ -28,6 +29,25 @@ export abstract class BaseComment {
 
   @Column({ name: 'reply_count', default: 0 })
   replyCount: number;
+
+  @Column({ name: 'is_pinned', default: false })
+  isPinned: boolean;
+
+  @Column({ name: 'is_edited', default: false })
+  isEdited: boolean;
+
+  @Column({ name: 'is_deleted', default: false })
+  isDeleted: boolean;
+
+  @Column({ name: 'vote_score', default: 0 })
+  voteScore: number;
+
+  @Column({
+    name: 'edited_at',
+    type: 'timestamp with time zone',
+    nullable: true,
+  })
+  editedAt: Date | null;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp with time zone' })
   createdAt: Date;

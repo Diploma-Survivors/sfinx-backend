@@ -37,13 +37,22 @@ export class SolutionResponseDto {
   @Expose()
   downvoteCount: number;
 
+  @ApiProperty({ description: 'Net vote score (upvotes - downvotes)' })
+  @Expose()
+  voteScore: number;
+
   @ApiProperty()
   @Expose()
   commentCount: number;
 
-  @ApiProperty({ enum: ['up_vote', 'down_vote', null], nullable: true })
+  @ApiProperty({
+    description:
+      'Current user vote (1 for upvote, -1 for downvote, null if not voted)',
+    enum: [1, -1, null],
+    nullable: true,
+  })
   @Expose()
-  myVote: 'up_vote' | 'down_vote' | null;
+  userVote: number | null;
 
   @ApiProperty()
   @Expose()

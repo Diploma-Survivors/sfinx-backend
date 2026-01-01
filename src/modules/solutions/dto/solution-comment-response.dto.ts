@@ -1,9 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { AuthorDto } from '../../users/dtos/author.dto';
+import { BaseCommentResponseDto } from '../../comments-base/dto';
 
-export class SolutionCommentResponseDto {
+export class SolutionCommentResponseDto extends BaseCommentResponseDto {
   @ApiProperty({ description: 'Unique identifier', example: 1 })
-  id: number;
+  declare id: number;
 
   @ApiProperty({ description: 'Solution ID', example: 1 })
   solutionId: number;
@@ -13,40 +14,71 @@ export class SolutionCommentResponseDto {
     example: 42,
     nullable: true,
   })
-  parentId: number | null;
+  declare parentId: number | null;
 
   @ApiProperty({
     description: 'Comment content in markdown format',
     example: '**Great solution!** I used two pointers approach.',
   })
-  content: string;
+  declare content: string;
 
   @ApiProperty({ description: 'Total upvotes count', example: 42 })
-  upvoteCount: number;
+  declare upvoteCount: number;
 
   @ApiProperty({ description: 'Total downvotes count', example: 3 })
-  downvoteCount: number;
+  declare downvoteCount: number;
 
   @ApiProperty({ description: 'Total number of replies', example: 5 })
-  replyCount: number;
+  declare replyCount: number;
+
+  @ApiProperty({
+    description: 'Whether this comment is pinned by moderators',
+    example: false,
+  })
+  declare isPinned: boolean;
+
+  @ApiProperty({
+    description: 'Whether this comment has been edited',
+    example: false,
+  })
+  declare isEdited: boolean;
+
+  @ApiProperty({
+    description: 'Soft delete flag',
+    example: false,
+  })
+  declare isDeleted: boolean;
+
+  @ApiProperty({
+    description: 'Net vote score (upvotes - downvotes)',
+    example: 39,
+  })
+  declare voteScore: number;
+
+  @ApiPropertyOptional({
+    description: 'Last edit timestamp',
+    example: '2025-01-15T10:30:00Z',
+    nullable: true,
+  })
+  declare editedAt: Date | null;
 
   @ApiProperty({
     description: 'Creation timestamp',
     example: '2025-01-15T09:00:00Z',
   })
-  createdAt: Date;
+  declare createdAt: Date;
 
   @ApiProperty({
     description: 'Last update timestamp',
     example: '2025-01-15T10:30:00Z',
   })
-  updatedAt: Date;
+  declare updatedAt: Date;
 
   @ApiProperty({
     description: 'Comment author',
     type: () => AuthorDto,
   })
-  author: AuthorDto;
+  declare author: AuthorDto;
 
   @ApiPropertyOptional({
     description:
@@ -54,11 +86,26 @@ export class SolutionCommentResponseDto {
     example: 'up_vote',
     nullable: true,
   })
-  myVote?: 'up_vote' | 'down_vote' | null;
+  declare myVote?: 'up_vote' | 'down_vote' | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Current user vote on this comment (1 for upvote, -1 for downvote, null if not voted)',
+    example: 1,
+    nullable: true,
+  })
+  declare userVote?: number | null;
 
   @ApiProperty({
     description: 'Total number of replies (frontend alias)',
     example: 0,
   })
-  replyCounts: number;
+  declare replyCounts: number;
+
+  @ApiPropertyOptional({
+    description: 'Nested replies to this comment',
+    type: () => [SolutionCommentResponseDto],
+    isArray: true,
+  })
+  declare replies?: SolutionCommentResponseDto[];
 }

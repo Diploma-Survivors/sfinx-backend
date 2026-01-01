@@ -13,8 +13,9 @@ import { Tag } from '../problems/entities/tag.entity';
 import { ProgrammingLanguage } from '../programming-language/entities/programming-language.entity';
 import { User } from '../auth/entities/user.entity';
 import { AuthModule } from '../auth/auth.module';
-
 import { SolutionCommentsService } from './services/solution-comments.service';
+import { SolutionVotesService } from './services/solution-votes.service';
+import { CommentsModule } from '../problems/comments/comments.module';
 
 @Module({
   imports: [
@@ -30,9 +31,10 @@ import { SolutionCommentsService } from './services/solution-comments.service';
       User,
     ]),
     AuthModule,
+    CommentsModule,
   ],
   controllers: [SolutionsController, SolutionCommentsController],
-  providers: [SolutionsService, SolutionCommentsService],
-  exports: [SolutionsService, SolutionCommentsService],
+  providers: [SolutionsService, SolutionCommentsService, SolutionVotesService],
+  exports: [SolutionsService, SolutionCommentsService, SolutionVotesService],
 })
 export class SolutionsModule {}

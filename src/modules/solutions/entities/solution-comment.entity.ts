@@ -5,6 +5,7 @@ import { BaseComment } from '../../comments-base/entities/base-comment.entity';
 
 /**
  * Solution Comment entity
+ * Supports unlimited nesting via self-referencing parent-child relationship
  */
 @Entity('solution_comments')
 export class SolutionComment extends BaseComment {
@@ -16,12 +17,12 @@ export class SolutionComment extends BaseComment {
   solution: Solution;
 
   @ManyToOne(() => SolutionComment, (comment) => comment.replies, {
-    onDelete: 'CASCADE',
+    onDelete: 'SET NULL',
     nullable: true,
   })
   @JoinColumn({ name: 'parent_id' })
   parentComment: SolutionComment | null;
 
-  @OneToMany(() => SolutionComment, (comment) => comment.replies)
+  @OneToMany(() => SolutionComment, (comment) => comment.parentComment)
   replies: SolutionComment[];
 }

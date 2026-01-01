@@ -24,7 +24,7 @@ import { OptionalJwtAuthGuard } from '../../../auth/guards/optional-jwt-auth.gua
 import { CaslGuard } from '../../../auth/guards/casl.guard';
 import { Action } from '../../../rbac/casl/casl-ability.factory';
 import {
-  CommentResponseDto,
+  ProblemCommentResponseDto,
   CreateCommentDto,
   FilterCommentDto,
   ReportCommentDto,
@@ -38,7 +38,7 @@ import { ProblemCommentsService, CommentReportsService } from '../services';
 
 @ApiTags('Problem Comments')
 @Controller()
-export class CommentsController {
+export class ProblemCommentsController {
   constructor(
     private readonly commentsService: ProblemCommentsService,
     private readonly reportsService: CommentReportsService,
@@ -56,7 +56,7 @@ export class CommentsController {
   @ApiResponse({
     status: 201,
     description: 'Comment created successfully',
-    type: CommentResponseDto,
+    type: ProblemCommentResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Email not verified' })
@@ -65,7 +65,7 @@ export class CommentsController {
     @Param('problemId') problemId: string,
     @Body() dto: CreateCommentDto,
     @GetUser('id') userId: number,
-  ): Promise<CommentResponseDto> {
+  ): Promise<ProblemCommentResponseDto> {
     dto.problemId = +problemId;
     return this.commentsService.createComment(userId, +problemId, dto);
   }
@@ -81,18 +81,20 @@ export class CommentsController {
   @ApiResponse({
     status: 200,
     description: 'Comments retrieved successfully',
-    type: PaginatedResultDto<CommentResponseDto>,
+    type: PaginatedResultDto<ProblemCommentResponseDto>,
   })
+  @ApiBearerAuth('JWT-auth')
   async getComments(
     @Param('problemId') problemId: string,
     @Query() query: FilterCommentDto,
     @GetUser('id') userId?: number,
-  ): Promise<PaginatedResultDto<CommentResponseDto>> {
+  ): Promise<PaginatedResultDto<ProblemCommentResponseDto>> {
     query.problemId = +problemId;
     return this.commentsService.getPaginatedComments(query, userId);
   }
 
   @Get('problems/:problemId/comments/tree')
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({
     summary: 'Get comment tree for a problem',
@@ -103,29 +105,30 @@ export class CommentsController {
   @ApiResponse({
     status: 200,
     description: 'Comment tree retrieved successfully',
-    type: [CommentResponseDto],
+    type: [ProblemCommentResponseDto],
   })
   async getCommentTree(
     @Param('problemId') problemId: string,
     @GetUser('id') userId?: number,
-  ): Promise<CommentResponseDto[]> {
+  ): Promise<ProblemCommentResponseDto[]> {
     return this.commentsService.buildCommentTree(+problemId, userId);
   }
 
   @Get('problems/comments/:id')
   @UseGuards(OptionalJwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get problem comment by ID' })
   @ApiParam({ name: 'id', description: 'Comment ID', type: Number })
   @ApiResponse({
     status: 200,
     description: 'Comment retrieved successfully',
-    type: CommentResponseDto,
+    type: ProblemCommentResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Comment not found' })
   async getCommentById(
     @Param('id') id: string,
     @GetUser('id') userId?: number,
-  ): Promise<CommentResponseDto> {
+  ): Promise<ProblemCommentResponseDto> {
     return this.commentsService.getCommentById(+id, userId);
   }
 
@@ -140,7 +143,7 @@ export class CommentsController {
   @ApiResponse({
     status: 200,
     description: 'Comment updated successfully',
-    type: CommentResponseDto,
+    type: ProblemCommentResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Not the comment owner' })
@@ -149,7 +152,7 @@ export class CommentsController {
     @Param('id') id: string,
     @Body() dto: UpdateCommentDto,
     @GetUser('id') userId: number,
-  ): Promise<CommentResponseDto> {
+  ): Promise<ProblemCommentResponseDto> {
     return this.commentsService.updateComment(+id, userId, dto);
   }
 
@@ -185,12 +188,14 @@ export class CommentsController {
   @ApiResponse({
     status: 200,
     description: 'Comment pinned successfully',
-    type: CommentResponseDto,
+    type: ProblemCommentResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 404, description: 'Comment not found' })
-  async pinComment(@Param('id') id: string): Promise<CommentResponseDto> {
+  async pinComment(
+    @Param('id') id: string,
+  ): Promise<ProblemCommentResponseDto> {
     return this.commentsService.pinComment(+id);
   }
 
@@ -206,12 +211,14 @@ export class CommentsController {
   @ApiResponse({
     status: 200,
     description: 'Comment unpinned successfully',
-    type: CommentResponseDto,
+    type: ProblemCommentResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 404, description: 'Comment not found' })
-  async unpinComment(@Param('id') id: string): Promise<CommentResponseDto> {
+  async unpinComment(
+    @Param('id') id: string,
+  ): Promise<ProblemCommentResponseDto> {
     return this.commentsService.unpinComment(+id);
   }
 
