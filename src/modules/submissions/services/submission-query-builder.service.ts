@@ -4,7 +4,6 @@ import { SelectQueryBuilder } from 'typeorm';
 import { SortOrder } from 'src/common';
 import { FilterSubmissionDto } from '../dto/filter-submission.dto';
 import { Submission } from '../entities/submission.entity';
-import { SubmissionStatus } from '../enums/submission-status.enum';
 
 /**
  * Service for building complex submission queries
@@ -55,7 +54,6 @@ export class SubmissionQueryBuilderService {
       maxRuntimeMs,
       minMemoryKb,
       maxMemoryKb,
-      acceptedOnly,
     } = filterDto;
 
     // Basic filters
@@ -73,13 +71,6 @@ export class SubmissionQueryBuilderService {
 
     if (status) {
       queryBuilder.andWhere('submission.status = :status', { status });
-    }
-
-    // Accepted only filter
-    if (acceptedOnly) {
-      queryBuilder.andWhere('submission.status = :acceptedStatus', {
-        acceptedStatus: SubmissionStatus.ACCEPTED,
-      });
     }
 
     // Date range filters

@@ -18,15 +18,16 @@ import { ProgrammingLanguageService } from '../programming-language';
 import { SUBMISSION_EVENTS } from './constants/submission-events.constants';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { FilterSubmissionDto } from './dto/filter-submission.dto';
+import { ResultDescription } from './dto/result-description.dto';
 import {
   SubmissionListResponseDto,
   SubmissionResponseDto,
 } from './dto/submission-response.dto';
+import { UserProblemProgressDetailResponseDto } from './dto/user-problem-progress-detail-response.dto';
+import { UserProblemProgressResponseDto } from './dto/user-problem-progress-response.dto';
 import { Submission } from './entities/submission.entity';
-import { UserProblemProgress } from './entities/user-problem-progress.entity';
 import { ProgressStatus } from './enums/progress-status.enum';
 import { SubmissionStatus } from './enums/submission-status.enum';
-import { ResultDescription } from './interfaces/result-description.interface';
 import {
   ProblemSolvedEvent,
   SubmissionAcceptedEvent,
@@ -256,12 +257,7 @@ export class SubmissionsService {
     submission.passedTestcases = passedTestcases;
     submission.runtimeMs = runtimeMs ?? null;
     submission.memoryKb = memoryKb ?? null;
-    submission.resultDescription = resultDescription
-      ? {
-          ...resultDescription,
-          message: resultDescription.message ?? 'Unknown Error',
-        }
-      : null;
+    submission.resultDescription = resultDescription ?? null;
     submission.judgedAt = new Date();
 
     await this.submissionRepository.save(submission);
@@ -390,7 +386,10 @@ export class SubmissionsService {
   /**
    * Get user problem progress (delegates to progress service)
    */
-  async getUserProblemProgress(userId: number, problemId: number) {
+  async getUserProblemProgress(
+    userId: number,
+    problemId: number,
+  ): Promise<UserProblemProgressDetailResponseDto | null> {
     return this.userProgress.getUserProgress(userId, problemId);
   }
 
@@ -400,7 +399,7 @@ export class SubmissionsService {
   async getUserAllProgress(
     userId: number,
     paginationDto: PaginationQueryDto,
-  ): Promise<PaginatedResultDto<UserProblemProgress>> {
+  ): Promise<PaginatedResultDto<UserProblemProgressResponseDto>> {
     return this.userProgress.getAllUserProgress(userId, paginationDto);
   }
 

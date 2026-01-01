@@ -124,12 +124,4 @@ export class FilterSubmissionDto extends PaginationQueryDto {
   @Min(0)
   @Type(() => Number)
   maxMemoryKb?: number;
-
-  @ApiPropertyOptional({
-    description: 'Only show accepted submissions',
-    type: Boolean,
-  })
-  @IsOptional()
-  @Type(() => Boolean)
-  acceptedOnly?: boolean;
 }

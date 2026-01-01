@@ -9,6 +9,7 @@ import {
   Sse,
   UseGuards,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -17,7 +18,6 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { ConfigService } from '@nestjs/config';
 import { interval, merge, Observable } from 'rxjs';
 import { finalize, map } from 'rxjs/operators';
 
@@ -41,7 +41,8 @@ import {
   SubmissionListResponseDto,
   SubmissionResponseDto,
 } from './dto/submission-response.dto';
-import { UserProblemProgress } from './entities/user-problem-progress.entity';
+import { UserProblemProgressDetailResponseDto } from './dto/user-problem-progress-detail-response.dto';
+import { UserProblemProgressResponseDto } from './dto/user-problem-progress-response.dto';
 import { SubmissionEvent } from './enums';
 import {
   MessageEvent,
@@ -155,13 +156,13 @@ export class SubmissionsController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get current user problem progress' })
   @ApiPaginatedResponse(
-    UserProblemProgress,
+    UserProblemProgressResponseDto,
     'User problem progress retrieved successfully',
   )
   async getUserAllProgress(
     @GetUser() user: User,
     @Query() paginationDto: PaginationQueryDto,
-  ): Promise<PaginatedResultDto<UserProblemProgress>> {
+  ): Promise<PaginatedResultDto<UserProblemProgressResponseDto>> {
     return this.submissionsService.getUserAllProgress(user.id, paginationDto);
   }
 
@@ -173,12 +174,13 @@ export class SubmissionsController {
   @ApiResponse({
     status: 200,
     description: 'Problem progress retrieved successfully',
+    type: UserProblemProgressDetailResponseDto,
   })
   @ApiResponse({ status: 404, description: 'No progress found' })
   async getUserProblemProgress(
     @Param('problemId') problemId: string,
     @GetUser() user: User,
-  ) {
+  ): Promise<UserProblemProgressDetailResponseDto | null> {
     return this.submissionsService.getUserProblemProgress(user.id, +problemId);
   }
 
@@ -196,8 +198,6 @@ export class SubmissionsController {
     @Query() filterDto: FilterSubmissionDto,
   ): Promise<PaginatedResultDto<SubmissionListResponseDto>> {
     filterDto.problemId = +problemId;
-    // Only show accepted submissions publicly
-    filterDto.acceptedOnly = true;
     return this.submissionsService.getSubmissions(filterDto);
   }
 

@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { PaginatedResultDto, PaginationQueryDto } from '../../../common';
+import { UserProblemProgressDetailResponseDto } from '../dto/user-problem-progress-detail-response.dto';
+import { UserProblemProgressResponseDto } from '../dto/user-problem-progress-response.dto';
 import { Submission } from '../entities/submission.entity';
 import { UserProblemProgress } from '../entities/user-problem-progress.entity';
 import { ProgressStatus } from '../enums/progress-status.enum';
@@ -38,11 +40,15 @@ export class UserProgressService {
   async getUserProgress(
     userId: number,
     problemId: number,
-  ): Promise<UserProblemProgress | null> {
-    return this.progressRepository.findOne({
+  ): Promise<UserProblemProgressDetailResponseDto | null> {
+    const progress = await this.progressRepository.findOne({
       where: { userId, problemId },
-      relations: ['bestSubmission', 'problem', 'user'],
+      relations: ['problem', 'bestSubmission', 'bestSubmission.language'],
     });
+
+    if (!progress) return null;
+
+    return this.mapToDetailDto(progress);
   }
 
   /**
@@ -51,20 +57,92 @@ export class UserProgressService {
   async getAllUserProgress(
     userId: number,
     paginationDto: PaginationQueryDto,
-  ): Promise<PaginatedResultDto<UserProblemProgress>> {
+  ): Promise<PaginatedResultDto<UserProblemProgressResponseDto>> {
     const page = paginationDto.page ?? 1;
     const limit = paginationDto.take;
     const skip = paginationDto.skip;
 
     const [data, total] = await this.progressRepository.findAndCount({
       where: { userId },
-      relations: ['problem', 'bestSubmission'],
+      relations: ['problem'],
       order: { lastAttemptedAt: 'DESC' },
       skip,
       take: limit,
     });
 
-    return new PaginatedResultDto(data, { page, limit, total });
+    const mappedData = data.map((item) => this.mapToDto(item));
+
+    return new PaginatedResultDto(mappedData, { page, limit, total });
+  }
+
+  /**
+   * Map entity to DTO (Slim)
+   */
+  private mapToDto(
+    progress: UserProblemProgress,
+  ): UserProblemProgressResponseDto {
+    const dto = new UserProblemProgressResponseDto();
+    this.assignBasicFields(progress, dto);
+    return dto;
+  }
+
+  /**
+   * Map entity to Detailed DTO
+   */
+  private mapToDetailDto(
+    progress: UserProblemProgress,
+  ): UserProblemProgressDetailResponseDto {
+    const dto = new UserProblemProgressDetailResponseDto();
+    this.assignBasicFields(progress, dto);
+
+    if (progress.bestSubmission) {
+      dto.bestSubmission = {
+        id: progress.bestSubmission.id,
+        status: progress.bestSubmission.status,
+        executionTime: progress.bestSubmission.runtimeMs ?? undefined,
+        memoryUsed: progress.bestSubmission.memoryKb ?? undefined,
+        testcasesPassed: progress.bestSubmission.passedTestcases,
+        totalTestcases: progress.bestSubmission.totalTestcases,
+        submittedAt: progress.bestSubmission.submittedAt,
+        problemId: progress.problemId,
+        languageId: progress.bestSubmission.language?.id,
+        language: progress.bestSubmission.language
+          ? {
+              id: progress.bestSubmission.language.id,
+              name: progress.bestSubmission.language.name,
+            }
+          : undefined,
+      };
+    }
+
+    return dto;
+  }
+
+  /**
+   * Assign basic fields to DTO
+   */
+  private assignBasicFields(
+    progress: UserProblemProgress,
+    dto: UserProblemProgressResponseDto,
+  ): void {
+    dto.userId = progress.userId;
+    dto.problemId = progress.problemId;
+    dto.status = progress.status;
+    dto.totalAttempts = progress.totalAttempts;
+    dto.totalAccepted = progress.totalAccepted;
+    dto.bestRuntimeMs = progress.bestRuntimeMs;
+    dto.bestMemoryKb = progress.bestMemoryKb;
+    dto.firstAttemptedAt = progress.firstAttemptedAt;
+    dto.firstSolvedAt = progress.firstSolvedAt;
+    dto.lastAttemptedAt = progress.lastAttemptedAt;
+
+    if (progress.problem) {
+      dto.problem = {
+        id: progress.problem.id,
+        title: progress.problem.title,
+        slug: progress.problem.slug,
+      };
+    }
   }
 
   /**

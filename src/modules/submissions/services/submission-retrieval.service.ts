@@ -3,12 +3,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { PaginatedResultDto } from '../../../common';
-import { Submission } from '../entities/submission.entity';
 import { FilterSubmissionDto } from '../dto/filter-submission.dto';
 import {
   SubmissionListResponseDto,
   SubmissionResponseDto,
 } from '../dto/submission-response.dto';
+import { Submission } from '../entities/submission.entity';
 import { SubmissionMapper } from '../mappers/submission.mapper';
 import { SubmissionQueryBuilderService } from './submission-query-builder.service';
 

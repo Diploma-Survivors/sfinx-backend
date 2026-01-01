@@ -1,4 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { SubmissionStatus } from '../enums';
+import { ResultDescription } from './result-description.dto';
 
 export class TestcaseResultDto {
   @ApiProperty({ description: 'Testcase ID', type: Number })
@@ -80,8 +82,11 @@ export class SubmissionResponseDto {
   @ApiProperty({ description: 'Submission ID', type: Number })
   id: number;
 
-  @ApiProperty({ description: 'Overall submission status' })
-  status: string;
+  @ApiProperty({
+    description: 'Overall submission status',
+    enum: SubmissionStatus,
+  })
+  status: SubmissionStatus;
 
   @ApiPropertyOptional({ description: 'Execution time in ms' })
   executionTime?: number;
@@ -95,23 +100,11 @@ export class SubmissionResponseDto {
   @ApiProperty({ description: 'Total number of testcases' })
   totalTestcases: number;
 
-  @ApiPropertyOptional({
-    description: 'Testcase results (for run mode)',
-    type: [TestcaseResultDto],
+  @ApiProperty({
+    description: 'Result description',
+    type: ResultDescription,
   })
-  testcaseResults?: TestcaseResultDto[];
-
-  @ApiPropertyOptional({
-    description: 'Failed result details',
-    type: FailedResultDto,
-  })
-  failedResult?: FailedResultDto;
-
-  @ApiPropertyOptional({ description: 'Compilation error' })
-  compileError?: string;
-
-  @ApiPropertyOptional({ description: 'Runtime error' })
-  runtimeError?: string;
+  resultDescription: ResultDescription;
 
   @ApiProperty({ description: 'Submission timestamp' })
   submittedAt: Date;

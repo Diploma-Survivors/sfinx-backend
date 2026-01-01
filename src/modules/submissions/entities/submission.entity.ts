@@ -11,8 +11,8 @@ import { User } from '../../auth/entities/user.entity';
 import { Contest } from '../../contest/entities/contest.entity';
 import { Problem } from '../../problems/entities/problem.entity';
 import { ProgrammingLanguage } from '../../programming-language/entities/programming-language.entity';
+import { ResultDescription } from '../dto/result-description.dto';
 import { SubmissionStatus } from '../enums/submission-status.enum';
-import type { ResultDescription } from '../interfaces/result-description.interface';
 
 @Entity('submissions')
 export class Submission {
