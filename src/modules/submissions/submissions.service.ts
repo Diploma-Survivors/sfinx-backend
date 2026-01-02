@@ -18,6 +18,7 @@ import { ProgrammingLanguageService } from '../programming-language';
 import { SUBMISSION_EVENTS } from './constants/submission-events.constants';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { FilterSubmissionDto } from './dto/filter-submission.dto';
+import { ResultDescription } from './dto/result-description.dto';
 import {
   SubmissionListResponseDto,
   SubmissionResponseDto,
@@ -25,10 +26,9 @@ import {
 import { UserPracticeHistoryDto } from './dto/user-practice-history.dto';
 import { GetPracticeHistoryDto } from './dto/get-practice-history.dto';
 import { UserStatisticsDto } from './dto/user-statistics.dto';
+import { UserProblemProgressDetailResponseDto } from './dto/user-problem-progress-detail-response.dto';
 import { Submission } from './entities/submission.entity';
-import { ProgressStatus } from './enums/progress-status.enum';
-import { SubmissionStatus } from './enums/submission-status.enum';
-import { ResultDescription } from './interfaces/result-description.interface';
+import { ProgressStatus, SubmissionStatus } from './enums';
 import {
   ProblemSolvedEvent,
   SubmissionAcceptedEvent,
@@ -37,12 +37,12 @@ import {
 } from './events/submission.events';
 import {
   Judge0PayloadBuilderService,
+  SubmissionAnalysisService,
+  SubmissionRetrievalService,
   SubmissionTrackerService,
   UserProgressService,
   UserStatisticsService,
 } from './services';
-import { SubmissionAnalysisService } from './services/submission-analysis.service';
-import { SubmissionRetrievalService } from './services/submission-retrieval.service';
 
 /**
  * Main service for managing code submissions
@@ -258,12 +258,7 @@ export class SubmissionsService {
     submission.passedTestcases = passedTestcases;
     submission.runtimeMs = runtimeMs ?? null;
     submission.memoryKb = memoryKb ?? null;
-    submission.resultDescription = resultDescription
-      ? {
-          ...resultDescription,
-          message: resultDescription.message ?? 'Unknown Error',
-        }
-      : null;
+    submission.resultDescription = resultDescription ?? null;
     submission.judgedAt = new Date();
 
     await this.submissionRepository.save(submission);
@@ -392,7 +387,10 @@ export class SubmissionsService {
   /**
    * Get user problem progress (delegates to progress service)
    */
-  async getUserProblemProgress(userId: number, problemId: number) {
+  async getUserProblemProgress(
+    userId: number,
+    problemId: number,
+  ): Promise<UserProblemProgressDetailResponseDto | null> {
     return this.userProgress.getUserProgress(userId, problemId);
   }
 

@@ -9,6 +9,7 @@ import {
   Sse,
   UseGuards,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -17,7 +18,6 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { ConfigService } from '@nestjs/config';
 import { interval, merge, Observable } from 'rxjs';
 import { finalize, map } from 'rxjs/operators';
 
@@ -43,6 +43,7 @@ import {
 import { GetPracticeHistoryDto } from './dto/get-practice-history.dto';
 import { UserPracticeHistoryDto } from './dto/user-practice-history.dto';
 import { UserStatisticsDto } from './dto/user-statistics.dto';
+import { UserProblemProgressDetailResponseDto } from './dto/user-problem-progress-detail-response.dto';
 import { SubmissionEvent } from './enums';
 import { MessageEvent, SubmissionSseService } from './services';
 import { SubmissionsService } from './submissions.service';
@@ -172,12 +173,13 @@ export class SubmissionsController {
   @ApiResponse({
     status: 200,
     description: 'Problem progress retrieved successfully',
+    type: UserProblemProgressDetailResponseDto,
   })
   @ApiResponse({ status: 404, description: 'No progress found' })
   async getUserProblemProgress(
     @Param('problemId') problemId: string,
     @GetUser() user: User,
-  ) {
+  ): Promise<UserProblemProgressDetailResponseDto | null> {
     return this.submissionsService.getUserProblemProgress(user.id, +problemId);
   }
 
@@ -195,8 +197,6 @@ export class SubmissionsController {
     @Query() filterDto: FilterSubmissionDto,
   ): Promise<PaginatedResultDto<SubmissionListResponseDto>> {
     filterDto.problemId = +problemId;
-    // Only show accepted submissions publicly
-    filterDto.acceptedOnly = true;
     return this.submissionsService.getSubmissions(filterDto);
   }
 

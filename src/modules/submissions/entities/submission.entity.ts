@@ -12,7 +12,7 @@ import { Contest } from '../../contest/entities';
 import { Problem } from '../../problems/entities/problem.entity';
 import { ProgrammingLanguage } from '../../programming-language';
 import { SubmissionStatus } from '../enums';
-import type { ResultDescription } from '../interfaces';
+import { ResultDescription } from '../dto/result-description.dto';
 
 @Entity('submissions')
 export class Submission {

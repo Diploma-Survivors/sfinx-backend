@@ -5,11 +5,12 @@ import { Repository } from 'typeorm';
 import { PaginatedResultDto } from '../../../common';
 import { Submission } from '../entities/submission.entity';
 import { UserProblemProgress } from '../entities/user-problem-progress.entity';
-import { ProgressStatus } from '../enums';
-import { SubmissionStatus } from '../enums';
+import { ProgressStatus, SubmissionStatus } from '../enums';
+import { UserProblemProgressResponseDto } from '../dto/user-problem-progress-response.dto';
+import { UserProblemProgressDetailResponseDto } from '../dto/user-problem-progress-detail-response.dto';
+import { PracticeSortBy } from '../enums/practice-sort-by.enum';
 import { UserPracticeHistoryDto } from '../dto/user-practice-history.dto';
 import { GetPracticeHistoryDto } from '../dto/get-practice-history.dto';
-import { PracticeSortBy } from '../enums/practice-sort-by.enum';
 
 @Injectable()
 export class UserProgressService {
@@ -26,11 +27,15 @@ export class UserProgressService {
   async getUserProgress(
     userId: number,
     problemId: number,
-  ): Promise<UserProblemProgress | null> {
-    return this.progressRepository.findOne({
+  ): Promise<UserProblemProgressDetailResponseDto | null> {
+    const progress = await this.progressRepository.findOne({
       where: { userId, problemId },
-      relations: ['bestSubmission', 'problem', 'user'],
+      relations: ['problem', 'bestSubmission', 'bestSubmission.language'],
     });
+
+    if (!progress) return null;
+
+    return this.mapToDetailDto(progress);
   }
 
   /**
@@ -199,6 +204,76 @@ export class UserProgressService {
         .take(limit)
         .getMany()
     );
+  }
+
+  /**
+   * Map entity to DTO (Slim)
+   */
+  private mapToDto(
+    progress: UserProblemProgress,
+  ): UserProblemProgressResponseDto {
+    const dto = new UserProblemProgressResponseDto();
+    this.assignBasicFields(progress, dto);
+    return dto;
+  }
+
+  /**
+   * Map entity to Detailed DTO
+   */
+  private mapToDetailDto(
+    progress: UserProblemProgress,
+  ): UserProblemProgressDetailResponseDto {
+    const dto = new UserProblemProgressDetailResponseDto();
+    this.assignBasicFields(progress, dto);
+
+    if (progress.bestSubmission) {
+      dto.bestSubmission = {
+        id: progress.bestSubmission.id,
+        status: progress.bestSubmission.status,
+        executionTime: progress.bestSubmission.runtimeMs ?? undefined,
+        memoryUsed: progress.bestSubmission.memoryKb ?? undefined,
+        testcasesPassed: progress.bestSubmission.passedTestcases,
+        totalTestcases: progress.bestSubmission.totalTestcases,
+        submittedAt: progress.bestSubmission.submittedAt,
+        problemId: progress.problemId,
+        languageId: progress.bestSubmission.language?.id,
+        language: progress.bestSubmission.language
+          ? {
+              id: progress.bestSubmission.language.id,
+              name: progress.bestSubmission.language.name,
+            }
+          : undefined,
+      };
+    }
+
+    return dto;
+  }
+
+  /**
+   * Assign basic fields to DTO
+   */
+  private assignBasicFields(
+    progress: UserProblemProgress,
+    dto: UserProblemProgressResponseDto,
+  ): void {
+    dto.userId = progress.userId;
+    dto.problemId = progress.problemId;
+    dto.status = progress.status;
+    dto.totalAttempts = progress.totalAttempts;
+    dto.totalAccepted = progress.totalAccepted;
+    dto.bestRuntimeMs = progress.bestRuntimeMs;
+    dto.bestMemoryKb = progress.bestMemoryKb;
+    dto.firstAttemptedAt = progress.firstAttemptedAt;
+    dto.firstSolvedAt = progress.firstSolvedAt;
+    dto.lastAttemptedAt = progress.lastAttemptedAt;
+
+    if (progress.problem) {
+      dto.problem = {
+        id: progress.problem.id,
+        title: progress.problem.title,
+        slug: progress.problem.slug,
+      };
+    }
   }
 
   /**

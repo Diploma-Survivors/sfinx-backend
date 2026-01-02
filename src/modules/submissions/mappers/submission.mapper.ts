@@ -1,7 +1,5 @@
-import { Submission } from '../entities/submission.entity';
 import {
   ContestInfoDto,
-  FailedResultDto,
   LanguageInfoDto,
   ProblemInfoDto,
   SubmissionListResponseDto,
@@ -10,6 +8,7 @@ import {
 import { AuthorDto } from '../../users/dtos/author.dto';
 import { StorageService } from '../../storage/storage.service';
 import { getAvatarUrl } from '../../../common';
+import { Submission } from '../entities/submission.entity';
 
 export interface MapperOptions {
   includeSourceCode?: boolean;
@@ -34,15 +33,6 @@ export class SubmissionMapper {
       includeUser = false,
       storageService,
     } = options;
-
-    // Extract error data from JSONB structure
-    const compileError = submission.resultDescription?.compileOutput;
-    const runtimeError = submission.resultDescription?.stderr;
-
-    // Build failed result if exists
-    const failedResult = submission.resultDescription
-      ? this.toFailedResultDto(submission.resultDescription)
-      : undefined;
 
     // Build problem info if loaded
     const problem: ProblemInfoDto | undefined = submission.problem
@@ -89,9 +79,11 @@ export class SubmissionMapper {
       memoryUsed: submission.memoryKb ?? undefined,
       testcasesPassed: submission.passedTestcases,
       totalTestcases: submission.totalTestcases,
-      failedResult,
-      compileError: compileError ?? undefined,
-      runtimeError: runtimeError ?? undefined,
+      resultDescription: submission.resultDescription
+        ? {
+            ...submission.resultDescription,
+          }
+        : { message: 'Unknown Error' },
       submittedAt: submission.submittedAt,
       judgedAt: submission.judgedAt ?? undefined,
       problemId: submission.problem?.id ?? 0,
@@ -165,22 +157,6 @@ export class SubmissionMapper {
       language,
       author,
       contest,
-    };
-  }
-
-  /**
-   * Map ResultDescription to FailedResultDto
-   */
-  private static toFailedResultDto(
-    result: NonNullable<Submission['resultDescription']>,
-  ): FailedResultDto {
-    return {
-      message: result.message ?? undefined,
-      input: result.input ?? undefined,
-      expectedOutput: result.expectedOutput ?? undefined,
-      actualOutput: result.actualOutput ?? undefined,
-      stderr: result.stderr ?? undefined,
-      compileOutput: result.compileOutput ?? undefined,
     };
   }
 
