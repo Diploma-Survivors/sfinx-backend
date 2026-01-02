@@ -9,7 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { v4 as uuidV4 } from 'uuid';
 
-import { PaginatedResultDto, PaginationQueryDto } from '../../common';
+import { PaginatedResultDto } from '../../common';
 import { Judge0BatchResponse } from '../judge0/interfaces';
 import { Judge0Service } from '../judge0/judge0.service';
 import { Problem } from '../problems/entities/problem.entity';
@@ -23,6 +23,7 @@ import {
   SubmissionResponseDto,
 } from './dto/submission-response.dto';
 import { UserPracticeHistoryDto } from './dto/user-practice-history.dto';
+import { GetPracticeHistoryDto } from './dto/get-practice-history.dto';
 import { UserStatisticsDto } from './dto/user-statistics.dto';
 import { Submission } from './entities/submission.entity';
 import { ProgressStatus } from './enums/progress-status.enum';
@@ -400,9 +401,9 @@ export class SubmissionsService {
    */
   async getUserAllProgress(
     userId: number,
-    paginationDto: PaginationQueryDto,
+    query: GetPracticeHistoryDto,
   ): Promise<PaginatedResultDto<UserPracticeHistoryDto>> {
-    return this.userProgress.getAllUserProgress(userId, paginationDto);
+    return this.userProgress.getAllUserProgress(userId, query);
   }
 
   /**

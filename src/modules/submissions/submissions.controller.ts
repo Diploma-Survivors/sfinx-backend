@@ -26,7 +26,6 @@ import {
   CheckPolicies,
   GetUser,
   PaginatedResultDto,
-  PaginationQueryDto,
   SkipTransformResponse,
 } from '../../common';
 import { User } from '../auth/entities/user.entity';
@@ -41,13 +40,11 @@ import {
   SubmissionListResponseDto,
   SubmissionResponseDto,
 } from './dto/submission-response.dto';
+import { GetPracticeHistoryDto } from './dto/get-practice-history.dto';
 import { UserPracticeHistoryDto } from './dto/user-practice-history.dto';
 import { UserStatisticsDto } from './dto/user-statistics.dto';
 import { SubmissionEvent } from './enums';
-import {
-  MessageEvent,
-  SubmissionSseService,
-} from './services/submission-sse.service';
+import { MessageEvent, SubmissionSseService } from './services';
 import { SubmissionsService } from './submissions.service';
 
 @ApiTags('Submissions')
@@ -162,9 +159,9 @@ export class SubmissionsController {
   )
   async getUserAllProgress(
     @GetUser() user: User,
-    @Query() paginationDto: PaginationQueryDto,
+    @Query() query: GetPracticeHistoryDto,
   ): Promise<PaginatedResultDto<UserPracticeHistoryDto>> {
-    return this.submissionsService.getUserAllProgress(user.id, paginationDto);
+    return this.submissionsService.getUserAllProgress(user.id, query);
   }
 
   @Get('problem/:problemId/progress')

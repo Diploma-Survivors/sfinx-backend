@@ -11,11 +11,11 @@ import {
   UserStatisticsService,
 } from '../submissions/services';
 import { UserStatisticsDto } from '../submissions/dto/user-statistics.dto';
-import { PaginationQueryDto } from '../../common';
 import { ProgressStatus } from '../submissions/enums';
 import { UsersService } from './users.service';
 import { UserProfileResponseDto } from '../auth/dto/user-profile-response.dto';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
+import { GetPracticeHistoryDto } from '../submissions/dto/get-practice-history.dto';
 
 @ApiTags('Users')
 @Controller('users')
@@ -97,9 +97,8 @@ export class UsersController {
   @ApiQuery({ name: 'status', required: false, enum: ProgressStatus })
   async getPracticeHistory(
     @Param('userId') userId: string,
-    @Query() query: PaginationQueryDto,
-    @Query('status') status?: ProgressStatus,
+    @Query() query: GetPracticeHistoryDto,
   ) {
-    return this.userProgressService.getAllUserProgress(+userId, query, status);
+    return this.userProgressService.getAllUserProgress(+userId, query);
   }
 }

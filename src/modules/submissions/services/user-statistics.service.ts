@@ -6,6 +6,7 @@ import { ProblemDifficulty } from '../../problems/enums/problem-difficulty.enum'
 import { CacheService } from '../../redis';
 import { CacheKeys } from '../../redis';
 import { UserProblemProgress } from '../entities/user-problem-progress.entity';
+import { Problem } from '../../problems/entities/problem.entity';
 import { Submission } from '../entities/submission.entity';
 import { ProgressStatus, SubmissionStatus } from '../enums';
 import { SUBMISSION_CACHE } from '../constants/submission.constants';
@@ -20,6 +21,8 @@ export class UserStatisticsService {
     private readonly progressRepository: Repository<UserProblemProgress>,
     @InjectRepository(Submission)
     private readonly submissionRepository: Repository<Submission>,
+    @InjectRepository(Problem)
+    private readonly problemRepository: Repository<Problem>,
     private readonly cacheService: CacheService,
   ) {}
 
@@ -43,36 +46,28 @@ export class UserStatisticsService {
   /**
    * Calculate user statistics (uncached)
    */
-  /**
-   * Calculate user statistics (uncached)
-   */
   private async calculateUserStatistics(
     userId: number,
   ): Promise<UserStatisticsDto> {
     // 1. Get aggregate totals directly from DB
     const aggregates = await this.progressRepository
       .createQueryBuilder('progress')
-      .select('SUM(progress.totalAttempts)', 'totalSubmissions')
-      .addSelect('SUM(progress.totalAccepted)', 'totalAccepted')
-      .addSelect('COUNT(*)', 'totalProblemsAttempted')
+      .select('COUNT(*)', 'totalProblemsAttempted')
       .addSelect(
         `SUM(CASE WHEN progress.status = '${ProgressStatus.SOLVED}' THEN 1 ELSE 0 END)`,
         'totalProblemsSolved',
       )
       .where('progress.userId = :userId', { userId })
       .getRawOne<{
-        totalSubmissions: string;
-        totalAccepted: string;
         totalProblemsAttempted: string;
         totalProblemsSolved: string;
       }>();
 
-    // 2. Get difficulty breakdown (Solved vs Total)
-    const difficultyStats = await this.progressRepository
+    // 2. Get user's difficulty breakdown (Solved count)
+    const userDifficultyStats = await this.progressRepository
       .createQueryBuilder('progress')
       .leftJoin('progress.problem', 'problem')
       .select('problem.difficulty', 'difficulty')
-      .addSelect('COUNT(*)', 'total')
       .addSelect(
         `SUM(CASE WHEN progress.status = '${ProgressStatus.SOLVED}' THEN 1 ELSE 0 END)`,
         'solved',
@@ -81,24 +76,41 @@ export class UserStatisticsService {
       .groupBy('problem.difficulty')
       .getRawMany<{
         difficulty: ProblemDifficulty;
-        total: string;
         solved: string;
+      }>();
+
+    // 3. Get system-wide problem counts by difficulty (Total count)
+    const systemDifficultyStats = await this.problemRepository
+      .createQueryBuilder('problem')
+      .select('problem.difficulty', 'difficulty')
+      .addSelect('COUNT(*)', 'total')
+      .where('problem.isActive = :isActive', { isActive: true })
+      .groupBy('problem.difficulty')
+      .getRawMany<{
+        difficulty: ProblemDifficulty;
+        total: string;
       }>();
 
     // Helper to extract stats
     const getStatsForDiff = (diff: ProblemDifficulty) => {
-      const stat = difficultyStats.find((s) => s.difficulty === diff);
+      const userStat = userDifficultyStats.find((s) => s.difficulty === diff);
+      const systemStat = systemDifficultyStats.find(
+        (s) => s.difficulty === diff,
+      );
       return {
-        solved: parseInt(stat?.solved ?? '0', 10),
-        total: parseInt(stat?.total ?? '0', 10),
+        solved: parseInt(userStat?.solved ?? '0', 10),
+        total: parseInt(systemStat?.total ?? '0', 10),
       };
     };
 
     // Get submission statistics
     const submissionStats = await this.getSubmissionStats(userId);
 
-    const tSubmissions = parseInt(aggregates?.totalSubmissions ?? '0', 10);
-    const tAccepted = parseInt(aggregates?.totalAccepted ?? '0', 10);
+    // Calculate total system problems (sum of totals from system stats)
+    const totalSystemProblems = systemDifficultyStats.reduce(
+      (sum, stat) => sum + parseInt(stat.total, 10),
+      0,
+    );
 
     return {
       problemStats: {
@@ -107,13 +119,11 @@ export class UserStatisticsService {
         hard: getStatsForDiff(ProblemDifficulty.HARD),
         total: {
           solved: parseInt(aggregates?.totalProblemsSolved ?? '0', 10),
-          total: parseInt(aggregates?.totalProblemsAttempted ?? '0', 10),
+          total: totalSystemProblems,
         },
       },
       submissionStats: {
-        ...submissionStats,
-        total: tSubmissions,
-        accepted: tAccepted,
+        ...submissionStats, // Contains total and accepted from Submission table
       },
     };
   }

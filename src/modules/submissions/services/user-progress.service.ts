@@ -2,12 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import { PaginatedResultDto, PaginationQueryDto } from '../../../common';
+import { PaginatedResultDto } from '../../../common';
 import { Submission } from '../entities/submission.entity';
 import { UserProblemProgress } from '../entities/user-problem-progress.entity';
 import { ProgressStatus } from '../enums';
 import { SubmissionStatus } from '../enums';
 import { UserPracticeHistoryDto } from '../dto/user-practice-history.dto';
+import { GetPracticeHistoryDto } from '../dto/get-practice-history.dto';
+import { PracticeSortBy } from '../enums/practice-sort-by.enum';
 
 @Injectable()
 export class UserProgressService {
@@ -36,12 +38,11 @@ export class UserProgressService {
    */
   async getAllUserProgress(
     userId: number,
-    paginationDto: PaginationQueryDto,
-    status?: ProgressStatus,
+    query: GetPracticeHistoryDto,
   ): Promise<PaginatedResultDto<UserPracticeHistoryDto>> {
-    const page = paginationDto.page ?? 1;
-    const limit = paginationDto.take;
-    const skip = paginationDto.skip;
+    const page = query.page ?? 1;
+    const limit = query.take;
+    const skip = query.skip;
 
     // 1. Fetch paginated progress records with simplified problem fields
     const queryBuilder = this.progressRepository
@@ -58,11 +59,30 @@ export class UserProgressService {
         'problem.slug',
         'problem.difficulty',
       ])
-      .where('progress.userId = :userId', { userId })
-      .orderBy('progress.lastAttemptedAt', 'DESC');
+      .where('progress.userId = :userId', { userId });
 
-    if (status) {
-      queryBuilder.andWhere('progress.status = :status', { status });
+    // Filter by status
+    if (query.status) {
+      queryBuilder.andWhere('progress.status = :status', {
+        status: query.status,
+      });
+    }
+
+    // Filter by difficulty
+    if (query.difficulty) {
+      queryBuilder.andWhere('problem.difficulty = :difficulty', {
+        difficulty: query.difficulty,
+      });
+    }
+
+    // Sorting
+    const sortOrder = query.sortOrder ?? 'DESC';
+
+    if (query.sortBy === PracticeSortBy.SUBMISSION_COUNT) {
+      queryBuilder.orderBy('progress.totalAttempts', sortOrder);
+    } else {
+      // Default to LAST_SUBMITTED_AT
+      queryBuilder.orderBy('progress.lastAttemptedAt', sortOrder);
     }
 
     const [progressRecords, total] = await queryBuilder
