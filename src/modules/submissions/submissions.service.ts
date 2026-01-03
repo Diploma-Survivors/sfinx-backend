@@ -43,6 +43,7 @@ import {
   UserProgressService,
   UserStatisticsService,
 } from './services';
+import { ContestSubmissionService } from '../contest/services';
 
 /**
  * Main service for managing code submissions
@@ -64,6 +65,7 @@ export class SubmissionsService {
     private readonly retrievalService: SubmissionRetrievalService,
     private readonly analysisService: SubmissionAnalysisService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly contestSubmissionService: ContestSubmissionService,
   ) {}
 
   /**
@@ -85,7 +87,7 @@ export class SubmissionsService {
     const submissionId = uuidV4();
     this.logger.debug(`Generated submission ID: ${submissionId}`);
 
-    return this.submitBatch(
+    return this.submitToJudge0(
       submissionId,
       language.judge0Id,
       sourceCode,
@@ -96,9 +98,9 @@ export class SubmissionsService {
   }
 
   /**
-   * Submit code for grading (creates database record)
+   * Submit practice solution (regular submission)
    */
-  async submitForGrading(
+  async submitPracticeSolution(
     createSubmissionDto: CreateSubmissionDto,
     userId: number,
     ipAddress?: string,
@@ -134,13 +136,69 @@ export class SubmissionsService {
     // Update user progress (tracks attempts)
     await this.userProgress.updateProgressOnSubmit(userId, problemId);
 
-    return this.submitBatch(
+    return this.submitToJudge0(
       submission.id.toString(),
       language.judge0Id,
       sourceCode,
       problem,
       true,
     );
+  }
+
+  /**
+   * Submit contest solution
+   */
+  async submitContestSolution(
+    createSubmissionDto: CreateSubmissionDto,
+    userId: number,
+    ipAddress: string,
+    contestId: number,
+  ): Promise<{ submissionId: string; contestId: number }> {
+    const { problemId, languageId, sourceCode } = createSubmissionDto;
+
+    // Validate contest rules (running, registered, problem part of contest)
+    await this.contestSubmissionService.validateSubmission(
+      contestId,
+      userId,
+      problemId,
+    );
+
+    this.logger.log(
+      `User ${userId} submitting contest solution for problem ${problemId} in contest ${contestId}`,
+    );
+
+    const problem = await this.problemsService.findProblemEntityById(problemId);
+    const language = await this.languagesService.findById(languageId);
+
+    if (!problem.testcaseFileKey) {
+      throw new BadRequestException('Problem has no testcases');
+    }
+
+    const submission = await this.createSubmissionRecord(
+      userId,
+      problemId,
+      languageId,
+      sourceCode,
+      problem.testcaseCount,
+      ipAddress,
+      contestId, // Pass contestId
+    );
+
+    // Emit submission created event
+    this.eventEmitter.emit(
+      SUBMISSION_EVENTS.CREATED,
+      new SubmissionCreatedEvent(submission.id, userId, problemId, languageId),
+    );
+
+    await this.submitToJudge0(
+      submission.id.toString(),
+      language.judge0Id,
+      sourceCode,
+      problem,
+      true,
+    );
+
+    return { submissionId: submission.id.toString(), contestId };
   }
 
   /**
@@ -153,6 +211,7 @@ export class SubmissionsService {
     sourceCode: string,
     totalTestcases: number,
     ipAddress?: string,
+    contestId?: number,
   ): Promise<Submission> {
     const submission = this.submissionRepository.create({
       user: { id: userId },
@@ -163,6 +222,7 @@ export class SubmissionsService {
       totalTestcases,
       passedTestcases: 0,
       ipAddress,
+      contestId: contestId ?? null,
     });
 
     const saved = await this.submissionRepository.save(submission);
@@ -173,7 +233,7 @@ export class SubmissionsService {
   /**
    * Submit batch to Judge0 and initialize tracking
    */
-  private async submitBatch(
+  private async submitToJudge0(
     submissionId: string,
     judge0LanguageId: number,
     sourceCode: string,

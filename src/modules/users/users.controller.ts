@@ -16,6 +16,7 @@ import { UsersService } from './users.service';
 import { UserProfileResponseDto } from '../auth/dto/user-profile-response.dto';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { GetPracticeHistoryDto } from '../submissions/dto/get-practice-history.dto';
+import { Permission } from '../rbac/entities/permission.entity';
 
 @ApiTags('Users')
 @Controller('users')
@@ -41,6 +42,23 @@ export class UsersController {
     @Query('userId') userId: number,
   ): Promise<UserProfileResponseDto> {
     return this.usersService.getUserProfile(userId);
+  }
+
+  @Get('permissions')
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get user permisison' })
+  @ApiQuery({ name: 'userId', required: true, type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'User profile retrieved successfully',
+    type: [Permission],
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async getUserPermission(
+    @Query('userId') userId: number,
+  ): Promise<Permission[]> {
+    return this.usersService.getUserPermisison(userId);
   }
 
   @Get(':userId/stats')

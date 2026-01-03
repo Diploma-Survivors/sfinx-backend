@@ -11,16 +11,22 @@ import { Repository } from 'typeorm';
 import { PaginatedResultDto, SortOrder } from '../../../common';
 import { User } from '../../auth/entities/user.entity';
 import { Problem } from '../../problems/entities/problem.entity';
-import { CacheService } from '../../redis/services/cache.service';
-import { CacheKeys } from '../../redis/utils/cache-key.builder';
-import { AddContestProblemDto } from '../dto/add-contest-problem.dto';
-import { CreateContestDto } from '../dto/create-contest.dto';
-import { FilterContestDto } from '../dto/filter-contest.dto';
-import { UpdateContestDto } from '../dto/update-contest.dto';
-import { ContestParticipant } from '../entities/contest-participant.entity';
-import { ContestProblem } from '../entities/contest-problem.entity';
-import { Contest } from '../entities/contest.entity';
-import { ContestStatus } from '../enums/contest-status.enum';
+import { CacheKeys, CacheService } from '../../redis';
+import {
+  AddContestProblemDto,
+  CreateContestDto,
+  FilterContestDto,
+  UpdateContestDto,
+} from '../dto';
+import { Contest, ContestParticipant, ContestProblem } from '../entities';
+import { ContestStatus } from '../enums';
+
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  ContestCreatedEvent,
+  ContestDeletedEvent,
+  ContestUpdatedEvent,
+} from '../events/contest-scheduled.events';
 
 @Injectable()
 export class ContestService {
@@ -36,6 +42,7 @@ export class ContestService {
     @InjectRepository(Problem)
     private readonly problemRepository: Repository<Problem>,
     private readonly cacheService: CacheService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -61,13 +68,19 @@ export class ContestService {
       rules: dto.rules ?? null,
       startTime: dto.startTime,
       endTime: dto.endTime,
-      status: ContestStatus.DRAFT,
+      status: dto.status ?? ContestStatus.DRAFT,
       maxParticipants: dto.maxParticipants ?? 0,
       durationMinutes,
       createdBy: { id: userId } as User,
     });
 
     const savedContest = await this.contestRepository.save(contest);
+
+    // Emit created event
+    this.eventEmitter.emit(
+      ContestCreatedEvent.name,
+      new ContestCreatedEvent(savedContest.id),
+    );
 
     // Add problems if provided
     if (dto.problems && dto.problems.length > 0) {
@@ -116,6 +129,12 @@ export class ContestService {
 
     const updated = await this.contestRepository.save(contest);
 
+    // Emit updated event
+    this.eventEmitter.emit(
+      ContestUpdatedEvent.name,
+      new ContestUpdatedEvent(updated.id),
+    );
+
     // Invalidate cache
     await this.invalidateContestCache(id, contest.slug);
 
@@ -139,6 +158,10 @@ export class ContestService {
     }
 
     await this.contestRepository.delete(id);
+    this.eventEmitter.emit(
+      ContestDeletedEvent.name,
+      new ContestDeletedEvent(id),
+    );
     await this.invalidateContestCache(id, contest.slug);
   }
 
@@ -383,25 +406,33 @@ export class ContestService {
   }
 
   /**
-   * Register user for contest
+   * Join a contest (Idempotent)
    */
-  async registerForContest(
+  async joinContest(
     contestId: number,
     userId: number,
   ): Promise<ContestParticipant> {
     const contest = await this.getContestById(contestId);
 
-    // Check if registration is allowed
+    // 1. Check if already registered
+    const existing = await this.participantRepository.findOne({
+      where: { contestId, userId },
+    });
+    if (existing) {
+      return existing;
+    }
+
+    // 2. Validate Status
     if (
       contest.status !== ContestStatus.SCHEDULED &&
       contest.status !== ContestStatus.RUNNING
     ) {
       throw new BadRequestException(
-        'Registration is only allowed for scheduled or running contests',
+        'Can only join scheduled or running contests',
       );
     }
 
-    // Check max participants
+    // 3. Check max participants
     if (
       contest.maxParticipants > 0 &&
       contest.participantCount >= contest.maxParticipants
@@ -409,15 +440,7 @@ export class ContestService {
       throw new BadRequestException('Contest has reached maximum participants');
     }
 
-    // Check if already registered
-    const existing = await this.participantRepository.findOne({
-      where: { contestId, userId },
-    });
-    if (existing) {
-      throw new ConflictException('Already registered for this contest');
-    }
-
-    // Create participant
+    // 4. Create participant
     const participant = this.participantRepository.create({
       contestId,
       userId,
@@ -426,6 +449,7 @@ export class ContestService {
       totalScore: 0,
       problemScores: {},
       totalSubmissions: 0,
+      startedAt: new Date(), // Set join time
     });
 
     const saved = await this.participantRepository.save(participant);
@@ -520,8 +544,23 @@ export class ContestService {
   async endContest(id: number): Promise<Contest> {
     const contest = await this.getContestById(id);
 
-    if (contest.status !== ContestStatus.RUNNING) {
-      throw new BadRequestException('Can only end running contests');
+    if (
+      contest.status !== ContestStatus.RUNNING &&
+      contest.status !== ContestStatus.SCHEDULED
+    ) {
+      throw new BadRequestException(
+        'Can only end running or scheduled contests',
+      );
+    }
+
+    // If ending a scheduled contest, ensure time has passed
+    if (
+      contest.status === ContestStatus.SCHEDULED &&
+      contest.endTime > new Date()
+    ) {
+      throw new BadRequestException(
+        'Cannot end a scheduled contest before its end time',
+      );
     }
 
     contest.status = ContestStatus.ENDED;

@@ -597,4 +597,83 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       );
     }
   }
+
+  /**
+   * Sorted Set: Add members with scores
+   */
+  async zadd(key: string, score: number, member: string): Promise<number> {
+    try {
+      return await this.client.zadd(key, score, member);
+    } catch (error) {
+      this.logger.error(`Failed to zadd to ${key}:`, error);
+      throw new Error(
+        `${REDIS_ERROR_CODES.OPERATION_FAILED}: ${(error as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * Sorted Set: Get rank (high to low)
+   * Returns null if member not found
+   */
+  async zrevrank(key: string, member: string): Promise<number | null> {
+    try {
+      return await this.client.zrevrank(key, member);
+    } catch (error) {
+      this.logger.error(`Failed to zrevrank ${key}:`, error);
+      throw new Error(
+        `${REDIS_ERROR_CODES.OPERATION_FAILED}: ${(error as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * Sorted Set: Get score of member
+   */
+  async zscore(key: string, member: string): Promise<string | null> {
+    try {
+      return await this.client.zscore(key, member);
+    } catch (error) {
+      this.logger.error(`Failed to zscore ${key}:`, error);
+      throw new Error(
+        `${REDIS_ERROR_CODES.OPERATION_FAILED}: ${(error as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * Sorted Set: Get range (high to low) with scores
+   */
+  async zrevrange(
+    key: string,
+    start: number,
+    stop: number,
+    withScores: boolean = false,
+  ): Promise<string[]> {
+    try {
+      if (withScores) {
+        return await this.client.zrevrange(key, start, stop, 'WITHSCORES');
+      }
+      return await this.client.zrevrange(key, start, stop);
+    } catch (error) {
+      this.logger.error(`Failed to zrevrange ${key}:`, error);
+      throw new Error(
+        `${REDIS_ERROR_CODES.OPERATION_FAILED}: ${(error as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * Sorted Set: Get cardinality (count)
+   */
+  async zcard(key: string): Promise<number> {
+    try {
+      return await this.client.zcard(key);
+    } catch (error) {
+      this.logger.error(`Failed to zcard ${key}:`, error);
+      throw new Error(
+        `${REDIS_ERROR_CODES.OPERATION_FAILED}: ${(error as Error).message}`,
+      );
+    }
+  }
 }

@@ -7,6 +7,7 @@ import {
   ManyToOne,
   PrimaryColumn,
   UpdateDateColumn,
+  VersionColumn,
 } from 'typeorm';
 import { User } from '../../auth/entities/user.entity';
 import { Contest } from './contest.entity';
@@ -18,6 +19,7 @@ export interface ProblemScore {
   score: number;
   submissions: number;
   lastSubmitTime: string | null;
+  firstAcTime?: string | null;
 }
 
 @Entity('contest_participants')
@@ -52,9 +54,27 @@ export class ContestParticipant {
   })
   totalScore: number;
 
-  @ApiPropertyOptional({ description: 'Current rank in leaderboard' })
-  @Column({ type: 'int', nullable: true })
-  rank: number | null;
+  @ApiProperty({ description: 'Number of problems solved', default: 0 })
+  @Column({ name: 'solved_count', type: 'int', default: 0 })
+  solvedCount: number;
+
+  @ApiProperty({
+    description: 'Sum of time (ms) for all first AC submissions',
+    default: 0,
+  })
+  @Column({
+    name: 'finish_time',
+    type: 'bigint',
+    default: 0,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => parseInt(value, 10),
+    },
+  })
+  finishTime: number;
+
+  @VersionColumn()
+  version: number;
 
   @ApiProperty({
     description: 'Score breakdown per problem',
@@ -79,9 +99,9 @@ export class ContestParticipant {
   @Column({ name: 'last_submission_at', type: 'timestamptz', nullable: true })
   lastSubmissionAt: Date | null;
 
-  @ApiProperty({ description: 'Registration timestamp' })
-  @CreateDateColumn({ name: 'registered_at', type: 'timestamptz' })
-  registeredAt: Date;
+  @ApiProperty({ description: 'Start timestamp (when user joined)' })
+  @CreateDateColumn({ name: 'started_at', type: 'timestamptz' })
+  startedAt: Date;
 
   @ApiProperty({ description: 'Last update timestamp' })
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })

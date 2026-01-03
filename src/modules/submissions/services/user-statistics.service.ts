@@ -1,16 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 
 import { ProblemDifficulty } from '../../problems/enums/problem-difficulty.enum';
-import { CacheService } from '../../redis';
-import { CacheKeys } from '../../redis';
+import { CacheKeys, CacheService, RedisService } from '../../redis';
 import { UserProblemProgress } from '../entities/user-problem-progress.entity';
 import { Problem } from '../../problems/entities/problem.entity';
 import { Submission } from '../entities/submission.entity';
 import { ProgressStatus, SubmissionStatus } from '../enums';
 import { SUBMISSION_CACHE } from '../constants/submission.constants';
 import { UserStatisticsDto } from '../dto/user-statistics.dto';
+import { User } from '../../auth/entities/user.entity';
+import { SystemConfigService } from '../../system-config/system-config.service';
 
 @Injectable()
 export class UserStatisticsService {
@@ -23,7 +25,11 @@ export class UserStatisticsService {
     private readonly submissionRepository: Repository<Submission>,
     @InjectRepository(Problem)
     private readonly problemRepository: Repository<Problem>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly cacheService: CacheService,
+    private readonly redisService: RedisService,
+    private readonly systemConfigService: SystemConfigService,
   ) {}
 
   /**
@@ -49,37 +55,18 @@ export class UserStatisticsService {
   private async calculateUserStatistics(
     userId: number,
   ): Promise<UserStatisticsDto> {
-    // 1. Get aggregate totals directly from DB
-    const aggregates = await this.progressRepository
-      .createQueryBuilder('progress')
-      .select('COUNT(*)', 'totalProblemsAttempted')
-      .addSelect(
-        `SUM(CASE WHEN progress.status = '${ProgressStatus.SOLVED}' THEN 1 ELSE 0 END)`,
-        'totalProblemsSolved',
-      )
-      .where('progress.userId = :userId', { userId })
-      .getRawOne<{
-        totalProblemsAttempted: string;
-        totalProblemsSolved: string;
-      }>();
+    // 1. Get user with stats directly from User table (O(1))
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      select: ['solvedEasy', 'solvedMedium', 'solvedHard', 'globalScore'],
+    });
 
-    // 2. Get user's difficulty breakdown (Solved count)
-    const userDifficultyStats = await this.progressRepository
-      .createQueryBuilder('progress')
-      .leftJoin('progress.problem', 'problem')
-      .select('problem.difficulty', 'difficulty')
-      .addSelect(
-        `SUM(CASE WHEN progress.status = '${ProgressStatus.SOLVED}' THEN 1 ELSE 0 END)`,
-        'solved',
-      )
-      .where('progress.userId = :userId', { userId })
-      .groupBy('problem.difficulty')
-      .getRawMany<{
-        difficulty: ProblemDifficulty;
-        solved: string;
-      }>();
+    if (!user) {
+      throw new Error(`User ${userId} not found`);
+    }
 
-    // 3. Get system-wide problem counts by difficulty (Total count)
+    // 2. Get system-wide problem counts by difficulty (Total count)
+    // Cache this or keep as is (Problem table is small enough for now)
     const systemDifficultyStats = await this.problemRepository
       .createQueryBuilder('problem')
       .select('problem.difficulty', 'difficulty')
@@ -93,13 +80,28 @@ export class UserStatisticsService {
 
     // Helper to extract stats
     const getStatsForDiff = (diff: ProblemDifficulty) => {
-      const userStat = userDifficultyStats.find((s) => s.difficulty === diff);
+      let solvedCount = 0;
+      switch (diff) {
+        case ProblemDifficulty.EASY:
+          solvedCount = user.solvedEasy;
+          break;
+        case ProblemDifficulty.MEDIUM:
+          solvedCount = user.solvedMedium;
+          break;
+        case ProblemDifficulty.HARD:
+          solvedCount = user.solvedHard;
+          break;
+      }
+
       const systemStat = systemDifficultyStats.find(
         (s) => s.difficulty === diff,
       );
+
+      const totalCount = parseInt(systemStat?.total ?? '0', 10);
+
       return {
-        solved: parseInt(userStat?.solved ?? '0', 10),
-        total: parseInt(systemStat?.total ?? '0', 10),
+        solved: solvedCount,
+        total: totalCount,
       };
     };
 
@@ -118,7 +120,7 @@ export class UserStatisticsService {
         medium: getStatsForDiff(ProblemDifficulty.MEDIUM),
         hard: getStatsForDiff(ProblemDifficulty.HARD),
         total: {
-          solved: parseInt(aggregates?.totalProblemsSolved ?? '0', 10),
+          solved: user.solvedEasy + user.solvedMedium + user.solvedHard,
           total: totalSystemProblems,
         },
       },
@@ -246,5 +248,184 @@ export class UserStatisticsService {
         error,
       );
     }
+  }
+
+  /**
+   * Increment User's Global Score based on a newly solved problem
+   * Optimized to avoid full recalculation
+   */
+  async incrementGlobalScore(userId: number, problemId: number): Promise<void> {
+    const problem = await this.problemRepository.findOne({
+      where: { id: problemId },
+      select: ['difficulty'],
+    });
+
+    if (!problem) {
+      this.logger.warn(`Problem ${problemId} not found for score increment`);
+      return;
+    }
+
+    const weightEasy = this.systemConfigService.getInt(
+      'PROBLEM_WEIGHT_EASY',
+      10,
+    );
+    const weightMedium = this.systemConfigService.getInt(
+      'PROBLEM_WEIGHT_MEDIUM',
+      20,
+    );
+    const weightHard = this.systemConfigService.getInt(
+      'PROBLEM_WEIGHT_HARD',
+      30,
+    );
+
+    let weight = 0;
+    switch (problem.difficulty) {
+      case ProblemDifficulty.EASY:
+        weight = weightEasy;
+        break;
+      case ProblemDifficulty.MEDIUM:
+        weight = weightMedium;
+        break;
+      case ProblemDifficulty.HARD:
+        weight = weightHard;
+        break;
+    }
+
+    if (weight > 0) {
+      // Atomic update of score AND stats using query builder for custom SQL increment
+      const updateData: QueryDeepPartialEntity<User> = {
+        globalScore: () => `global_score + ${weight}`,
+      };
+
+      switch (problem.difficulty) {
+        case ProblemDifficulty.EASY:
+          updateData.solvedEasy = () => `solved_easy + 1`;
+          break;
+        case ProblemDifficulty.MEDIUM:
+          updateData.solvedMedium = () => `solved_medium + 1`;
+          break;
+        case ProblemDifficulty.HARD:
+          updateData.solvedHard = () => `solved_hard + 1`;
+          break;
+      }
+
+      updateData.lastSolveAt = new Date(); // Update tie-breaker
+
+      await this.userRepository
+        .createQueryBuilder()
+        .update(User)
+        .set(updateData)
+        .where('id = :id', { id: userId })
+        .execute();
+
+      this.logger.debug(
+        `Incremented global score and stats for user ${userId} by ${weight}`,
+      );
+      await this.invalidateUserStatisticsCache(userId);
+
+      // Async: Update Redis Ranking
+      // Score Encoding: Score * 1e10 + (MAX_TIMESTAMP - CurrentTimestamp)
+      // This allows sorting by Score DESC, then Time ASC (Earlier is better)
+      try {
+        await this.recalculateGlobalScore(userId); // Call recalculate to ensure Redis consistency
+      } catch (error) {
+        this.logger.error(
+          `Failed to update Redis ranking for user ${userId}`,
+          error,
+        );
+      }
+    }
+  }
+
+  /**
+   * Recalculate global score from scratch (useful for reconciliation)
+   * Also updates the Redis ZSET ranking
+   */
+  async recalculateGlobalScore(userId: number): Promise<void> {
+    // 1. Get solved count by difficulty
+    const solvedStats = await this.progressRepository
+      .createQueryBuilder('progress')
+      .leftJoin('progress.problem', 'problem')
+      .select('problem.difficulty', 'difficulty')
+      .addSelect('COUNT(*)', 'count')
+      .where('progress.userId = :userId', { userId })
+      .andWhere('progress.status = :status', { status: ProgressStatus.SOLVED })
+      .groupBy('problem.difficulty')
+      .getRawMany<{ difficulty: ProblemDifficulty; count: string }>();
+
+    // 2. Get Weights
+    const weightEasy = this.systemConfigService.getInt(
+      'PROBLEM_WEIGHT_EASY',
+      10,
+    );
+    const weightMedium = this.systemConfigService.getInt(
+      'PROBLEM_WEIGHT_MEDIUM',
+      20,
+    );
+    const weightHard = this.systemConfigService.getInt(
+      'PROBLEM_WEIGHT_HARD',
+      30,
+    );
+
+    // 3. Calculate Score
+    let totalScore = 0;
+    solvedStats.forEach((stat) => {
+      const count = parseInt(stat.count, 10);
+      switch (stat.difficulty) {
+        case ProblemDifficulty.EASY:
+          totalScore += count * weightEasy;
+          break;
+        case ProblemDifficulty.MEDIUM:
+          totalScore += count * weightMedium;
+          break;
+        case ProblemDifficulty.HARD:
+          totalScore += count * weightHard;
+          break;
+      }
+    });
+
+    // 4. Update User
+    await this.userRepository.update(userId, { globalScore: totalScore });
+    await this.invalidateUserStatisticsCache(userId);
+
+    // Update Redis Ranking
+    try {
+      // Need last solve time for correct encoding.
+      const lastSolve = await this.progressRepository
+        .createQueryBuilder('p')
+        .select('MAX(p.solvedAt)', 'lastSolve')
+        .where('p.userId = :userId', { userId })
+        .andWhere('p.status = :status', { status: ProgressStatus.SOLVED })
+        .getRawOne<{ lastSolve: string | Date }>();
+
+      const lastSolveTime = lastSolve?.lastSolve
+        ? Math.floor(new Date(lastSolve.lastSolve).getTime() / 1000)
+        : 0;
+      const MAX_TIMESTAMP = 9999999999;
+
+      const encodedScore = totalScore * 1e10 + (MAX_TIMESTAMP - lastSolveTime);
+      const GLOBAL_RANKING_KEY = 'global:ranking';
+      await this.redisService.zadd(
+        GLOBAL_RANKING_KEY,
+        encodedScore,
+        userId.toString(),
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to sync Redis ranking for user ${userId}`,
+        error,
+      );
+    }
+
+    this.logger.log(
+      `Recalculated global score for user ${userId}: ${totalScore}`,
+    );
+  }
+
+  /**
+   * @deprecated Use recalculateGlobalScore or incrementGlobalScore
+   */
+  async updateGlobalScore(userId: number): Promise<void> {
+    return this.recalculateGlobalScore(userId);
   }
 }

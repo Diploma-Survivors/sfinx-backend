@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Ip,
   Param,
   Post,
   Put,
@@ -42,6 +43,7 @@ import { Contest } from '../entities';
 import { ContestStatisticsService } from '../services/contest-statistics.service';
 import { ContestSubmissionService } from '../services';
 import { ContestService } from '../services';
+import { SubmissionsService } from '../../submissions/submissions.service';
 
 @ApiTags('Contests')
 @Controller('contests')
@@ -50,6 +52,7 @@ export class ContestController {
     private readonly contestService: ContestService,
     private readonly contestStatisticsService: ContestStatisticsService,
     private readonly contestSubmissionService: ContestSubmissionService,
+    private readonly submissionsService: SubmissionsService,
   ) {}
 
   @Get()
@@ -168,41 +171,22 @@ export class ContestController {
     return this.contestStatisticsService.getProblemStats(+id);
   }
 
-  @Post(':id/register')
+  @Post(':id/enter')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Register for a contest' })
+  @ApiOperation({ summary: 'Enter/Join a contest' })
   @ApiParam({ name: 'id', description: 'Contest ID', type: Number })
   @ApiResponse({
-    status: 201,
-    description: 'Registered successfully',
+    status: 200,
+    description: 'Joined successfully',
     type: ContestParticipant,
   })
-  @ApiResponse({ status: 400, description: 'Registration not allowed' })
-  @ApiResponse({ status: 409, description: 'Already registered' })
-  async registerForContest(
+  @ApiResponse({ status: 400, description: 'Cannot join contest' })
+  async enterContest(
     @Param('id') id: string,
     @GetUser() user: User,
   ): Promise<ContestParticipant> {
-    return this.contestService.registerForContest(+id, user.id);
-  }
-
-  @Delete(':id/register')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Unregister from a contest' })
-  @ApiParam({ name: 'id', description: 'Contest ID', type: Number })
-  @ApiResponse({ status: 204, description: 'Unregistered successfully' })
-  @ApiResponse({
-    status: 400,
-    description: 'Cannot unregister after contest started',
-  })
-  async unregisterFromContest(
-    @Param('id') id: string,
-    @GetUser() user: User,
-  ): Promise<void> {
-    return this.contestService.unregisterFromContest(+id, user.id);
+    return this.contestService.joinContest(+id, user.id);
   }
 
   @Get(':id/my-submissions')
@@ -243,21 +227,14 @@ export class ContestController {
     @Param('id') id: string,
     @Body() createSubmissionDto: CreateSubmissionDto,
     @GetUser() user: User,
+    @Ip() ipAddress: string,
   ): Promise<{ submissionId: string; contestId: number }> {
-    // Validate submission is allowed
-    await this.contestSubmissionService.validateSubmission(
-      +id,
+    return this.submissionsService.submitContestSolution(
+      createSubmissionDto,
       user.id,
-      createSubmissionDto.problemId,
+      ipAddress,
+      +id,
     );
-
-    // Note: The actual submission creation is delegated to SubmissionsService
-    // This endpoint just validates and returns context
-    // The integration with SubmissionsService should be done in the caller
-    return {
-      submissionId: 'pending', // Placeholder - actual submission handled by SubmissionsService
-      contestId: +id,
-    };
   }
 
   @Post(':id/start')

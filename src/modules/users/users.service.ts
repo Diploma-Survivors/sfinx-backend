@@ -27,6 +27,17 @@ export class UsersService {
     return this.transformUserResponse(user);
   }
 
+  async getUserPermisison(userId: number) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['role', 'role.permissions'],
+    });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+    return user.role.permissions;
+  }
+
   transformUserResponse(user: User): UserProfileResponseDto {
     const dto = plainToInstance(UserProfileResponseDto, user);
 

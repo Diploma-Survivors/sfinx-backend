@@ -308,13 +308,24 @@ export class CacheKeys {
         .suffix('problems')
         .build(),
 
-    leaderboard: (contestId: string | number, page: number, limit: number) =>
-      CacheKeyBuilder.namespace('contest')
+    leaderboard: (
+      contestId: string | number,
+      page: number,
+      limit: number,
+      search?: string,
+    ) => {
+      const builder = CacheKeyBuilder.namespace('contest')
         .id(contestId)
         .suffix('leaderboard')
         .part(`p${page}`)
-        .part(`l${limit}`)
-        .build(),
+        .part(`l${limit}`);
+
+      if (search) {
+        builder.part(`s:${search}`);
+      }
+
+      return builder.build();
+    },
 
     leaderboardPattern: (contestId: string | number) =>
       CacheKeyBuilder.namespace('contest')

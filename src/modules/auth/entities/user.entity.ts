@@ -88,6 +88,38 @@ export class User {
   rank: number;
 
   @ApiProperty({
+    description: 'Global score based on problem difficulty',
+    default: 0,
+  })
+  @Column({
+    name: 'global_score',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    default: 0,
+  })
+  globalScore: number;
+
+  @ApiProperty({ description: 'Count of solved Easy problems', default: 0 })
+  @Column({ name: 'solved_easy', default: 0 })
+  solvedEasy: number;
+
+  @ApiProperty({ description: 'Count of solved Medium problems', default: 0 })
+  @Column({ name: 'solved_medium', default: 0 })
+  solvedMedium: number;
+
+  @ApiProperty({ description: 'Count of solved Hard problems', default: 0 })
+  @Column({ name: 'solved_hard', default: 0 })
+  solvedHard: number;
+
+  @ApiProperty({
+    description: 'Timestamp of the last solved problem (for tie-breaking)',
+    required: false,
+  })
+  @Column({ name: 'last_solve_at', type: 'timestamptz', nullable: true })
+  lastSolveAt: Date | null;
+
+  @ApiProperty({
     description: 'Website URL',
     required: false,
     example: 'https://example.com',

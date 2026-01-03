@@ -347,14 +347,39 @@ export class PlatformStatisticsService {
   }
 
   /**
-   * Get time series metrics for the last 30 days
+   * Get time series metrics for the specified date range (default: last 30 days)
    */
   @Cacheable({
-    key: () => 'platform:timeseries',
+    key: (args: any[]) => {
+      const format = (d: any) => {
+        if (!d) return 'default';
+        try {
+          return new Date(d).toISOString().split('T')[0];
+        } catch {
+          return String(d);
+        }
+      };
+      const from = format(args[0]);
+      const to = format(args[1]);
+      return `platform:timeseries:${from}:${to}`;
+    },
     ttl: CACHE_TTL.FIVE_MINUTES,
   })
-  async getTimeSeriesMetrics(): Promise<TimeSeriesMetricsDto> {
-    this.logger.log('Fetching time series metrics for last 30 days');
+  async getTimeSeriesMetrics(
+    from?: Date,
+    to?: Date,
+  ): Promise<TimeSeriesMetricsDto> {
+    this.logger.log(
+      `Fetching time series metrics from ${String(from)} to ${String(to)}`,
+    );
+
+    // Default to last 30 days if not provided
+    const endDate = to ? new Date(to) : new Date();
+    const startDate = from ? new Date(from) : new Date();
+
+    if (!from) {
+      startDate.setDate(endDate.getDate() - 30);
+    }
 
     const [
       dailyNewUsers,
@@ -363,11 +388,11 @@ export class PlatformStatisticsService {
       dailyRevenue,
       dailyAcceptedSubmissions,
     ] = await Promise.all([
-      this.getDailyNewUsers(),
-      this.getDailySubmissions(),
-      this.getDailyActiveUsers(),
-      this.getDailyRevenue(),
-      this.getDailyAcceptedSubmissions(),
+      this.getDailyNewUsers(startDate, endDate),
+      this.getDailySubmissions(startDate, endDate),
+      this.getDailyActiveUsers(startDate, endDate),
+      this.getDailyRevenue(startDate, endDate),
+      this.getDailyAcceptedSubmissions(startDate, endDate),
     ]);
 
     return {
@@ -380,96 +405,111 @@ export class PlatformStatisticsService {
   }
 
   /**
-   * Get daily new user registrations for last 30 days
+   * Get daily new user registrations for date range
    */
-  private async getDailyNewUsers(): Promise<TimeSeriesDataPointDto[]> {
+  private async getDailyNewUsers(
+    from: Date,
+    to: Date,
+  ): Promise<TimeSeriesDataPointDto[]> {
     const results = await this.userRepository
       .createQueryBuilder('user')
       .select("DATE(user.createdAt AT TIME ZONE 'UTC')", 'date')
       .addSelect('COUNT(*)', 'value')
-      .where("user.createdAt >= NOW() - INTERVAL '30 days'")
+      .where('user.createdAt BETWEEN :from AND :to', { from, to })
       .andWhere('user.isBanned = false')
       .groupBy("DATE(user.createdAt AT TIME ZONE 'UTC')")
       .orderBy('date', 'ASC')
       .getRawMany<{ date: string; value: string }>();
 
-    return this.fillMissingDates(results);
+    return this.fillMissingDates(results, from, to);
   }
 
   /**
-   * Get daily submission counts for last 30 days
+   * Get daily submission counts for date range
    */
-  private async getDailySubmissions(): Promise<TimeSeriesDataPointDto[]> {
+  private async getDailySubmissions(
+    from: Date,
+    to: Date,
+  ): Promise<TimeSeriesDataPointDto[]> {
     const results = await this.submissionRepository
       .createQueryBuilder('submission')
       .select("DATE(submission.submittedAt AT TIME ZONE 'UTC')", 'date')
       .addSelect('COUNT(*)', 'value')
-      .where("submission.submittedAt >= NOW() - INTERVAL '30 days'")
+      .where('submission.submittedAt BETWEEN :from AND :to', { from, to })
       .groupBy("DATE(submission.submittedAt AT TIME ZONE 'UTC')")
       .orderBy('date', 'ASC')
       .getRawMany<{ date: string; value: string }>();
 
-    return this.fillMissingDates(results);
+    return this.fillMissingDates(results, from, to);
   }
 
   /**
-   * Get daily active users for last 30 days
+   * Get daily active users for date range
    */
-  private async getDailyActiveUsers(): Promise<TimeSeriesDataPointDto[]> {
+  private async getDailyActiveUsers(
+    from: Date,
+    to: Date,
+  ): Promise<TimeSeriesDataPointDto[]> {
     const results = await this.userRepository
       .createQueryBuilder('user')
       .select("DATE(user.lastActiveAt AT TIME ZONE 'UTC')", 'date')
       .addSelect('COUNT(DISTINCT user.id)', 'value')
-      .where("user.lastActiveAt >= NOW() - INTERVAL '30 days'")
+      .where('user.lastActiveAt BETWEEN :from AND :to', { from, to })
       .andWhere('user.isBanned = false')
       .groupBy("DATE(user.lastActiveAt AT TIME ZONE 'UTC')")
       .orderBy('date', 'ASC')
       .getRawMany<{ date: string; value: string }>();
 
-    return this.fillMissingDates(results);
+    return this.fillMissingDates(results, from, to);
   }
 
   /**
-   * Get daily revenue for last 30 days
+   * Get daily revenue for date range
    */
-  private async getDailyRevenue(): Promise<TimeSeriesDataPointDto[]> {
+  private async getDailyRevenue(
+    from: Date,
+    to: Date,
+  ): Promise<TimeSeriesDataPointDto[]> {
     const results = await this.paymentRepository
       .createQueryBuilder('payment')
       .select("DATE(payment.paymentDate AT TIME ZONE 'UTC')", 'date')
       .addSelect('COALESCE(SUM(payment.amount), 0)', 'value')
-      .where("payment.paymentDate >= NOW() - INTERVAL '30 days'")
+      .where('payment.paymentDate BETWEEN :from AND :to', { from, to })
       .andWhere('payment.status = :status', { status: PaymentStatus.SUCCESS })
       .groupBy("DATE(payment.paymentDate AT TIME ZONE 'UTC')")
       .orderBy('date', 'ASC')
       .getRawMany<{ date: string; value: string }>();
 
-    return this.fillMissingDates(results, true);
+    return this.fillMissingDates(results, from, to, true);
   }
 
   /**
-   * Get daily accepted submissions for last 30 days
+   * Get daily accepted submissions for date range
    */
-  private async getDailyAcceptedSubmissions(): Promise<
-    TimeSeriesDataPointDto[]
-  > {
+  private async getDailyAcceptedSubmissions(
+    from: Date,
+    to: Date,
+  ): Promise<TimeSeriesDataPointDto[]> {
     const results = await this.submissionRepository
       .createQueryBuilder('submission')
       .select("DATE(submission.submittedAt AT TIME ZONE 'UTC')", 'date')
       .addSelect('COUNT(*)', 'value')
-      .where("submission.submittedAt >= NOW() - INTERVAL '30 days'")
+      .where('submission.submittedAt BETWEEN :from AND :to', { from, to })
       .andWhere('submission.status = :status', { status: 'ACCEPTED' })
       .groupBy("DATE(submission.submittedAt AT TIME ZONE 'UTC')")
       .orderBy('date', 'ASC')
       .getRawMany<{ date: string; value: string }>();
 
-    return this.fillMissingDates(results);
+    return this.fillMissingDates(results, from, to);
   }
 
   /**
-   * Fill missing dates with zero values for continuous time series
+   * Fill missing dates with zero values for continuous time series within range
    */
   private fillMissingDates(
     results: { date: string; value: string }[],
+    from: Date,
+    to: Date,
     isDecimal = false,
   ): TimeSeriesDataPointDto[] {
     const dataMap = new Map<string, number>();
@@ -487,14 +527,14 @@ export class PlatformStatisticsService {
       );
     });
 
-    // Generate all dates for last 30 days
+    // Generate all dates for the range
     const filledData: TimeSeriesDataPointDto[] = [];
-    const today = new Date();
+    const currentDate = new Date(from);
+    const endDate = new Date(to);
 
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
+    // Ensure we iterate day by day
+    while (currentDate <= endDate) {
+      const dateStr = currentDate.toISOString().split('T')[0];
 
       filledData.push({
         date: dateStr,
@@ -502,6 +542,8 @@ export class PlatformStatisticsService {
           ? Math.round((dataMap.get(dateStr) ?? 0) * 100) / 100
           : (dataMap.get(dateStr) ?? 0),
       });
+
+      currentDate.setDate(currentDate.getDate() + 1);
     }
 
     return filledData;

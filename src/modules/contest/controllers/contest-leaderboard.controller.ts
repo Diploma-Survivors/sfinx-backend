@@ -15,9 +15,8 @@ import {
 } from '../../../common';
 import { User } from '../../auth/entities/user.entity';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { LeaderboardEntryDto } from '../dto/leaderboard-entry.dto';
-import { ContestLeaderboardService } from '../services/contest-leaderboard.service';
-import { ContestSseService } from '../services/contest-sse.service';
+import { LeaderboardEntryDto } from '../dto';
+import { ContestLeaderboardService, ContestSseService } from '../services';
 
 @ApiTags('Contest Leaderboard')
 @Controller('contests/:contestId/leaderboard')
@@ -37,11 +36,13 @@ export class ContestLeaderboardController {
   async getLeaderboard(
     @Param('contestId') contestId: string,
     @Query() paginationDto: PaginationQueryDto,
+    @Query('search') search?: string,
   ): Promise<PaginatedResultDto<LeaderboardEntryDto>> {
     return this.leaderboardService.getLeaderboard(
       +contestId,
       paginationDto.page ?? 1,
       paginationDto.limit ?? 50,
+      search,
     );
   }
 

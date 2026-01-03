@@ -54,6 +54,7 @@ import { SolutionsModule } from './modules/solutions/solutions.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AdminModule } from './modules/admin/admin.module';
+import { SystemConfigModule } from './modules/system-config/system-config.module';
 
 @Module({
   imports: [
@@ -135,6 +136,7 @@ import { AdminModule } from './modules/admin/admin.module';
     SolutionsModule,
     PaymentsModule,
     AdminModule,
+    SystemConfigModule,
     // AiModule,
     // CommunityModule,
   ],

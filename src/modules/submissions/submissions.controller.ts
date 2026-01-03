@@ -100,7 +100,7 @@ export class SubmissionsController {
     @GetUser() user: User,
     @Ip() ipAddress: string,
   ) {
-    return this.submissionsService.submitForGrading(
+    return this.submissionsService.submitPracticeSolution(
       createSubmissionDto,
       user.id,
       ipAddress,

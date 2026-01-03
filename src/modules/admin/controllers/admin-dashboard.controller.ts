@@ -1,24 +1,24 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { CheckPolicies } from '../../../common';
-import { AdminAccessPolicy } from '../../rbac/casl';
+import { Action } from '../../rbac/casl';
 import { PlatformStatisticsService } from '../services/platform-statistics.service';
 import {
   PlatformStatisticsDto,
   TimeSeriesMetricsDto,
 } from '../dto/platform-statistics.dto';
+import { CaslGuard } from '../../auth/guards/casl.guard';
 
 @ApiTags('Admin Dashboard')
 @Controller('admin/dashboard')
-@UseGuards(JwtAuthGuard)
+@UseGuards(CaslGuard)
 export class AdminDashboardController {
   constructor(
     private readonly platformStatisticsService: PlatformStatisticsService,
   ) {}
 
   @Get('statistics')
-  @CheckPolicies(new AdminAccessPolicy())
+  @CheckPolicies((ability) => ability.can(Action.Access, 'Admin'))
   @ApiOperation({
     summary: 'Get platform-wide statistics',
     description:
@@ -36,11 +36,11 @@ export class AdminDashboardController {
   }
 
   @Get('time-series')
-  @CheckPolicies(new AdminAccessPolicy())
+  @CheckPolicies((ability) => ability.can(Action.Access, 'Admin'))
   @ApiOperation({
     summary: 'Get time series data for charts',
     description:
-      'Retrieve daily time series data for the last 30 days including new users, submissions, active users, and revenue for charting purposes',
+      'Retrieve daily time series data including new users, submissions, active users, and revenue for charting purposes',
   })
   @ApiResponse({
     status: 200,
@@ -49,7 +49,10 @@ export class AdminDashboardController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
-  async getTimeSeriesMetrics(): Promise<TimeSeriesMetricsDto> {
-    return this.platformStatisticsService.getTimeSeriesMetrics();
+  async getTimeSeriesMetrics(
+    @Query('from') from?: Date,
+    @Query('to') to?: Date,
+  ): Promise<TimeSeriesMetricsDto> {
+    return this.platformStatisticsService.getTimeSeriesMetrics(from, to);
   }
 }

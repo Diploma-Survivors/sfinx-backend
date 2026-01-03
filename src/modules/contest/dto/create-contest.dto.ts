@@ -3,6 +3,7 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsDate,
+  IsEnum,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -11,6 +12,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import { ContestStatus } from '../enums';
 
 export class AddProblemToContestDto {
   @ApiProperty({ description: 'Problem ID' })
@@ -65,6 +67,15 @@ export class CreateContestDto {
   @Min(0)
   @IsOptional()
   maxParticipants?: number = 0;
+
+  @ApiPropertyOptional({
+    description: 'Contest status',
+    enum: ContestStatus,
+    default: ContestStatus.DRAFT,
+  })
+  @IsEnum(ContestStatus)
+  @IsOptional()
+  status?: ContestStatus = ContestStatus.DRAFT;
 
   @ApiPropertyOptional({
     description: 'Problems to include in contest',

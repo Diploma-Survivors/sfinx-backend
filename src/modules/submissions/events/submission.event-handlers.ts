@@ -4,9 +4,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { User } from '../../auth/entities/user.entity';
-import { MailService } from '../../mail/mail.service';
+import { MailService } from '../../mail';
 import { ProblemsService } from '../../problems/problems.service';
-import { SubmissionStatus } from '../enums/submission-status.enum';
+import { SubmissionStatus } from '../enums';
 import { SUBMISSION_EVENTS } from '../constants/submission-events.constants';
 import {
   SubmissionCreatedEvent,
