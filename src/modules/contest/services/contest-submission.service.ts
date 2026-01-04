@@ -16,6 +16,7 @@ import { ContestStatus } from '../enums/contest-status.enum';
 import { ContestLeaderboardService } from './contest-leaderboard.service';
 import { ContestService } from './contest.service';
 import { SubmissionAcceptedEvent } from '../../submissions/events/submission.events';
+import { SubmissionRetrievalService } from '../../submissions/services';
 
 @Injectable()
 export class ContestSubmissionService {
@@ -28,6 +29,7 @@ export class ContestSubmissionService {
     private readonly contestProblemRepository: Repository<ContestProblem>,
     private readonly contestService: ContestService,
     private readonly leaderboardService: ContestLeaderboardService,
+    private readonly retrievalService: SubmissionRetrievalService,
   ) {}
 
   /**
@@ -87,44 +89,9 @@ export class ContestSubmissionService {
     userId: number,
     filterDto: FilterSubmissionDto,
   ): Promise<PaginatedResultDto<SubmissionListResponseDto>> {
-    const queryBuilder = this.submissionRepository
-      .createQueryBuilder('submission')
-      .leftJoinAndSelect('submission.problem', 'problem')
-      .leftJoinAndSelect('submission.language', 'language')
-      .where('submission.contestId = :contestId', { contestId })
-      .andWhere('submission.user.id = :userId', { userId });
-
-    // Apply problem filter if provided
-    if (filterDto.problemId) {
-      queryBuilder.andWhere('submission.problem.id = :problemId', {
-        problemId: filterDto.problemId,
-      });
-    }
-
-    // Apply status filter if provided
-    if (filterDto.status) {
-      queryBuilder.andWhere('submission.status = :status', {
-        status: filterDto.status,
-      });
-    }
-
-    // Apply sorting
-    const sortBy = filterDto.sortBy || 'submittedAt';
-    const sortOrder = filterDto.sortOrder || 'DESC';
-    queryBuilder.orderBy(`submission.${sortBy}`, sortOrder);
-
-    // Apply pagination
-    queryBuilder.skip(filterDto.skip).take(filterDto.take);
-
-    const [submissions, total] = await queryBuilder.getManyAndCount();
-
-    const data = SubmissionMapper.toListResponseDtos(submissions);
-
-    return new PaginatedResultDto(data, {
-      page: filterDto.page ?? 1,
-      limit: filterDto.limit ?? 20,
-      total,
-    });
+    filterDto.contestId = contestId;
+    filterDto.userId = userId;
+    return this.retrievalService.getSubmissions(filterDto, userId);
   }
 
   /**

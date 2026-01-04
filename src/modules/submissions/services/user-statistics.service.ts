@@ -58,7 +58,6 @@ export class UserStatisticsService {
     // 1. Get user with stats directly from User table (O(1))
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      select: ['solvedEasy', 'solvedMedium', 'solvedHard', 'globalScore'],
     });
 
     if (!user) {

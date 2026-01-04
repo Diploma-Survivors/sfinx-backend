@@ -118,6 +118,8 @@ import { SubmissionsService } from './submissions.service';
     CallbackProcessorService,
     UserStatisticsService,
     UserProgressService,
+    SubmissionRetrievalService,
+    SubmissionAnalysisService,
   ],
 })
 export class SubmissionsModule {}

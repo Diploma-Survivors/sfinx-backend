@@ -1,8 +1,10 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   InternalServerErrorException,
   Logger,
+  forwardRef,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -35,14 +37,12 @@ import {
   SubmissionCreatedEvent,
   SubmissionJudgedEvent,
 } from './events/submission.events';
-import {
-  Judge0PayloadBuilderService,
-  SubmissionAnalysisService,
-  SubmissionRetrievalService,
-  SubmissionTrackerService,
-  UserProgressService,
-  UserStatisticsService,
-} from './services';
+import { Judge0PayloadBuilderService } from './services/judge0-payload-builder.service';
+import { SubmissionAnalysisService } from './services/submission-analysis.service';
+import { SubmissionRetrievalService } from './services/submission-retrieval.service';
+import { SubmissionTrackerService } from './services/submission-tracker.service';
+import { UserProgressService } from './services/user-progress.service';
+import { UserStatisticsService } from './services/user-statistics.service';
 import { ContestSubmissionService } from '../contest/services';
 
 /**
@@ -65,6 +65,7 @@ export class SubmissionsService {
     private readonly retrievalService: SubmissionRetrievalService,
     private readonly analysisService: SubmissionAnalysisService,
     private readonly eventEmitter: EventEmitter2,
+    @Inject(forwardRef(() => ContestSubmissionService))
     private readonly contestSubmissionService: ContestSubmissionService,
   ) {}
 

@@ -33,16 +33,14 @@ import { ManageContestsPolicy } from '../../rbac/casl';
 import { CreateSubmissionDto } from '../../submissions/dto/create-submission.dto';
 import { FilterSubmissionDto } from '../../submissions/dto/filter-submission.dto';
 import { SubmissionListResponseDto } from '../../submissions/dto/submission-response.dto';
-import { CreateContestDto } from '../dto';
-import { ContestStatisticsDto } from '../dto/contest-statistics.dto';
-import { ContestProblemStatsDto } from '../dto/contest-statistics.dto';
-import { FilterContestDto } from '../dto';
-import { UpdateContestDto } from '../dto';
-import { ContestParticipant } from '../entities';
-import { Contest } from '../entities';
+import { CreateContestDto, FilterContestDto, UpdateContestDto } from '../dto';
+import {
+  ContestProblemStatsDto,
+  ContestStatisticsDto,
+} from '../dto/contest-statistics.dto';
+import { Contest, ContestParticipant } from '../entities';
 import { ContestStatisticsService } from '../services/contest-statistics.service';
-import { ContestSubmissionService } from '../services';
-import { ContestService } from '../services';
+import { ContestService, ContestSubmissionService } from '../services';
 import { SubmissionsService } from '../../submissions/submissions.service';
 
 @ApiTags('Contests')
@@ -59,21 +57,25 @@ export class ContestController {
   @ApiOperation({ summary: 'Get all contests with filtering' })
   @ApiPaginatedResponse(Contest, 'Contests retrieved successfully')
   @ApiBearerAuth('JWT-auth')
-  @UseGuards(JwtAuthGuard) // Make it protected or optional? User asked for filter by status of user, implies auth.
-  // Actually, standard practice is optional auth if we want public to see contests too.
-  // But JwtAuthGuard usually enforces it.
-  // If we want optional, we might need a different guard or make JwtAuthGuard allow loose.
-  // For now, let's assume filtering by JOINED requires login, but general list might not.
-  // However, `UseGuards(JwtAuthGuard)` makes it strict.
-  // Providing the user filter usually implies 'my' contests context.
-  // I will make it UseGuards(JwtAuthGuard) because userStatus filter is requested.
-  // If the user meant public access + optional filter, we'd need a custom decorator or Public() with optional extraction.
-  // Given the requirement "filter theo status của user", it strongly suggests authenticated context.
+  @UseGuards(JwtAuthGuard)
+  async getContestsForNotAdminUser(
+    @Query() filterDto: FilterContestDto,
+    @GetUser() user: User,
+  ): Promise<PaginatedResultDto<Contest>> {
+    return this.contestService.getContestsForNotAdminUser(filterDto, user.id);
+  }
+
+  @Get('admin')
+  @ApiOperation({ summary: 'Get all contests with filtering (Admin view)' })
+  @ApiPaginatedResponse(Contest, 'Contests retrieved successfully')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @CheckPolicies(new ManageContestsPolicy())
   async getContests(
     @Query() filterDto: FilterContestDto,
     @GetUser() user: User,
   ): Promise<PaginatedResultDto<Contest>> {
-    return this.contestService.getContests(filterDto, user?.id);
+    return this.contestService.getContests(filterDto, user.id);
   }
 
   @Get(':id')

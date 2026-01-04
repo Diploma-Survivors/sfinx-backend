@@ -73,7 +73,6 @@ export class ContestService {
       durationMinutes,
       createdBy: { id: userId } as User,
     });
-
     const savedContest = await this.contestRepository.save(contest);
 
     // Emit created event
@@ -86,7 +85,7 @@ export class ContestService {
     if (dto.problems && dto.problems.length > 0) {
       for (let i = 0; i < dto.problems.length; i++) {
         const prob = dto.problems[i];
-        await this.addProblemToContest(savedContest.id, {
+        await this.addProblemToContest(savedContest, {
           problemId: prob.problemId,
           points: prob.points ?? 100,
           label: prob.label ?? this.getDefaultLabel(i),
@@ -103,31 +102,76 @@ export class ContestService {
    */
   async updateContest(id: number, dto: UpdateContestDto): Promise<Contest> {
     const contest = await this.getContestById(id);
+    // Check if contest is not running or ended
+    if (
+      contest.status === ContestStatus.RUNNING ||
+      contest.status === ContestStatus.ENDED
+    ) {
+      throw new BadRequestException(
+        'Cannot add problems to running or ended contests',
+      );
+    }
 
     // Validate timing if provided
     const startTime = dto.startTime ?? contest.startTime;
     const endTime = dto.endTime ?? contest.endTime;
     this.validateContestTiming(startTime, endTime);
 
+    // Prepare update data
+    const updateData: Partial<Contest> = {};
+
     // Update fields
     if (dto.title !== undefined) {
-      contest.title = dto.title;
-      contest.slug = await this.generateUniqueSlug(dto.title, id);
+      updateData.title = dto.title;
+      updateData.slug = await this.generateUniqueSlug(dto.title, id);
     }
-    if (dto.description !== undefined) contest.description = dto.description;
-    if (dto.rules !== undefined) contest.rules = dto.rules;
-    if (dto.startTime !== undefined) contest.startTime = dto.startTime;
-    if (dto.endTime !== undefined) contest.endTime = dto.endTime;
-    if (dto.status !== undefined) contest.status = dto.status;
+    if (dto.description !== undefined) updateData.description = dto.description;
+    if (dto.rules !== undefined) updateData.rules = dto.rules;
+    if (dto.startTime !== undefined) updateData.startTime = dto.startTime;
+    if (dto.endTime !== undefined) updateData.endTime = dto.endTime;
+    if (dto.status !== undefined) updateData.status = dto.status;
     if (dto.maxParticipants !== undefined)
-      contest.maxParticipants = dto.maxParticipants;
+      updateData.maxParticipants = dto.maxParticipants;
 
-    // Recalculate duration
-    contest.durationMinutes = Math.round(
-      (contest.endTime.getTime() - contest.startTime.getTime()) / 60000,
-    );
+    // Recalculate duration if time changed
+    if (dto.startTime || dto.endTime) {
+      const s = dto.startTime ?? contest.startTime;
+      const e = dto.endTime ?? contest.endTime;
+      updateData.durationMinutes = Math.round(
+        (e.getTime() - s.getTime()) / 60000,
+      );
+    }
 
-    const updated = await this.contestRepository.save(contest);
+    // Save implementation:
+    // Use update() to avoid cascade issues with relations (contestProblems)
+    // trying to nullify foreign keys.
+    if (Object.keys(updateData).length > 0) {
+      await this.contestRepository.update(id, updateData);
+    }
+
+    // We need the updated entity for problem association if we changed keys,
+    // but ID is constant.
+    const updated = await this.getContestById(id);
+
+    // Update problems if provided
+    if (dto.problems !== undefined) {
+      // Delete existing problems directly from repo
+      await this.contestProblemRepository.delete({ contestId: id });
+
+      // Add new problems
+      if (dto.problems.length > 0) {
+        for (let i = 0; i < dto.problems.length; i++) {
+          const prob = dto.problems[i];
+          // We pass 'updated' contest entity which has the ID.
+          await this.addProblemToContest(updated, {
+            problemId: prob.problemId,
+            points: prob.points ?? 100,
+            label: prob.label ?? this.getDefaultLabel(i),
+            orderIndex: prob.orderIndex ?? i,
+          });
+        }
+      }
+    }
 
     // Emit updated event
     this.eventEmitter.emit(
@@ -138,7 +182,8 @@ export class ContestService {
     // Invalidate cache
     await this.invalidateContestCache(id, contest.slug);
 
-    return updated;
+    // Return fresh entity to ensure we get the latest problems from DB
+    return this.getContestById(updated.id);
   }
 
   /**
@@ -200,9 +245,33 @@ export class ContestService {
   /**
    * Get contests with filtering and pagination
    */
+  async getContestsForNotAdminUser(
+    filter: FilterContestDto,
+    userId?: number,
+  ): Promise<PaginatedResultDto<Contest>> {
+    return this.queryContests(filter, userId, {
+      excludeDrafts: true,
+      populateUserStatus: true,
+    });
+  }
+
   async getContests(
     filter: FilterContestDto,
     userId?: number,
+  ): Promise<PaginatedResultDto<Contest>> {
+    return this.queryContests(filter, userId, {
+      excludeDrafts: false,
+      populateUserStatus: false,
+    });
+  }
+
+  private async queryContests(
+    filter: FilterContestDto,
+    userId?: number,
+    options: { excludeDrafts: boolean; populateUserStatus: boolean } = {
+      excludeDrafts: false,
+      populateUserStatus: false,
+    },
   ): Promise<PaginatedResultDto<Contest>> {
     const queryBuilder = this.contestRepository
       .createQueryBuilder('contest')
@@ -247,8 +316,13 @@ export class ContestService {
       });
     }
 
-    // Apply user participation filter if userId provided and userStatus filter is set
-    if (userId && filter.userStatus) {
+    if (options.excludeDrafts) {
+      queryBuilder.andWhere('contest.status != :draft', {
+        draft: ContestStatus.DRAFT,
+      });
+    }
+
+    if (options.populateUserStatus && userId && filter.userStatus) {
       if (filter.userStatus === UserContestStatus.JOINED) {
         queryBuilder.innerJoin(
           'contest.participants',
@@ -283,10 +357,7 @@ export class ContestService {
     const [contests, total] = await queryBuilder.getManyAndCount();
 
     // Map userStatus property to each contest if userId is provided
-    if (userId) {
-      // Fetch all participation for these contests for the user
-      // Or we can just do a separate query or join.
-      // Easiest is to check participation for the returned contests.
+    if (options.populateUserStatus && userId) {
       const contestIds = contests.map((c) => c.id);
       if (contestIds.length > 0) {
         const participations = await this.participantRepository.find({
@@ -319,21 +390,9 @@ export class ContestService {
    * Add problem to contest
    */
   async addProblemToContest(
-    contestId: number,
+    contest: Contest,
     dto: AddContestProblemDto,
   ): Promise<ContestProblem> {
-    const contest = await this.getContestById(contestId);
-
-    // Check if contest is not running or ended
-    if (
-      contest.status === ContestStatus.RUNNING ||
-      contest.status === ContestStatus.ENDED
-    ) {
-      throw new BadRequestException(
-        'Cannot add problems to running or ended contests',
-      );
-    }
-
     // Check if problem exists
     const problem = await this.problemRepository.findOne({
       where: { id: dto.problemId },
@@ -344,7 +403,7 @@ export class ContestService {
 
     // Check if already added
     const existing = await this.contestProblemRepository.findOne({
-      where: { contestId, problemId: dto.problemId },
+      where: { contestId: contest.id, problemId: dto.problemId },
     });
     if (existing) {
       throw new ConflictException('Problem already added to contest');
@@ -354,14 +413,14 @@ export class ContestService {
     const maxOrder = await this.contestProblemRepository
       .createQueryBuilder('cp')
       .select('MAX(cp.orderIndex)', 'max')
-      .where('cp.contestId = :contestId', { contestId })
+      .where('cp.contestId = :contestId', { contestId: contest.id })
       .getRawOne<{ max: number }>();
 
     const orderIndex = dto.orderIndex ?? (maxOrder?.max ?? -1) + 1;
     const label = dto.label ?? this.getDefaultLabel(orderIndex);
 
     const contestProblem = this.contestProblemRepository.create({
-      contestId,
+      contestId: contest.id,
       problemId: dto.problemId,
       points: dto.points ?? 100,
       orderIndex,
@@ -369,8 +428,6 @@ export class ContestService {
     });
 
     const saved = await this.contestProblemRepository.save(contestProblem);
-    await this.invalidateContestCache(contestId, contest.slug);
-
     return saved;
   }
 

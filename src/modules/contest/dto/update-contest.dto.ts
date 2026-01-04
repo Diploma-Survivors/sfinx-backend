@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsDate,
   IsEnum,
   IsInt,
@@ -8,8 +9,10 @@ import {
   IsString,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { ContestStatus } from '../enums/contest-status.enum';
+import { AddProblemToContestDto } from './create-contest.dto';
 
 export class UpdateContestDto {
   @ApiPropertyOptional({ description: 'Contest title' })
@@ -55,4 +58,14 @@ export class UpdateContestDto {
   @Min(0)
   @IsOptional()
   maxParticipants?: number;
+
+  @ApiPropertyOptional({
+    description: 'Problems to include in contest',
+    type: [AddProblemToContestDto],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AddProblemToContestDto)
+  @IsOptional()
+  problems?: AddProblemToContestDto[];
 }
