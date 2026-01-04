@@ -50,6 +50,8 @@ import { SubmissionsModule } from './modules/submissions/submissions.module';
 import { ContestModule } from './modules/contest/contest.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AiInterviewsModule } from './modules/ai-interviews/ai-interviews.module';
+import { LiveKitModule } from './modules/livekit/livekit.module';
+import { livekitConfig } from './config';
 
 @Module({
   imports: [
@@ -67,6 +69,7 @@ import { AiInterviewsModule } from './modules/ai-interviews/ai-interviews.module
         redisConfig,
         submissionConfig,
         vnpayConfig,
+        livekitConfig,
       ],
       validationSchema: environmentValidation,
       envFilePath: '.env',
@@ -127,6 +130,7 @@ import { AiInterviewsModule } from './modules/ai-interviews/ai-interviews.module
     ProgrammingLanguageModule,
     ContestModule,
     AiInterviewsModule,
+    LiveKitModule,
     // UsersModule,
     // PaymentsModule,
     // AiModule,

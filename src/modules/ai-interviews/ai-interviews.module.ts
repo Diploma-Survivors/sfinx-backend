@@ -6,6 +6,7 @@ import { InterviewMessage } from './entities/interview-message.entity';
 import { InterviewEvaluation } from './entities/interview-evaluation.entity';
 import { Problem } from '../problems/entities/problem.entity';
 import { AiInterviewController } from './controllers/ai-interviews.controller';
+import { AiInterviewsInternalController } from './controllers/ai-interviews-internal.controller';
 import { AiInterviewService } from './services/ai-interview.service';
 import { AiChatService } from './services/ai-chat.service';
 import { GeminiService } from './services/gemini.service';
@@ -20,7 +21,7 @@ import { GeminiService } from './services/gemini.service';
     ]),
     ConfigModule,
   ],
-  controllers: [AiInterviewController],
+  controllers: [AiInterviewController, AiInterviewsInternalController],
   providers: [AiInterviewService, AiChatService, GeminiService],
   exports: [AiInterviewService],
 })
