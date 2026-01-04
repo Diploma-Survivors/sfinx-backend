@@ -49,6 +49,7 @@ import { RedisModule } from './modules/redis/redis.module';
 import { SubmissionsModule } from './modules/submissions/submissions.module';
 import { ContestModule } from './modules/contest/contest.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { AiInterviewsModule } from './modules/ai-interviews/ai-interviews.module';
 
 @Module({
   imports: [
@@ -125,6 +126,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     Judge0Module,
     ProgrammingLanguageModule,
     ContestModule,
+    AiInterviewsModule,
     // UsersModule,
     // PaymentsModule,
     // AiModule,

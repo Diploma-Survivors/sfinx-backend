@@ -73,3 +73,7 @@ src/temp/**
 !src/temp/uploads/
 !src/temp/uploads/testcases/
 !src/temp/uploads/testcases/local.ndjson
+
+
+jwt-private.pem
+jwt-public.pem

@@ -12,11 +12,15 @@ export interface JwtConfig {
   algorithm: Algorithm;
 }
 
-export const jwtConfig = registerAs(
-  'jwt',
-  (): JwtConfig => ({
-    privateKey: process.env.JWT_PRIVATE_KEY!,
-    publicKey: process.env.JWT_PUBLIC_KEY!,
+export const jwtConfig = registerAs('jwt', (): JwtConfig => {
+  // Replace escaped newlines with actual newlines (if using \n format)
+  // Also handle actual newlines in multi-line strings
+  const privateKey = process.env.JWT_PRIVATE_KEY!.replace(/\\n/g, '\n');
+  const publicKey = process.env.JWT_PUBLIC_KEY!.replace(/\\n/g, '\n');
+
+  return {
+    privateKey,
+    publicKey,
 
     accessExpiresInMs: Number.parseInt(
       process.env.JWT_ACCESS_EXPIRES_IN_MS || '900000',
@@ -28,5 +32,5 @@ export const jwtConfig = registerAs(
     ), // 7 days
 
     algorithm: (process.env.JWT_ALGORITHM || 'RS256') as Algorithm,
-  }),
-);
+  };
+});

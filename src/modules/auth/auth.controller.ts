@@ -9,6 +9,7 @@ import {
   HttpCode,
   HttpStatus,
   Ip,
+  Optional,
   Patch,
   Post,
   Query,
@@ -18,6 +19,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import {
   ApiBearerAuth,
+  ApiHeader,
   ApiOperation,
   ApiResponse,
   ApiTags,
@@ -227,6 +229,11 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login user' })
+  @ApiHeader({
+    name: 'user-agent',
+    required: false,
+    description: 'User agent string (automatically sent by browser/client)',
+  })
   @ApiResponse({
     status: 200,
     description: 'User successfully logged in',
@@ -239,7 +246,7 @@ export class AuthController {
   async login(
     @Body() loginDto: LoginDto,
     @Ip() ipAddress: string,
-    @Headers('user-agent') userAgent: string,
+    @Headers('user-agent') @Optional() userAgent?: string,
   ): Promise<AuthResponseDto> {
     return this.authService.login(loginDto, ipAddress, userAgent);
   }
@@ -253,6 +260,11 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access token' })
+  @ApiHeader({
+    name: 'user-agent',
+    required: false,
+    description: 'User agent string (automatically sent by browser/client)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Token successfully refreshed',
@@ -265,7 +277,7 @@ export class AuthController {
   async refreshToken(
     @Body() refreshTokenDto: RefreshTokenDto,
     @Ip() ipAddress: string,
-    @Headers('user-agent') userAgent: string,
+    @Headers('user-agent') @Optional() userAgent?: string,
   ): Promise<AuthResponseDto> {
     return this.authService.refreshAccessToken(
       refreshTokenDto.refreshToken,
@@ -466,6 +478,11 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(GoogleAuthGuard)
   @ApiOperation({ summary: 'Google OAuth callback' })
+  @ApiHeader({
+    name: 'user-agent',
+    required: false,
+    description: 'User agent string (automatically sent by browser/client)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Successfully authenticated with Google - returns HTML form',
@@ -475,10 +492,10 @@ export class AuthController {
     description: 'Google authentication failed',
   })
   async googleCallback(
+    @Res() res: Response,
     @Body() googleAuthDto: GoogleAuthDto,
     @Ip() ipAddress: string,
-    @Headers('user-agent') userAgent: string,
-    @Res() res: Response,
+    @Headers('user-agent') @Optional() userAgent?: string,
   ): Promise<void> {
     const authResponse = await this.googleOAuthService.handleGoogleCallback(
       googleAuthDto.code,
@@ -500,15 +517,20 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
   @ApiOperation({ summary: 'Google OAuth callback (GET)' })
+  @ApiHeader({
+    name: 'user-agent',
+    required: false,
+    description: 'User agent string (automatically sent by browser/client)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Successfully authenticated with Google - returns HTML form',
   })
   async googleCallbackGet(
+    @Res() res: Response,
     @Query('code') code: string,
     @Ip() ipAddress: string,
-    @Headers('user-agent') userAgent: string,
-    @Res() res: Response,
+    @Headers('user-agent') @Optional() userAgent?: string,
   ): Promise<void> {
     const authResponse = await this.googleOAuthService.handleGoogleCallback(
       code,
