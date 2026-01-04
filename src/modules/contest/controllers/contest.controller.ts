@@ -58,10 +58,22 @@ export class ContestController {
   @Get()
   @ApiOperation({ summary: 'Get all contests with filtering' })
   @ApiPaginatedResponse(Contest, 'Contests retrieved successfully')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard) // Make it protected or optional? User asked for filter by status of user, implies auth.
+  // Actually, standard practice is optional auth if we want public to see contests too.
+  // But JwtAuthGuard usually enforces it.
+  // If we want optional, we might need a different guard or make JwtAuthGuard allow loose.
+  // For now, let's assume filtering by JOINED requires login, but general list might not.
+  // However, `UseGuards(JwtAuthGuard)` makes it strict.
+  // Providing the user filter usually implies 'my' contests context.
+  // I will make it UseGuards(JwtAuthGuard) because userStatus filter is requested.
+  // If the user meant public access + optional filter, we'd need a custom decorator or Public() with optional extraction.
+  // Given the requirement "filter theo status của user", it strongly suggests authenticated context.
   async getContests(
     @Query() filterDto: FilterContestDto,
+    @GetUser() user: User,
   ): Promise<PaginatedResultDto<Contest>> {
-    return this.contestService.getContests(filterDto);
+    return this.contestService.getContests(filterDto, user?.id);
   }
 
   @Get(':id')
@@ -208,6 +220,21 @@ export class ContestController {
       user.id,
       filterDto,
     );
+  }
+
+  @Get('/submissions/all')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get my submissions for this contest' })
+  @ApiPaginatedResponse(
+    SubmissionListResponseDto,
+    'Submissions retrieved successfully',
+  )
+  async getAllContestSubmissions(
+    @Param('id') id: string,
+    @Query() filterDto: FilterSubmissionDto,
+  ): Promise<PaginatedResultDto<SubmissionListResponseDto>> {
+    return this.contestSubmissionService.getContestSubmissions(+id, filterDto);
   }
 
   @Throttle({ default: { limit: 6, ttl: 60 } })

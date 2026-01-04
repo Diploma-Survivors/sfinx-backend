@@ -3,7 +3,7 @@ import { Type } from 'class-transformer';
 import { IsDate, IsEnum, IsOptional, IsString } from 'class-validator';
 import { PaginationQueryDto } from '../../../common';
 import { ContestSortBy } from '../enums';
-import { ContestStatus } from '../enums';
+import { ContestStatus, UserContestStatus } from '../enums';
 import { ToBoolean } from '../../../common/decorators/transform.decorators';
 
 export class FilterContestDto extends PaginationQueryDto {
@@ -14,6 +14,14 @@ export class FilterContestDto extends PaginationQueryDto {
   @IsEnum(ContestStatus)
   @IsOptional()
   status?: ContestStatus;
+
+  @ApiPropertyOptional({
+    description: 'Filter by user participation status (JOINED, NOT_JOINED)',
+    enum: [UserContestStatus.JOINED, UserContestStatus.NOT_JOINED],
+  })
+  @IsEnum(UserContestStatus)
+  @IsOptional()
+  userStatus?: UserContestStatus;
 
   @ApiPropertyOptional({
     description: 'Sort by field',

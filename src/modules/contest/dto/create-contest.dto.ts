@@ -30,6 +30,16 @@ export class AddProblemToContestDto {
   @MaxLength(10)
   @IsOptional()
   label?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Order index for the problem (optional, defaulting to array index)',
+    example: 0,
+  })
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  orderIndex?: number;
 }
 
 export class CreateContestDto {

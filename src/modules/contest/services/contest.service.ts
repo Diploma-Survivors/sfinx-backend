@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import slugify from 'slugify';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { PaginatedResultDto, SortOrder } from '../../../common';
 import { User } from '../../auth/entities/user.entity';
 import { Problem } from '../../problems/entities/problem.entity';
@@ -19,7 +19,7 @@ import {
   UpdateContestDto,
 } from '../dto';
 import { Contest, ContestParticipant, ContestProblem } from '../entities';
-import { ContestStatus } from '../enums';
+import { ContestStatus, UserContestStatus } from '../enums';
 
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
@@ -90,7 +90,7 @@ export class ContestService {
           problemId: prob.problemId,
           points: prob.points ?? 100,
           label: prob.label ?? this.getDefaultLabel(i),
-          orderIndex: i,
+          orderIndex: prob.orderIndex ?? i,
         });
       }
     }
@@ -202,6 +202,7 @@ export class ContestService {
    */
   async getContests(
     filter: FilterContestDto,
+    userId?: number,
   ): Promise<PaginatedResultDto<Contest>> {
     const queryBuilder = this.contestRepository
       .createQueryBuilder('contest')
@@ -246,6 +247,31 @@ export class ContestService {
       });
     }
 
+    // Apply user participation filter if userId provided and userStatus filter is set
+    if (userId && filter.userStatus) {
+      if (filter.userStatus === UserContestStatus.JOINED) {
+        queryBuilder.innerJoin(
+          'contest.participants',
+          'participant',
+          'participant.user.id = :userId',
+          { userId },
+        );
+      } else if (filter.userStatus === UserContestStatus.NOT_JOINED) {
+        queryBuilder.andWhere(
+          (qb) => {
+            const subQuery = qb
+              .subQuery()
+              .select('p.contestId')
+              .from('contest_participants', 'p')
+              .where('p.userId = :userId', { userId })
+              .getQuery();
+            return `contest.id NOT IN ${subQuery}`;
+          },
+          { userId },
+        );
+      }
+    }
+
     // Apply sorting
     const sortBy = filter.sortBy || 'startTime';
     const sortOrder = filter.sortOrder || 'DESC';
@@ -255,6 +281,32 @@ export class ContestService {
     queryBuilder.skip(filter.skip).take(filter.take);
 
     const [contests, total] = await queryBuilder.getManyAndCount();
+
+    // Map userStatus property to each contest if userId is provided
+    if (userId) {
+      // Fetch all participation for these contests for the user
+      // Or we can just do a separate query or join.
+      // Easiest is to check participation for the returned contests.
+      const contestIds = contests.map((c) => c.id);
+      if (contestIds.length > 0) {
+        const participations = await this.participantRepository.find({
+          where: {
+            userId,
+            contestId: In(contestIds),
+          },
+          select: ['contestId'],
+        });
+        const joinedContestIds = new Set(
+          participations.map((p) => p.contestId),
+        );
+        contests.forEach((c) => {
+          (c as Contest & { userStatus?: UserContestStatus }).userStatus =
+            joinedContestIds.has(c.id)
+              ? UserContestStatus.JOINED
+              : UserContestStatus.NOT_JOINED;
+        });
+      }
+    }
 
     return new PaginatedResultDto(contests, {
       page: filter.page ?? 1,

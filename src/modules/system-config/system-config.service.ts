@@ -33,6 +33,11 @@ export class SystemConfigService implements OnModuleInit {
     return val ? parseInt(val, 10) : defaultValue;
   }
 
+  getFloat(key: string, defaultValue: number): number {
+    const val = this.cache.get(key);
+    return val ? parseFloat(val) : defaultValue;
+  }
+
   private async seedDefaults() {
     const defaults = [
       {
@@ -54,6 +59,11 @@ export class SystemConfigService implements OnModuleInit {
         key: 'LEADERBOARD_UPDATE_RETRIES',
         value: '3',
         description: 'Max retries for optimistic locking updates',
+      },
+      {
+        key: 'CONTEST_DECAY_RATE',
+        value: '0.5',
+        description: 'Score decay rate for contests (0-1)',
       },
     ];
 

@@ -15,6 +15,7 @@ import { ContestProblem } from '../entities/contest-problem.entity';
 import { ContestStatus } from '../enums/contest-status.enum';
 import { ContestLeaderboardService } from './contest-leaderboard.service';
 import { ContestService } from './contest.service';
+import { SubmissionAcceptedEvent } from '../../submissions/events/submission.events';
 
 @Injectable()
 export class ContestSubmissionService {
@@ -130,14 +131,10 @@ export class ContestSubmissionService {
    * Handle submission result and update leaderboard
    * Called when a contest submission is judged
    */
-  async handleSubmissionResult(
-    submissionId: number,
-    passedTestcases: number,
-    totalTestcases: number,
-  ): Promise<void> {
+  async handleSubmissionResult(event: SubmissionAcceptedEvent): Promise<void> {
     // Get submission with contest info
     const submission = await this.submissionRepository.findOne({
-      where: { id: submissionId },
+      where: { id: event.submissionId },
       relations: ['user', 'problem'],
     });
 
@@ -145,18 +142,15 @@ export class ContestSubmissionService {
       return; // Not a contest submission
     }
 
-    // Update leaderboard
+    // Update participant score and leaderboard
     await this.leaderboardService.updateParticipantScore(
       submission.contestId,
-      submission.user.id,
+      submission.userId,
       submission.problem.id,
-      passedTestcases,
-      totalTestcases,
     );
 
     this.logger.debug(
-      `Processed contest submission ${submissionId}: ` +
-        `${passedTestcases}/${totalTestcases} testcases passed`,
+      `Processed contest submission ${submission.id}: updated leaderboard for contest ${submission.contestId}`,
     );
   }
 

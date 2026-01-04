@@ -153,15 +153,13 @@ export class ContestLeaderboardService {
 
   /**
    * Update participant score after a submission is judged
-   * IOI Scoring: score = (passed_testcases / total_testcases) * problem_points
+   * IOI Scoring: Score = Base Points - (Time to AC / Contest Duration) × Base Points × Decay Rate
    * Only keeps the best score per problem
    */
   async updateParticipantScore(
     contestId: number,
     userId: number,
     problemId: number,
-    passedTestcases: number,
-    totalTestcases: number,
   ): Promise<void> {
     const contest = await this.contestService.getContestById(contestId);
 
@@ -197,16 +195,15 @@ export class ContestLeaderboardService {
         const startTime = contest.startTime;
         const durationMinutes = contest.durationMinutes;
 
-        // Base Score (IOI Style)
-        const completionRatio =
-          totalTestcases > 0 ? passedTestcases / totalTestcases : 0;
-        const baseScore =
-          Math.round(completionRatio * contestProblem.points * 100) / 100;
+        // Base Score
+        const baseScore = contestProblem.points;
 
-        // Apply Time Decay (Example Formula)
+        // Apply Time Decay
         // Score = Base * (1 - (Time / Duration) * DecayRate)
-        // DecayRate can also be config? Default 0.5
-        const decayRate = 0.5;
+        const decayRate = this.systemConfigService.getFloat(
+          'CONTEST_DECAY_RATE',
+          0,
+        );
         const timeTakenMs = Math.max(0, now.getTime() - startTime.getTime());
         const timeTakenMinutes = timeTakenMs / 60000;
 
@@ -235,12 +232,10 @@ export class ContestLeaderboardService {
           firstAcTime: currentProblemScore.firstAcTime,
         };
 
-        // If AC (Full Score/Ratio 1) and no previous AC -> Set firstAcTime
-        // Using passedTestcases === totalTestcases as AC check
-        if (passedTestcases === totalTestcases && totalTestcases > 0) {
-          if (!currentProblemScore.firstAcTime) {
-            newProblemScore.firstAcTime = now.toISOString();
-          }
+        // If AC (Full Score) and no previous AC -> Set firstAcTime
+        // This method is now only called for AC submissions
+        if (!currentProblemScore.firstAcTime) {
+          newProblemScore.firstAcTime = now.toISOString();
         }
 
         participant.problemScores = {
@@ -278,11 +273,9 @@ export class ContestLeaderboardService {
           `Updated participant ${userId}: Score=${participant.totalScore}, Solved=${participant.solvedCount}`,
         );
         break;
-      } catch (error: any) {
-        if (
-          error.name === 'OptimisticLockVersionMismatchError' ||
-          error.code === '23505'
-        ) {
+      } catch (error: unknown) {
+        const err = error as Error & { name?: string };
+        if (err.name === 'OptimisticLockVersionMismatchError') {
           attempt++;
           if (attempt >= maxRetries) {
             this.logger.error(
