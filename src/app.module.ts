@@ -49,6 +49,9 @@ import { RedisModule } from './modules/redis/redis.module';
 import { SubmissionsModule } from './modules/submissions/submissions.module';
 import { ContestModule } from './modules/contest/contest.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { AiInterviewsModule } from './modules/ai-interviews/ai-interviews.module';
+import { LiveKitModule } from './modules/livekit/livekit.module';
+import { livekitConfig } from './config';
 
 @Module({
   imports: [
@@ -66,6 +69,7 @@ import { ScheduleModule } from '@nestjs/schedule';
         redisConfig,
         submissionConfig,
         vnpayConfig,
+        livekitConfig,
       ],
       validationSchema: environmentValidation,
       envFilePath: '.env',
@@ -125,6 +129,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     Judge0Module,
     ProgrammingLanguageModule,
     ContestModule,
+    AiInterviewsModule,
+    LiveKitModule,
     // UsersModule,
     // PaymentsModule,
     // AiModule,
