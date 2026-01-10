@@ -1,15 +1,17 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   InternalServerErrorException,
   Logger,
+  forwardRef,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { v4 as uuidV4 } from 'uuid';
 
-import { PaginatedResultDto, PaginationQueryDto } from '../../common';
+import { PaginatedResultDto } from '../../common';
 import { Judge0BatchResponse } from '../judge0/interfaces';
 import { Judge0Service } from '../judge0/judge0.service';
 import { Problem } from '../problems/entities/problem.entity';
@@ -23,25 +25,25 @@ import {
   SubmissionListResponseDto,
   SubmissionResponseDto,
 } from './dto/submission-response.dto';
+import { UserPracticeHistoryDto } from './dto/user-practice-history.dto';
+import { GetPracticeHistoryDto } from './dto/get-practice-history.dto';
+import { UserStatisticsDto } from './dto/user-statistics.dto';
 import { UserProblemProgressDetailResponseDto } from './dto/user-problem-progress-detail-response.dto';
-import { UserProblemProgressResponseDto } from './dto/user-problem-progress-response.dto';
 import { Submission } from './entities/submission.entity';
-import { ProgressStatus } from './enums/progress-status.enum';
-import { SubmissionStatus } from './enums/submission-status.enum';
+import { ProgressStatus, SubmissionStatus } from './enums';
 import {
   ProblemSolvedEvent,
   SubmissionAcceptedEvent,
   SubmissionCreatedEvent,
   SubmissionJudgedEvent,
 } from './events/submission.events';
-import {
-  Judge0PayloadBuilderService,
-  SubmissionTrackerService,
-  UserProgressService,
-  UserStatisticsService,
-} from './services';
+import { Judge0PayloadBuilderService } from './services/judge0-payload-builder.service';
 import { SubmissionAnalysisService } from './services/submission-analysis.service';
 import { SubmissionRetrievalService } from './services/submission-retrieval.service';
+import { SubmissionTrackerService } from './services/submission-tracker.service';
+import { UserProgressService } from './services/user-progress.service';
+import { UserStatisticsService } from './services/user-statistics.service';
+import { ContestSubmissionService } from '../contest/services';
 
 /**
  * Main service for managing code submissions
@@ -63,6 +65,8 @@ export class SubmissionsService {
     private readonly retrievalService: SubmissionRetrievalService,
     private readonly analysisService: SubmissionAnalysisService,
     private readonly eventEmitter: EventEmitter2,
+    @Inject(forwardRef(() => ContestSubmissionService))
+    private readonly contestSubmissionService: ContestSubmissionService,
   ) {}
 
   /**
@@ -84,7 +88,7 @@ export class SubmissionsService {
     const submissionId = uuidV4();
     this.logger.debug(`Generated submission ID: ${submissionId}`);
 
-    return this.submitBatch(
+    return this.submitToJudge0(
       submissionId,
       language.judge0Id,
       sourceCode,
@@ -95,9 +99,9 @@ export class SubmissionsService {
   }
 
   /**
-   * Submit code for grading (creates database record)
+   * Submit practice solution (regular submission)
    */
-  async submitForGrading(
+  async submitPracticeSolution(
     createSubmissionDto: CreateSubmissionDto,
     userId: number,
     ipAddress?: string,
@@ -133,13 +137,69 @@ export class SubmissionsService {
     // Update user progress (tracks attempts)
     await this.userProgress.updateProgressOnSubmit(userId, problemId);
 
-    return this.submitBatch(
+    return this.submitToJudge0(
       submission.id.toString(),
       language.judge0Id,
       sourceCode,
       problem,
       true,
     );
+  }
+
+  /**
+   * Submit contest solution
+   */
+  async submitContestSolution(
+    createSubmissionDto: CreateSubmissionDto,
+    userId: number,
+    ipAddress: string,
+    contestId: number,
+  ): Promise<{ submissionId: string; contestId: number }> {
+    const { problemId, languageId, sourceCode } = createSubmissionDto;
+
+    // Validate contest rules (running, registered, problem part of contest)
+    await this.contestSubmissionService.validateSubmission(
+      contestId,
+      userId,
+      problemId,
+    );
+
+    this.logger.log(
+      `User ${userId} submitting contest solution for problem ${problemId} in contest ${contestId}`,
+    );
+
+    const problem = await this.problemsService.findProblemEntityById(problemId);
+    const language = await this.languagesService.findById(languageId);
+
+    if (!problem.testcaseFileKey) {
+      throw new BadRequestException('Problem has no testcases');
+    }
+
+    const submission = await this.createSubmissionRecord(
+      userId,
+      problemId,
+      languageId,
+      sourceCode,
+      problem.testcaseCount,
+      ipAddress,
+      contestId, // Pass contestId
+    );
+
+    // Emit submission created event
+    this.eventEmitter.emit(
+      SUBMISSION_EVENTS.CREATED,
+      new SubmissionCreatedEvent(submission.id, userId, problemId, languageId),
+    );
+
+    await this.submitToJudge0(
+      submission.id.toString(),
+      language.judge0Id,
+      sourceCode,
+      problem,
+      true,
+    );
+
+    return { submissionId: submission.id.toString(), contestId };
   }
 
   /**
@@ -152,6 +212,7 @@ export class SubmissionsService {
     sourceCode: string,
     totalTestcases: number,
     ipAddress?: string,
+    contestId?: number,
   ): Promise<Submission> {
     const submission = this.submissionRepository.create({
       user: { id: userId },
@@ -162,6 +223,7 @@ export class SubmissionsService {
       totalTestcases,
       passedTestcases: 0,
       ipAddress,
+      contestId: contestId ?? null,
     });
 
     const saved = await this.submissionRepository.save(submission);
@@ -172,7 +234,7 @@ export class SubmissionsService {
   /**
    * Submit batch to Judge0 and initialize tracking
    */
-  private async submitBatch(
+  private async submitToJudge0(
     submissionId: string,
     judge0LanguageId: number,
     sourceCode: string,
@@ -398,15 +460,15 @@ export class SubmissionsService {
    */
   async getUserAllProgress(
     userId: number,
-    paginationDto: PaginationQueryDto,
-  ): Promise<PaginatedResultDto<UserProblemProgressResponseDto>> {
-    return this.userProgress.getAllUserProgress(userId, paginationDto);
+    query: GetPracticeHistoryDto,
+  ): Promise<PaginatedResultDto<UserPracticeHistoryDto>> {
+    return this.userProgress.getAllUserProgress(userId, query);
   }
 
   /**
    * Get user statistics (delegates to statistics service)
    */
-  async getUserStatistics(userId: number) {
+  async getUserStatistics(userId: number): Promise<UserStatisticsDto> {
     return this.userStatistics.getUserStatistics(userId);
   }
 

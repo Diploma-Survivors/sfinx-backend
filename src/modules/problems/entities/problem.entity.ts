@@ -159,6 +159,7 @@ export class Problem {
   })
   @OneToMany(() => SampleTestcase, (sample) => sample.problem, {
     cascade: true,
+    orphanedRowAction: 'delete',
   })
   sampleTestcases: SampleTestcase[];
 

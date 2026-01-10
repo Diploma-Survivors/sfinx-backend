@@ -2,7 +2,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 
-import { CallbackProcessorService } from '../services/callback-processor.service';
+import { CallbackProcessorService } from '../services';
 import { SUBMISSION_QUEUES } from '../constants/submission.constants';
 
 /**

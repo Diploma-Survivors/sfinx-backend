@@ -11,6 +11,7 @@ import {
 import { Submission } from '../entities/submission.entity';
 import { SubmissionMapper } from '../mappers/submission.mapper';
 import { SubmissionQueryBuilderService } from './submission-query-builder.service';
+import { StorageService } from '../../storage/storage.service';
 
 /**
  * Service responsible for retrieving submissions
@@ -23,6 +24,7 @@ export class SubmissionRetrievalService {
     @InjectRepository(Submission)
     private readonly submissionRepository: Repository<Submission>,
     private readonly queryBuilder: SubmissionQueryBuilderService,
+    private readonly storageService: StorageService,
   ) {}
 
   /**
@@ -38,7 +40,10 @@ export class SubmissionRetrievalService {
     this.queryBuilder.buildCompleteQuery(queryBuilder, filterDto, userId);
 
     const [submissions, total] = await queryBuilder.getManyAndCount();
-    const data = SubmissionMapper.toListResponseDtos(submissions);
+    const data = SubmissionMapper.toListResponseDtos(
+      submissions,
+      this.storageService,
+    );
 
     return new PaginatedResultDto(data, {
       page: filterDto.page ?? 1,
@@ -76,6 +81,7 @@ export class SubmissionRetrievalService {
     return SubmissionMapper.toResponseDto(submission, {
       includeSourceCode: includeSourceCode && isOwner,
       includeUser: !userId,
+      storageService: this.storageService,
     });
   }
 

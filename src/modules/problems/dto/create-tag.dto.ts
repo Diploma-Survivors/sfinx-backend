@@ -1,11 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsBoolean,
   IsHexColor,
   IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
 } from 'class-validator';
+import { ToBoolean } from '../../../common/decorators/transform.decorators';
 
 export class CreateTagDto {
   @ApiProperty({
@@ -43,4 +45,12 @@ export class CreateTagDto {
   @IsHexColor()
   @IsOptional()
   color?: string;
+
+  @ApiPropertyOptional({
+    description: 'Whether tag is active',
+  })
+  @IsOptional()
+  @ToBoolean()
+  @IsBoolean()
+  isActive?: boolean;
 }

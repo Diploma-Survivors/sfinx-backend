@@ -10,6 +10,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { ToBoolean } from '../../../common/decorators/transform.decorators';
 
 export class CreateTopicDto {
   @ApiProperty({
@@ -54,7 +55,7 @@ export class CreateTopicDto {
     default: true,
   })
   @IsBoolean()
-  @Type(() => Boolean)
+  @ToBoolean()
   @IsOptional()
   isActive?: boolean = true;
 }

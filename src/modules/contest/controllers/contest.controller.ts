@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Ip,
   Param,
   Post,
   Put,
@@ -28,33 +29,53 @@ import {
 import { User } from '../../auth/entities/user.entity';
 import { CaslGuard } from '../../auth/guards/casl.guard';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { ManageContestsPolicy } from '../../rbac/casl/policies';
+import { ManageContestsPolicy } from '../../rbac/casl';
 import { CreateSubmissionDto } from '../../submissions/dto/create-submission.dto';
 import { FilterSubmissionDto } from '../../submissions/dto/filter-submission.dto';
 import { SubmissionListResponseDto } from '../../submissions/dto/submission-response.dto';
-import { CreateContestDto } from '../dto/create-contest.dto';
-import { FilterContestDto } from '../dto/filter-contest.dto';
-import { UpdateContestDto } from '../dto/update-contest.dto';
-import { ContestParticipant } from '../entities/contest-participant.entity';
-import { Contest } from '../entities/contest.entity';
-import { ContestSubmissionService } from '../services/contest-submission.service';
-import { ContestService } from '../services/contest.service';
+import { CreateContestDto, FilterContestDto, UpdateContestDto } from '../dto';
+import {
+  ContestProblemStatsDto,
+  ContestStatisticsDto,
+} from '../dto/contest-statistics.dto';
+import { Contest, ContestParticipant } from '../entities';
+import { ContestStatisticsService } from '../services/contest-statistics.service';
+import { ContestService, ContestSubmissionService } from '../services';
+import { SubmissionsService } from '../../submissions/submissions.service';
 
 @ApiTags('Contests')
 @Controller('contests')
 export class ContestController {
   constructor(
     private readonly contestService: ContestService,
+    private readonly contestStatisticsService: ContestStatisticsService,
     private readonly contestSubmissionService: ContestSubmissionService,
+    private readonly submissionsService: SubmissionsService,
   ) {}
 
   @Get()
   @ApiOperation({ summary: 'Get all contests with filtering' })
   @ApiPaginatedResponse(Contest, 'Contests retrieved successfully')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  async getContestsForNotAdminUser(
+    @Query() filterDto: FilterContestDto,
+    @GetUser() user: User,
+  ): Promise<PaginatedResultDto<Contest>> {
+    return this.contestService.getContestsForNotAdminUser(filterDto, user.id);
+  }
+
+  @Get('admin')
+  @ApiOperation({ summary: 'Get all contests with filtering (Admin view)' })
+  @ApiPaginatedResponse(Contest, 'Contests retrieved successfully')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
+  @CheckPolicies(new ManageContestsPolicy())
   async getContests(
     @Query() filterDto: FilterContestDto,
+    @GetUser() user: User,
   ): Promise<PaginatedResultDto<Contest>> {
-    return this.contestService.getContests(filterDto);
+    return this.contestService.getContests(filterDto, user.id);
   }
 
   @Get(':id')
@@ -121,41 +142,65 @@ export class ContestController {
     return this.contestService.deleteContest(+id);
   }
 
-  @Post(':id/register')
-  @UseGuards(JwtAuthGuard)
+  @Get(':id/statistics')
+  @UseGuards(CaslGuard)
+  @CheckPolicies(new ManageContestsPolicy())
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Register for a contest' })
+  @ApiOperation({
+    summary: 'Get contest statistics (Admin only)',
+    description:
+      'Get comprehensive statistics for a contest including submission counts, participant counts, and per-problem breakdown',
+  })
   @ApiParam({ name: 'id', description: 'Contest ID', type: Number })
   @ApiResponse({
-    status: 201,
-    description: 'Registered successfully',
+    status: 200,
+    description: 'Contest statistics retrieved successfully',
+    type: ContestStatisticsDto,
+  })
+  @ApiResponse({ status: 404, description: 'Contest not found' })
+  async getContestStatistics(
+    @Param('id') id: string,
+  ): Promise<ContestStatisticsDto> {
+    return this.contestStatisticsService.getContestStatistics(+id);
+  }
+
+  @Get(':id/problems-health')
+  @UseGuards(CaslGuard)
+  @CheckPolicies(new ManageContestsPolicy())
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Get contest problem health stats (Admin only)',
+    description: 'Get per-problem statistics and health metrics for a contest',
+  })
+  @ApiParam({ name: 'id', description: 'Contest ID', type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'Problem health stats retrieved',
+    type: [ContestProblemStatsDto],
+  })
+  @ApiResponse({ status: 404, description: 'Contest not found' })
+  async getProblemHealth(
+    @Param('id') id: string,
+  ): Promise<ContestProblemStatsDto[]> {
+    return this.contestStatisticsService.getProblemStats(+id);
+  }
+
+  @Post(':id/enter')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Enter/Join a contest' })
+  @ApiParam({ name: 'id', description: 'Contest ID', type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'Joined successfully',
     type: ContestParticipant,
   })
-  @ApiResponse({ status: 400, description: 'Registration not allowed' })
-  @ApiResponse({ status: 409, description: 'Already registered' })
-  async registerForContest(
+  @ApiResponse({ status: 400, description: 'Cannot join contest' })
+  async enterContest(
     @Param('id') id: string,
     @GetUser() user: User,
   ): Promise<ContestParticipant> {
-    return this.contestService.registerForContest(+id, user.id);
-  }
-
-  @Delete(':id/register')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Unregister from a contest' })
-  @ApiParam({ name: 'id', description: 'Contest ID', type: Number })
-  @ApiResponse({ status: 204, description: 'Unregistered successfully' })
-  @ApiResponse({
-    status: 400,
-    description: 'Cannot unregister after contest started',
-  })
-  async unregisterFromContest(
-    @Param('id') id: string,
-    @GetUser() user: User,
-  ): Promise<void> {
-    return this.contestService.unregisterFromContest(+id, user.id);
+    return this.contestService.joinContest(+id, user.id);
   }
 
   @Get(':id/my-submissions')
@@ -179,6 +224,21 @@ export class ContestController {
     );
   }
 
+  @Get('/submissions/all')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get my submissions for this contest' })
+  @ApiPaginatedResponse(
+    SubmissionListResponseDto,
+    'Submissions retrieved successfully',
+  )
+  async getAllContestSubmissions(
+    @Param('id') id: string,
+    @Query() filterDto: FilterSubmissionDto,
+  ): Promise<PaginatedResultDto<SubmissionListResponseDto>> {
+    return this.contestSubmissionService.getContestSubmissions(+id, filterDto);
+  }
+
   @Throttle({ default: { limit: 6, ttl: 60 } })
   @Post(':id/submissions')
   @UseGuards(JwtAuthGuard)
@@ -196,21 +256,14 @@ export class ContestController {
     @Param('id') id: string,
     @Body() createSubmissionDto: CreateSubmissionDto,
     @GetUser() user: User,
+    @Ip() ipAddress: string,
   ): Promise<{ submissionId: string; contestId: number }> {
-    // Validate submission is allowed
-    await this.contestSubmissionService.validateSubmission(
-      +id,
+    return this.submissionsService.submitContestSolution(
+      createSubmissionDto,
       user.id,
-      createSubmissionDto.problemId,
+      ipAddress,
+      +id,
     );
-
-    // Note: The actual submission creation is delegated to SubmissionsService
-    // This endpoint just validates and returns context
-    // The integration with SubmissionsService should be done in the caller
-    return {
-      submissionId: 'pending', // Placeholder - actual submission handled by SubmissionsService
-      contestId: +id,
-    };
   }
 
   @Post(':id/start')

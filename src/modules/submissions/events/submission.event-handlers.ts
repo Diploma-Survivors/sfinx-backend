@@ -4,9 +4,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { User } from '../../auth/entities/user.entity';
-import { MailService } from '../../mail/mail.service';
+import { MailService } from '../../mail';
 import { ProblemsService } from '../../problems/problems.service';
-import { SubmissionStatus } from '../enums/submission-status.enum';
+import { SubmissionStatus } from '../enums';
 import { SUBMISSION_EVENTS } from '../constants/submission-events.constants';
 import {
   SubmissionCreatedEvent,
@@ -14,6 +14,7 @@ import {
   SubmissionAcceptedEvent,
   ProblemSolvedEvent,
 } from './submission.events';
+import { Problem } from '../../problems/entities/problem.entity';
 
 /**
  * Event handlers for submission lifecycle events
@@ -29,6 +30,8 @@ export class SubmissionEventHandlers {
     private readonly mailService: MailService,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Problem)
+    private readonly problemRepository: Repository<Problem>,
   ) {}
 
   /**
@@ -142,8 +145,7 @@ export class SubmissionEventHandlers {
         ((problem.totalAccepted / problem.totalSubmissions) * 100).toFixed(2),
       );
     }
-
-    await this.problemsService.updateProblemStats(problemId);
+    await this.problemRepository.save(problem);
   }
 
   /**

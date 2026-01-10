@@ -26,7 +26,6 @@ import {
 import {
   ApiPaginatedResponse,
   CheckAbility,
-  CheckPolicies,
   FileRequiredPipe,
   GetUser,
   PaginatedResultDto,
@@ -34,14 +33,14 @@ import {
 import { User } from '../auth/entities/user.entity';
 import { CaslGuard } from '../auth/guards/casl.guard';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
-import { Action } from '../rbac/casl/casl-ability.factory';
-import { ManageProblemsPolicy } from '../rbac/casl/policies';
+import { Action } from '../rbac/casl';
 import { CreateProblemDto } from './dto/create-problem.dto';
 import { CreateSampleTestcaseDto } from './dto/create-sample-testcase.dto';
 import { UploadTestcaseDto } from './dto/create-testcase.dto';
 import { FilterProblemDto } from './dto/filter-problem.dto';
 import { ProblemDetailDto } from './dto/problem-detail.dto';
 import { ProblemListItemDto } from './dto/problem-list-item.dto';
+import { ProblemStatisticsDto } from './dto/problem-statistics.dto';
 import { TestcaseDownloadUrlDto } from './dto/testcase-download-url.dto';
 import { TestcaseUploadResponseDto } from './dto/testcase-upload-response.dto';
 import { UpdateProblemDto } from './dto/update-problem.dto';
@@ -49,6 +48,7 @@ import { Problem } from './entities/problem.entity';
 import { SampleTestcase } from './entities/sample-testcase.entity';
 import { FileInterceptor } from './interceptors/file.interceptor';
 import { ProblemsService } from './problems.service';
+import { ProblemStatisticsService } from './services/problem-statistics.service';
 import { SampleTestcaseService, TestcaseFileService } from './services';
 
 @ApiTags('Problems')
@@ -56,6 +56,7 @@ import { SampleTestcaseService, TestcaseFileService } from './services';
 export class ProblemsController {
   constructor(
     private readonly problemsService: ProblemsService,
+    private readonly problemStatisticsService: ProblemStatisticsService,
     private readonly testcaseFileService: TestcaseFileService,
     private readonly sampleTestcaseService: SampleTestcaseService,
   ) {}
@@ -215,19 +216,46 @@ export class ProblemsController {
     return this.problemsService.deleteProblem(+id);
   }
 
-  @Post(':id/toggle')
+  @Get(':id/statistics')
   @UseGuards(CaslGuard)
-  @CheckPolicies(new ManageProblemsPolicy())
+  @CheckAbility({ action: Action.ReadAll, subject: Problem })
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Toggle problem publish status (Admin only)' })
+  @ApiOperation({
+    summary: 'Get problem statistics (Admin only)',
+    description:
+      'Get comprehensive statistics for a problem including submission counts, acceptance rate, language breakdown, and status distribution',
+  })
   @ApiParam({ name: 'id', description: 'Problem ID', type: Number })
+  @ApiQuery({
+    name: 'from',
+    required: false,
+    type: Date,
+    description: 'Filter submissions from this date (ISO 8601)',
+  })
+  @ApiQuery({
+    name: 'to',
+    required: false,
+    type: Date,
+    description: 'Filter submissions until this date (ISO 8601)',
+  })
   @ApiResponse({
     status: 200,
-    description: 'Problem publish status toggled',
-    type: Problem,
+    description: 'Problem statistics retrieved successfully',
+    type: ProblemStatisticsDto,
   })
-  async togglePublishProblem(@Param('id') id: string): Promise<Problem> {
-    return this.problemsService.toggleStatusProblem(+id);
+  @ApiResponse({ status: 404, description: 'Problem not found' })
+  async getProblemStatistics(
+    @Param('id') id: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ): Promise<ProblemStatisticsDto> {
+    const fromDate = from ? new Date(from) : undefined;
+    const toDate = to ? new Date(to) : undefined;
+    return this.problemStatisticsService.getProblemStatistics(
+      +id,
+      fromDate,
+      toDate,
+    );
   }
 
   // ==================== TESTCASES ENDPOINTS ====================

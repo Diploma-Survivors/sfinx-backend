@@ -65,12 +65,59 @@ export class User {
   bio: string;
 
   @ApiProperty({
-    description: 'User location',
+    description: 'User address',
     required: false,
-    example: 'New York, NY',
+    example: '123 Street, City',
   })
-  @Column({ nullable: true, length: 100 })
-  location: string;
+  @Column({ nullable: true, length: 255 })
+  address: string;
+
+  @ApiProperty({
+    description: 'Phone number',
+    required: false,
+    example: '0901234567',
+  })
+  @Column({ nullable: true, length: 20 })
+  phone: string;
+
+  @ApiProperty({
+    description: 'User rank',
+    example: 0,
+  })
+  @Column({ name: 'user_rank', default: 0 })
+  rank: number;
+
+  @ApiProperty({
+    description: 'Global score based on problem difficulty',
+    default: 0,
+  })
+  @Column({
+    name: 'global_score',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    default: 0,
+  })
+  globalScore: number;
+
+  @ApiProperty({ description: 'Count of solved Easy problems', default: 0 })
+  @Column({ name: 'solved_easy', default: 0 })
+  solvedEasy: number;
+
+  @ApiProperty({ description: 'Count of solved Medium problems', default: 0 })
+  @Column({ name: 'solved_medium', default: 0 })
+  solvedMedium: number;
+
+  @ApiProperty({ description: 'Count of solved Hard problems', default: 0 })
+  @Column({ name: 'solved_hard', default: 0 })
+  solvedHard: number;
+
+  @ApiProperty({
+    description: 'Timestamp of the last solved problem (for tie-breaking)',
+    required: false,
+  })
+  @Column({ name: 'last_solve_at', type: 'timestamptz', nullable: true })
+  lastSolveAt: Date | null;
 
   @ApiProperty({
     description: 'Website URL',
@@ -155,7 +202,7 @@ export class User {
     example: '2025-12-19T11:22:11.000Z',
   })
   @Column({ name: 'premium_started_at', type: 'timestamptz', nullable: true })
-  premiumStartedAt: Date;
+  premiumStartedAt: Date | null;
 
   @ApiProperty({
     description: 'Premium subscription expiry date',
@@ -163,7 +210,7 @@ export class User {
     example: '2025-12-19T11:22:11.000Z',
   })
   @Column({ name: 'premium_expires_at', type: 'timestamptz', nullable: true })
-  premiumExpiresAt: Date;
+  premiumExpiresAt: Date | null;
 
   // Metadata
   @ApiProperty({

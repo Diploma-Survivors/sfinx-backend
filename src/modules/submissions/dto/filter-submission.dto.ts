@@ -9,8 +9,9 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../common';
-import { SortBy } from '../enums/sort-by.enum';
-import { SubmissionStatus } from '../enums/submission-status.enum';
+import { SortBy } from '../enums';
+import { SubmissionStatus } from '../enums';
+import { ToBoolean } from '../../../common/decorators/transform.decorators';
 
 export class FilterSubmissionDto extends PaginationQueryDto {
   @ApiPropertyOptional({
@@ -56,6 +57,15 @@ export class FilterSubmissionDto extends PaginationQueryDto {
   @IsOptional()
   @Type(() => Number)
   userId?: number;
+
+  @ApiPropertyOptional({
+    description: 'Filter by contest ID (admin only)',
+    type: Number,
+  })
+  @IsInt()
+  @IsOptional()
+  @Type(() => Number)
+  contestId?: number;
 
   @ApiPropertyOptional({
     description: 'Filter submissions from this date',
@@ -124,4 +134,12 @@ export class FilterSubmissionDto extends PaginationQueryDto {
   @Min(0)
   @Type(() => Number)
   maxMemoryKb?: number;
+
+  @ApiPropertyOptional({
+    description: 'Only show accepted submissions',
+    type: Boolean,
+  })
+  @IsOptional()
+  @ToBoolean()
+  acceptedOnly?: boolean;
 }

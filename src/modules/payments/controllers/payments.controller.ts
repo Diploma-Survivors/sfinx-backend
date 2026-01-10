@@ -1,0 +1,117 @@
+import {
+  Body,
+  Controller,
+  Get,
+  Ip,
+  Post,
+  Query,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiTags,
+  ApiOkResponse,
+  ApiNotFoundResponse,
+  ApiBody,
+} from '@nestjs/swagger';
+import type { Response, Request } from 'express';
+import { GetUser } from '../../../common/decorators/get-user.decorator';
+import { User } from '../../auth/entities/user.entity';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { PaymentsService } from '../services/payments.service';
+import { ConfigService } from '@nestjs/config';
+import { CreatePaymentDto } from '../dto/create-payment.dto';
+import { VnpayCallbackDto } from '../dto/vnpay-callback.dto';
+
+@ApiTags('Payments')
+@Controller('payments')
+export class PaymentsController {
+  constructor(
+    private readonly paymentsService: PaymentsService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  @Post('create')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Create a payment URL' })
+  @ApiBody({ type: CreatePaymentDto })
+  @ApiOkResponse({
+    description: 'Payment URL generated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', example: 'https://sandbox.vnpayment.vn/...' },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'Subscription plan not found or inactive',
+  })
+  async createPayment(
+    @GetUser() user: User,
+    @Body() createPaymentDto: CreatePaymentDto,
+    @Ip() ip: string,
+    @Req() req: Request,
+  ): Promise<{ url: string }> {
+    const clientIp = ip || req.ip || '127.0.0.1';
+    const url = await this.paymentsService.createPaymentUrl(
+      user,
+      createPaymentDto.planId,
+      clientIp,
+      createPaymentDto.bankCode,
+    );
+    return { url };
+  }
+
+  @Get('vnpay/return')
+  @ApiOperation({ summary: 'Handle VNPAY return redirect' })
+  @ApiOkResponse({ description: 'Redirects to frontend success/fail page' })
+  async handleVnpayReturn(
+    @Query() query: VnpayCallbackDto,
+    @Res() res: Response,
+  ): Promise<void> {
+    const result = await this.paymentsService.handlePaymentCallback(query);
+
+    // Redirect to Frontend
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+
+    if (result.success) {
+      res.redirect(`${frontendUrl}/payment/success`);
+    } else {
+      res.redirect(
+        `${frontendUrl}/payment/failed?message=${encodeURIComponent(result.message || 'Unknown error')}`,
+      );
+    }
+  }
+
+  @Get('vnpay/ipn')
+  @ApiOperation({ summary: 'Handle VNPAY IPN (Instant Payment Notification)' })
+  @ApiOkResponse({
+    description: 'Returns VNPAY standard response',
+    schema: {
+      type: 'object',
+      properties: {
+        RspCode: { type: 'string', example: '00' },
+        Message: { type: 'string', example: 'Success' },
+      },
+    },
+  })
+  async handleVnpayIpn(
+    @Query() query: VnpayCallbackDto,
+  ): Promise<{ RspCode: string; Message: string }> {
+    try {
+      const result = await this.paymentsService.handlePaymentCallback(query);
+      if (result.success) {
+        return { RspCode: '00', Message: 'Success' };
+      } else {
+        return { RspCode: '99', Message: 'Fail' }; // Simplified error code
+      }
+    } catch {
+      return { RspCode: '99', Message: 'Unknown Error' };
+    }
+  }
+}

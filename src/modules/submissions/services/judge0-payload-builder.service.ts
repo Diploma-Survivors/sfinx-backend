@@ -140,9 +140,16 @@ export class Judge0PayloadBuilderService {
     expectedOutput: string | undefined,
     isSubmit: boolean,
   ): Judge0SubmissionPayload {
+    const encodedSource = encodeBase64(sourceCode);
+    if (!encodedSource) {
+      this.logger.error(
+        `Encoded source code is empty! Original length: ${sourceCode.length}`,
+      );
+    }
+
     return {
       language_id: judge0LanguageId,
-      source_code: encodeBase64(sourceCode),
+      source_code: encodedSource,
       stdin: stdinRaw ? encodeBase64(stdinRaw) : undefined,
       expected_output: expectedOutput
         ? encodeBase64(expectedOutput)

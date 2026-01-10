@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { StorageModule } from '../storage/storage.module';
+import { Submission } from '../submissions/entities/submission.entity';
 import { UserProblemProgress } from '../submissions/entities/user-problem-progress.entity';
 import { CommentsModule } from './comments/comments.module';
 import { Problem } from './entities/problem.entity';
@@ -10,12 +11,11 @@ import { Tag } from './entities/tag.entity';
 import { Topic } from './entities/topic.entity';
 import { ProblemsController } from './problems.controller';
 import { ProblemsService } from './problems.service';
-import {
-  SampleTestcaseService,
-  TagService,
-  TestcaseFileService,
-  TopicService,
-} from './services';
+import { ProblemStatisticsService } from './services/problem-statistics.service';
+import { SampleTestcaseService } from './services';
+import { TagService } from './services';
+import { TestcaseFileService } from './services';
+import { TopicService } from './services';
 import { TestcaseTransformService } from './services/testcase-transform.service';
 import { TestcaseValidationService } from './services/testcase-validation.service';
 import { TagsController } from './tags.controller';
@@ -29,6 +29,7 @@ import { TopicsController } from './topics.controller';
       Topic,
       Tag,
       UserProblemProgress,
+      Submission,
     ]),
     StorageModule,
     CommentsModule,
@@ -36,6 +37,7 @@ import { TopicsController } from './topics.controller';
   controllers: [ProblemsController, TagsController, TopicsController],
   providers: [
     ProblemsService,
+    ProblemStatisticsService,
     TestcaseFileService,
     SampleTestcaseService,
     TestcaseValidationService,

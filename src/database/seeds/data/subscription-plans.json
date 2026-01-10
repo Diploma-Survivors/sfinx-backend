@@ -1,0 +1,34 @@
+[
+  {
+    "type": "MONTHLY",
+    "priceUsd": 5.0,
+    "durationMonths": 1,
+    "isActive": true,
+    "translations": {
+      "en": {
+        "name": "Monthly Pro",
+        "description": "Unlock all premium features for one month."
+      },
+      "vi": {
+        "name": "Gói Chuyên Nghiệp Tháng",
+        "description": "Mở khóa tất cả tính năng cao cấp trong một tháng."
+      }
+    }
+  },
+  {
+    "type": "YEARLY",
+    "priceUsd": 50.0,
+    "durationMonths": 12,
+    "isActive": true,
+    "translations": {
+      "en": {
+        "name": "Yearly Pro",
+        "description": "Unlock all premium features for one year. Save 17%!"
+      },
+      "vi": {
+        "name": "Gói Chuyên Nghiệp Năm",
+        "description": "Mở khóa tất cả tính năng cao cấp trong một năm. Tiết kiệm 17%!"
+      }
+    }
+  }
+]

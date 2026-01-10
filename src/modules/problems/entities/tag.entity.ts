@@ -32,13 +32,13 @@ export class Tag {
   @Column({ type: 'text', nullable: true })
   description: string;
 
-  @ApiProperty({
-    description: 'Color for UI display (hex)',
-    example: '#3B82F6',
-    required: false,
-  })
+  @ApiProperty({ description: 'Color for UI display (hex)', required: false })
   @Column({ length: 7, nullable: true })
   color: string;
+
+  @ApiProperty({ description: 'Whether tag is active' })
+  @Column({ name: 'is_active', default: true })
+  isActive: boolean;
 
   @ApiProperty({ description: 'Creation timestamp' })
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })

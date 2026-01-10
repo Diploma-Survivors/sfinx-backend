@@ -1,4 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { AuthorDto } from '../../users/dtos/author.dto';
+import { ProblemDifficulty } from '../../problems/enums/problem-difficulty.enum';
 import { SubmissionStatus } from '../enums';
 import { ResultDescription } from './result-description.dto';
 
@@ -51,14 +53,6 @@ export class FailedResultDto {
   compileOutput?: string;
 }
 
-export class UserInfoDto {
-  @ApiProperty({ description: 'User ID' })
-  id: number;
-
-  @ApiProperty({ description: 'Username' })
-  username: string;
-}
-
 export class ProblemInfoDto {
   @ApiProperty({ description: 'Problem ID' })
   id: number;
@@ -68,6 +62,9 @@ export class ProblemInfoDto {
 
   @ApiPropertyOptional({ description: 'Problem slug' })
   slug?: string;
+
+  @ApiProperty({ enum: ProblemDifficulty })
+  difficulty?: ProblemDifficulty;
 }
 
 export class LanguageInfoDto {
@@ -76,6 +73,14 @@ export class LanguageInfoDto {
 
   @ApiProperty({ description: 'Language name' })
   name: string;
+}
+
+export class ContestInfoDto {
+  @ApiProperty({ description: 'Contest ID' })
+  id: number;
+
+  @ApiProperty({ description: 'Contest title' })
+  title: string;
 }
 
 export class SubmissionResponseDto {
@@ -132,9 +137,15 @@ export class SubmissionResponseDto {
 
   @ApiPropertyOptional({
     description: 'User information (admin only)',
-    type: UserInfoDto,
+    type: AuthorDto,
   })
-  user?: UserInfoDto;
+  user?: AuthorDto;
+
+  @ApiPropertyOptional({
+    description: 'Contest information (if submission is in contest)',
+    type: ContestInfoDto,
+  })
+  contest?: ContestInfoDto;
 
   @ApiPropertyOptional({ description: 'Source code (own submissions only)' })
   sourceCode?: string;
@@ -179,4 +190,16 @@ export class SubmissionListResponseDto {
     type: LanguageInfoDto,
   })
   language?: LanguageInfoDto;
+
+  @ApiProperty({
+    description: 'User information (admin only)',
+    type: AuthorDto,
+  })
+  author?: AuthorDto;
+
+  @ApiPropertyOptional({
+    description: 'Contest information (if submission is in contest)',
+    type: ContestInfoDto,
+  })
+  contest?: ContestInfoDto;
 }

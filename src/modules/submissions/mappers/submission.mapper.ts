@@ -1,15 +1,19 @@
 import {
+  ContestInfoDto,
   LanguageInfoDto,
   ProblemInfoDto,
   SubmissionListResponseDto,
   SubmissionResponseDto,
-  UserInfoDto,
 } from '../dto/submission-response.dto';
+import { AuthorDto } from '../../users/dtos/author.dto';
+import { StorageService } from '../../storage/storage.service';
+import { getAvatarUrl } from '../../../common';
 import { Submission } from '../entities/submission.entity';
 
 export interface MapperOptions {
   includeSourceCode?: boolean;
   includeUser?: boolean;
+  storageService?: StorageService;
 }
 
 /**
@@ -24,7 +28,11 @@ export class SubmissionMapper {
     submission: Submission,
     options: MapperOptions = {},
   ): SubmissionResponseDto {
-    const { includeSourceCode = false, includeUser = false } = options;
+    const {
+      includeSourceCode = false,
+      includeUser = false,
+      storageService,
+    } = options;
 
     // Build problem info if loaded
     const problem: ProblemInfoDto | undefined = submission.problem
@@ -44,13 +52,25 @@ export class SubmissionMapper {
       : undefined;
 
     // Build user info if loaded and requested
-    const user: UserInfoDto | undefined =
-      includeUser && submission.user
+    const user: AuthorDto | undefined =
+      includeUser && submission.user && storageService
         ? {
             id: submission.user.id,
             username: submission.user.username,
+            avatarUrl:
+              getAvatarUrl(submission.user.avatarKey, storageService) ??
+              undefined,
+            isPremium: submission.user.isPremium,
           }
         : undefined;
+
+    // Build contest info if loaded
+    const contest: ContestInfoDto | undefined = submission.contest
+      ? {
+          id: submission.contest.id,
+          title: submission.contest.title,
+        }
+      : undefined;
 
     return {
       id: submission.id,
@@ -71,6 +91,7 @@ export class SubmissionMapper {
       problem,
       language,
       user,
+      contest,
       sourceCode: includeSourceCode
         ? (submission.sourceCode ?? undefined)
         : undefined,
@@ -80,7 +101,10 @@ export class SubmissionMapper {
   /**
    * Map Submission entity to SubmissionListResponseDto (lightweight)
    */
-  static toListResponseDto(submission: Submission): SubmissionListResponseDto {
+  static toListResponseDto(
+    submission: Submission,
+    storageService?: StorageService,
+  ): SubmissionListResponseDto {
     // Build problem info if loaded
     const problem: ProblemInfoDto | undefined = submission.problem
       ? {
@@ -98,6 +122,27 @@ export class SubmissionMapper {
         }
       : undefined;
 
+    // Build author info if loaded
+    const author: AuthorDto | undefined =
+      submission.user && storageService
+        ? {
+            id: submission.user.id,
+            username: submission.user.username,
+            avatarUrl:
+              getAvatarUrl(submission.user.avatarKey, storageService) ??
+              undefined,
+            isPremium: submission.user.isPremium,
+          }
+        : undefined;
+
+    // Build contest info if loaded
+    const contest: ContestInfoDto | undefined = submission.contest
+      ? {
+          id: submission.contest.id,
+          title: submission.contest.title,
+        }
+      : undefined;
+
     return {
       id: submission.id,
       status: submission.status,
@@ -110,6 +155,8 @@ export class SubmissionMapper {
       languageId: submission.language?.id ?? 0,
       problem,
       language,
+      author,
+      contest,
     };
   }
 
@@ -118,8 +165,9 @@ export class SubmissionMapper {
    */
   static toListResponseDtos(
     submissions: Submission[],
+    storageService?: StorageService,
   ): SubmissionListResponseDto[] {
-    return submissions.map((s) => this.toListResponseDto(s));
+    return submissions.map((s) => this.toListResponseDto(s, storageService));
   }
 
   /**

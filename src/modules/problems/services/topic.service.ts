@@ -14,11 +14,12 @@ import {
   Cacheable,
   CacheInvalidate,
   PaginatedResultDto,
-  PaginationQueryDto,
   SortOrder,
 } from '../../../common';
+import { FindOptionsWhere } from 'typeorm';
 import { CacheKeys } from '../../redis/utils/cache-key.builder';
 import { Topic } from '../entities/topic.entity';
+import { FilterTopicDto } from '../dto/filter-topic.dto';
 
 @Injectable()
 export class TopicService {
@@ -60,11 +61,17 @@ export class TopicService {
    * Get paginated topics for admin (includes inactive)
    */
   async findAllPaginated(
-    query: PaginationQueryDto,
+    query: FilterTopicDto,
   ): Promise<PaginatedResultDto<Topic>> {
-    const { skip, take, sortBy, sortOrder } = query;
+    const { skip, take, sortBy, sortOrder, isActive } = query;
+
+    const where: FindOptionsWhere<Topic> = {};
+    if (isActive !== undefined) {
+      where.isActive = isActive;
+    }
 
     const result = await this.topicRepository.findAndCount({
+      where,
       skip,
       take,
       order: sortBy

@@ -8,9 +8,10 @@ import {
   IsString,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../common';
-import { ProgressStatus } from '../../submissions/enums/progress-status.enum';
+import { ProgressStatus } from '../../submissions/enums';
 import { ProblemDifficulty } from '../enums/problem-difficulty.enum';
 import { SortBy } from '../enums/sort-by.enum';
+import { ToBoolean } from '../../../common/decorators/transform.decorators';
 
 export class FilterProblemDto extends PaginationQueryDto {
   @ApiPropertyOptional({
@@ -21,6 +22,15 @@ export class FilterProblemDto extends PaginationQueryDto {
   @IsOptional()
   @IsEnum(ProgressStatus)
   status?: ProgressStatus;
+
+  @ApiPropertyOptional({
+    description:
+      'Filter problems based on a specific user progress. If provided, status filtering applies to this user. Defaults to current user if not provided.',
+    type: Number,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  userId?: number;
 
   @ApiPropertyOptional({
     description:
@@ -46,8 +56,17 @@ export class FilterProblemDto extends PaginationQueryDto {
   })
   @IsOptional()
   @IsBoolean()
-  @Type(() => Boolean)
+  @ToBoolean()
   isPremium?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Filter by active status. true = active only, false = inactive only.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  @ToBoolean()
+  isActive?: boolean;
 
   @ApiPropertyOptional({
     description:

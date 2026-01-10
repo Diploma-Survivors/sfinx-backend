@@ -11,6 +11,15 @@ export interface UserStatistics {
   easyProblems: { solved: number; total: number };
   mediumProblems: { solved: number; total: number };
   hardProblems: { solved: number; total: number };
+  submissionStats: {
+    accepted: number;
+    wrongAnswer: number;
+    timeLimitExceeded: number;
+    runtimeError: number;
+    compilationError: number;
+    others: number;
+    total: number;
+  };
 }
 
 export interface DetailedUserStatistics extends UserStatistics {

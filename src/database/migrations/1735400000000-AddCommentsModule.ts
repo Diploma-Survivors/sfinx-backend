@@ -6,26 +6,34 @@ export class AddCommentsModule1735400000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Create comment_type_enum
     await queryRunner.query(`
-      CREATE TYPE "comment_type_enum" AS ENUM (
-        'Feedback', 'Question', 'Tip'
-      )
+      DO $$ BEGIN
+        CREATE TYPE "comment_type_enum" AS ENUM ('Feedback', 'Question', 'Tip');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
     `);
 
     // Create report_reason_enum
     await queryRunner.query(`
-      CREATE TYPE "report_reason_enum" AS ENUM (
-        'Spam', 'Inappropriate', 'Harassment', 'Off Topic', 'Misinformation', 'Other'
-      )
+      DO $$ BEGIN
+        CREATE TYPE "report_reason_enum" AS ENUM ('Spam', 'Inappropriate', 'Harassment', 'Off Topic', 'Misinformation', 'Other');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
     `);
 
     // Create vote_type_enum
     await queryRunner.query(`
-      CREATE TYPE "vote_type_enum" AS ENUM ('1', '-1')
+      DO $$ BEGIN
+        CREATE TYPE "vote_type_enum" AS ENUM ('1', '-1');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
     `);
 
     // Create comments table
     await queryRunner.query(`
-      CREATE TABLE "comments" (
+      CREATE TABLE IF NOT EXISTS "comments" (
         "id" SERIAL NOT NULL,
         "problem_id" INTEGER NOT NULL,
         "user_id" INTEGER NOT NULL,
@@ -55,30 +63,30 @@ export class AddCommentsModule1735400000000 implements MigrationInterface {
 
     // Create indexes for comments table
     await queryRunner.query(`
-      CREATE INDEX "IDX_comments_problem" ON "comments" ("problem_id")
+      CREATE INDEX IF NOT EXISTS "IDX_comments_problem" ON "comments" ("problem_id")
     `);
     await queryRunner.query(`
-      CREATE INDEX "IDX_comments_user" ON "comments" ("user_id")
+      CREATE INDEX IF NOT EXISTS "IDX_comments_user" ON "comments" ("user_id")
     `);
     await queryRunner.query(`
-      CREATE INDEX "IDX_comments_parent" ON "comments" ("parent_id")
+      CREATE INDEX IF NOT EXISTS "IDX_comments_parent" ON "comments" ("parent_id")
     `);
     await queryRunner.query(`
-      CREATE INDEX "IDX_comments_vote_score" ON "comments" ("vote_score" DESC)
+      CREATE INDEX IF NOT EXISTS "IDX_comments_vote_score" ON "comments" ("vote_score" DESC)
     `);
     await queryRunner.query(`
-      CREATE INDEX "IDX_comments_pinned" ON "comments" ("is_pinned", "vote_score" DESC)
+      CREATE INDEX IF NOT EXISTS "IDX_comments_pinned" ON "comments" ("is_pinned", "vote_score" DESC)
     `);
     await queryRunner.query(`
-      CREATE INDEX "IDX_comments_created" ON "comments" ("created_at" DESC)
+      CREATE INDEX IF NOT EXISTS "IDX_comments_created" ON "comments" ("created_at" DESC)
     `);
     await queryRunner.query(`
-      CREATE INDEX "IDX_comments_problem_parent" ON "comments" ("problem_id", "parent_id")
+      CREATE INDEX IF NOT EXISTS "IDX_comments_problem_parent" ON "comments" ("problem_id", "parent_id")
     `);
 
     // Create comment_votes table
     await queryRunner.query(`
-      CREATE TABLE "comment_votes" (
+      CREATE TABLE IF NOT EXISTS "comment_votes" (
         "comment_id" INTEGER NOT NULL,
         "user_id" INTEGER NOT NULL,
         "vote_type" "vote_type_enum" NOT NULL,
@@ -94,15 +102,15 @@ export class AddCommentsModule1735400000000 implements MigrationInterface {
 
     // Create indexes for comment_votes table
     await queryRunner.query(`
-      CREATE INDEX "IDX_comment_votes_comment" ON "comment_votes" ("comment_id")
+      CREATE INDEX IF NOT EXISTS "IDX_comment_votes_comment" ON "comment_votes" ("comment_id")
     `);
     await queryRunner.query(`
-      CREATE INDEX "IDX_comment_votes_user" ON "comment_votes" ("user_id")
+      CREATE INDEX IF NOT EXISTS "IDX_comment_votes_user" ON "comment_votes" ("user_id")
     `);
 
     // Create comment_reports table
     await queryRunner.query(`
-      CREATE TABLE "comment_reports" (
+      CREATE TABLE IF NOT EXISTS "comment_reports" (
         "id" SERIAL NOT NULL,
         "comment_id" INTEGER NOT NULL,
         "user_id" INTEGER NOT NULL,
@@ -125,13 +133,13 @@ export class AddCommentsModule1735400000000 implements MigrationInterface {
 
     // Create indexes for comment_reports table
     await queryRunner.query(`
-      CREATE INDEX "IDX_comment_reports_comment" ON "comment_reports" ("comment_id")
+      CREATE INDEX IF NOT EXISTS "IDX_comment_reports_comment" ON "comment_reports" ("comment_id")
     `);
     await queryRunner.query(`
-      CREATE INDEX "IDX_comment_reports_user" ON "comment_reports" ("user_id")
+      CREATE INDEX IF NOT EXISTS "IDX_comment_reports_user" ON "comment_reports" ("user_id")
     `);
     await queryRunner.query(`
-      CREATE INDEX "IDX_comment_reports_resolved" ON "comment_reports" ("is_resolved", "created_at" DESC)
+      CREATE INDEX IF NOT EXISTS "IDX_comment_reports_resolved" ON "comment_reports" ("is_resolved", "created_at" DESC)
     `);
   }
 

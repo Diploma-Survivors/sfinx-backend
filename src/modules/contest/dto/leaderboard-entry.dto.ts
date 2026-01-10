@@ -1,44 +1,58 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export class ProblemScoreDto {
+export enum LeaderboardProblemStatus {
+  SOLVED = 'SOLVED',
+  ATTEMPTED = 'ATTEMPTED',
+  NOT_STARTED = 'NOT_STARTED',
+}
+
+export class ProblemStatusDto {
   @ApiProperty({ description: 'Problem ID' })
   problemId: number;
 
-  @ApiProperty({ description: 'Score for this problem (IOI partial scoring)' })
-  score: number;
+  @ApiProperty({ description: 'Order of the problem in the contest' })
+  problemOrder: number;
 
-  @ApiProperty({ description: 'Number of submissions for this problem' })
-  submissions: number;
+  @ApiProperty({
+    enum: LeaderboardProblemStatus,
+    description: 'Status of the problem for the user',
+  })
+  status: LeaderboardProblemStatus;
 
-  @ApiPropertyOptional({ description: 'Last submission time' })
-  lastSubmitTime: string | null;
+  @ApiPropertyOptional({ description: 'Score achieved for this problem' })
+  score?: number;
+
+  @ApiPropertyOptional({ description: 'Number of attempts/submissions' })
+  attempts?: number;
+}
+
+export class LeaderboardUserDto {
+  @ApiProperty({ description: 'User ID' })
+  id: number;
+
+  @ApiProperty({ description: 'Username' })
+  username: string;
+
+  @ApiPropertyOptional({ description: 'User avatar URL' })
+  avatarUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Full name' })
+  fullName?: string;
 }
 
 export class LeaderboardEntryDto {
   @ApiProperty({ description: 'Rank in leaderboard' })
   rank: number;
 
-  @ApiProperty({ description: 'User ID' })
-  userId: number;
+  @ApiProperty({ description: 'User details' })
+  user: LeaderboardUserDto;
 
-  @ApiProperty({ description: 'Username' })
-  username: string;
-
-  @ApiPropertyOptional({ description: 'User avatar URL' })
-  avatarUrl: string | null;
-
-  @ApiProperty({ description: 'Total score (sum of best scores per problem)' })
+  @ApiProperty({ description: 'Total score' })
   totalScore: number;
 
   @ApiProperty({
-    description: 'Score breakdown per problem',
-    type: [ProblemScoreDto],
+    description: 'Status and score for each problem',
+    type: [ProblemStatusDto],
   })
-  problemScores: ProblemScoreDto[];
-
-  @ApiProperty({ description: 'Total number of submissions' })
-  totalSubmissions: number;
-
-  @ApiPropertyOptional({ description: 'Last submission time (for tiebreaker)' })
-  lastSubmissionAt: string | null;
+  problemStatus: ProblemStatusDto[];
 }

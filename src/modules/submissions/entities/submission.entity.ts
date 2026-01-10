@@ -8,17 +8,21 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { User } from '../../auth/entities/user.entity';
-import { Contest } from '../../contest/entities/contest.entity';
+import { Contest } from '../../contest/entities';
 import { Problem } from '../../problems/entities/problem.entity';
-import { ProgrammingLanguage } from '../../programming-language/entities/programming-language.entity';
+import { ProgrammingLanguage } from '../../programming-language';
+import { SubmissionStatus } from '../enums';
 import { ResultDescription } from '../dto/result-description.dto';
-import { SubmissionStatus } from '../enums/submission-status.enum';
 
 @Entity('submissions')
 export class Submission {
   @ApiProperty({ description: 'Unique identifier' })
   @PrimaryGeneratedColumn('increment')
   id: number;
+
+  @ApiProperty({ description: 'User ID who made the submission' })
+  @Column({ name: 'user_id' })
+  userId: number;
 
   @ApiProperty({
     description: 'User who made the submission',
@@ -27,6 +31,10 @@ export class Submission {
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
+
+  @ApiProperty({ description: 'Problem ID' })
+  @Column({ name: 'problem_id' })
+  problemId: number;
 
   @ApiProperty({ description: 'Problem being solved', type: () => Problem })
   @ManyToOne(() => Problem, { onDelete: 'CASCADE' })

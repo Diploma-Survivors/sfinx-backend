@@ -2,26 +2,24 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MarkdownService } from '../../../common';
 import { StorageModule } from '../../storage/storage.module';
-import { CommentsController, CommentReportsController } from './controllers';
-import { Comment, CommentVote, CommentReport } from './entities';
 import {
-  CommentsService,
-  CommentVotesService,
-  CommentReportsService,
-} from './services';
+  ProblemCommentsController,
+  CommentReportsController,
+} from './controllers';
+import { ProblemComment, ProblemCommentVote, CommentReport } from './entities';
+import { ProblemCommentsService, CommentReportsService } from './services';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Comment, CommentVote, CommentReport]),
+    TypeOrmModule.forFeature([
+      ProblemComment,
+      ProblemCommentVote,
+      CommentReport,
+    ]),
     StorageModule,
   ],
-  controllers: [CommentsController, CommentReportsController],
-  providers: [
-    MarkdownService,
-    CommentsService,
-    CommentVotesService,
-    CommentReportsService,
-  ],
-  exports: [CommentsService, CommentVotesService, CommentReportsService],
+  controllers: [ProblemCommentsController, CommentReportsController],
+  providers: [MarkdownService, ProblemCommentsService, CommentReportsService],
+  exports: [ProblemCommentsService, CommentReportsService],
 })
 export class CommentsModule {}

@@ -1,5 +1,5 @@
 import { BullModule } from '@nestjs/bullmq';
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
@@ -7,17 +7,20 @@ import { BackoffOptions } from 'bullmq';
 
 import { User } from '../auth/entities/user.entity';
 import { Judge0Module } from '../judge0/judge0.module';
-import { MailModule } from '../mail/mail.module';
+import { MailModule } from '../mail';
 import { Problem } from '../problems/entities/problem.entity';
 import { ProblemsModule } from '../problems/problems.module';
 import { ProgrammingLanguageModule } from '../programming-language';
-import { RedisModule } from '../redis/redis.module';
+import { RedisModule } from '../redis';
 import { StorageModule } from '../storage/storage.module';
+import { ContestModule } from '../contest/contest.module';
 import { SUBMISSION_QUEUES } from './constants/submission.constants';
 import { Judge0CallbackController } from './controllers/judge0-callback.controller';
 import { Submission } from './entities/submission.entity';
 import { UserProblemProgress } from './entities/user-problem-progress.entity';
 import { SubmissionEventHandlers } from './events/submission.event-handlers';
+import { GlobalRankingListener } from './listeners/global-ranking.listener';
+import { CronRebuildRankingJob } from './jobs/cron-rebuild-ranking.job';
 import { SubmissionFinalizeProcessor } from './processors/submission-finalize.processor';
 import {
   CallbackProcessorService,
@@ -77,6 +80,7 @@ import { SubmissionsService } from './submissions.service';
     RedisModule,
     StorageModule,
     MailModule,
+    forwardRef(() => ContestModule),
   ],
   controllers: [SubmissionsController, Judge0CallbackController],
   providers: [
@@ -100,10 +104,22 @@ import { SubmissionsService } from './submissions.service';
 
     // Event handlers
     SubmissionEventHandlers,
+    GlobalRankingListener,
 
     // Processors
     SubmissionFinalizeProcessor,
+
+    // Jobs
+    CronRebuildRankingJob,
+    SubmissionFinalizeProcessor,
   ],
-  exports: [SubmissionsService, CallbackProcessorService],
+  exports: [
+    SubmissionsService,
+    CallbackProcessorService,
+    UserStatisticsService,
+    UserProgressService,
+    SubmissionRetrievalService,
+    SubmissionAnalysisService,
+  ],
 })
 export class SubmissionsModule {}

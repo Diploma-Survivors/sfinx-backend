@@ -39,16 +39,22 @@ import {
   redisConfig,
   submissionConfig,
   vnpayConfig,
+  paymentConfig,
 } from './config';
 import { AuthModule } from './modules/auth/auth.module';
 import { Judge0Module } from './modules/judge0/judge0.module';
 import { ProblemsModule } from './modules/problems/problems.module';
 import { ProgrammingLanguageModule } from './modules/programming-language';
 import { RbacModule } from './modules/rbac/rbac.module';
-import { RedisModule } from './modules/redis/redis.module';
+import { RedisModule } from './modules/redis';
 import { SubmissionsModule } from './modules/submissions/submissions.module';
 import { ContestModule } from './modules/contest/contest.module';
+import { UsersModule } from './modules/users/users.module';
+import { SolutionsModule } from './modules/solutions/solutions.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { AdminModule } from './modules/admin/admin.module';
+import { SystemConfigModule } from './modules/system-config/system-config.module';
 import { AiInterviewsModule } from './modules/ai-interviews/ai-interviews.module';
 import { LiveKitModule } from './modules/livekit/livekit.module';
 import { livekitConfig } from './config';
@@ -69,6 +75,7 @@ import { livekitConfig } from './config';
         redisConfig,
         submissionConfig,
         vnpayConfig,
+        paymentConfig,
         livekitConfig,
       ],
       validationSchema: environmentValidation,
@@ -129,6 +136,11 @@ import { livekitConfig } from './config';
     Judge0Module,
     ProgrammingLanguageModule,
     ContestModule,
+    UsersModule,
+    SolutionsModule,
+    PaymentsModule,
+    AdminModule,
+    SystemConfigModule,
     AiInterviewsModule,
     LiveKitModule,
     // UsersModule,

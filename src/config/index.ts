@@ -10,4 +10,5 @@ export * from './jwt.config';
 export * from './redis.config';
 export * from './submission.config';
 export * from './vnpay.config';
+export * from './payment.config';
 export * from './livekit.config';

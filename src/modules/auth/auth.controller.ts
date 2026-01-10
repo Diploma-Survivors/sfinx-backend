@@ -27,7 +27,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 
 import { GetUser } from '../../common';
-import { AppConfig } from '../../config/app.config';
+import { AppConfig } from '../../config';
 import { AuthService } from './auth.service';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { AvatarUploadUrlResponseDto } from './dto/avatar-upload-url-response.dto';
@@ -305,7 +305,7 @@ export class AuthController {
 
   @Throttle({
     default: {
-      limit: 3,
+      limit: 10,
       ttl: 60000,
     },
   })
@@ -322,9 +322,9 @@ export class AuthController {
     status: 401,
     description: 'Unauthorized',
   })
-  // eslint-disable-next-line @typescript-eslint/require-await
   async getCurrentUser(@GetUser() user: User): Promise<UserProfileResponseDto> {
-    return this.authService.transformUserResponse(user);
+    const fetchUser = await this.authService.getUserProfile(user.id);
+    return this.authService.transformUserResponse(fetchUser);
   }
 
   @Throttle({

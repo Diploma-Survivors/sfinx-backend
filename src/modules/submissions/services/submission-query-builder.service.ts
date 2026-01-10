@@ -21,7 +21,8 @@ export class SubmissionQueryBuilderService {
     return queryBuilder
       .leftJoinAndSelect('submission.problem', 'problem')
       .leftJoinAndSelect('submission.language', 'language')
-      .leftJoinAndSelect('submission.user', 'user');
+      .leftJoinAndSelect('submission.user', 'user')
+      .leftJoinAndSelect('submission.contest', 'contest');
   }
 
   /**
@@ -48,6 +49,8 @@ export class SubmissionQueryBuilderService {
       problemId,
       languageId,
       status,
+      userId,
+      contestId,
       fromDate,
       toDate,
       minRuntimeMs,
@@ -71,6 +74,16 @@ export class SubmissionQueryBuilderService {
 
     if (status) {
       queryBuilder.andWhere('submission.status = :status', { status });
+    }
+
+    if (userId) {
+      queryBuilder.andWhere('submission.user.id = :userId', { userId });
+    }
+
+    if (contestId) {
+      queryBuilder.andWhere('submission.contest.id = :contestId', {
+        contestId,
+      });
     }
 
     // Date range filters

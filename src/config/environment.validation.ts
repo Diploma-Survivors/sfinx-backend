@@ -70,6 +70,11 @@ export const environmentValidation = Joi.object({
   VNPAY_RETURN_URL: Joi.string().uri().required(),
   VNPAY_IPN_URL: Joi.string().uri().required(),
 
+  // Payment
+  EXCHANGE_RATE_API_URL: Joi.string().uri().optional(),
+  EXCHANGE_RATE_API_KEY: Joi.string().optional(),
+  PAYMENT_CRON_SCHEDULE: Joi.string().default('0 0 * * *'),
+
   // Email Configuration
   SMTP_HOST: Joi.string().hostname().required(),
   SMTP_PORT: Joi.number().default(587),

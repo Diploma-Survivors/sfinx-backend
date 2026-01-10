@@ -8,15 +8,15 @@ import { Repository } from 'typeorm';
 import { Transactional } from 'typeorm-transactional';
 import { PaginatedResultDto, SortOrder } from '../../../../common';
 import { FilterCommentReportDto, ReportCommentDto } from '../dto';
-import { Comment, CommentReport } from '../entities';
+import { ProblemComment, CommentReport } from '../entities';
 
 @Injectable()
 export class CommentReportsService {
   constructor(
     @InjectRepository(CommentReport)
     private readonly reportRepository: Repository<CommentReport>,
-    @InjectRepository(Comment)
-    private readonly commentRepository: Repository<Comment>,
+    @InjectRepository(ProblemComment)
+    private readonly commentRepository: Repository<ProblemComment>,
   ) {}
 
   /**
@@ -57,7 +57,7 @@ export class CommentReportsService {
     // Increment report count on comment
     await this.commentRepository
       .createQueryBuilder()
-      .update(Comment)
+      .update(ProblemComment)
       .set({
         reportCount: () => 'report_count + 1',
       })

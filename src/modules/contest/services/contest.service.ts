@@ -7,20 +7,26 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import slugify from 'slugify';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { PaginatedResultDto, SortOrder } from '../../../common';
 import { User } from '../../auth/entities/user.entity';
 import { Problem } from '../../problems/entities/problem.entity';
-import { CacheService } from '../../redis/services/cache.service';
-import { CacheKeys } from '../../redis/utils/cache-key.builder';
-import { AddContestProblemDto } from '../dto/add-contest-problem.dto';
-import { CreateContestDto } from '../dto/create-contest.dto';
-import { FilterContestDto } from '../dto/filter-contest.dto';
-import { UpdateContestDto } from '../dto/update-contest.dto';
-import { ContestParticipant } from '../entities/contest-participant.entity';
-import { ContestProblem } from '../entities/contest-problem.entity';
-import { Contest } from '../entities/contest.entity';
-import { ContestStatus } from '../enums/contest-status.enum';
+import { CacheKeys, CacheService } from '../../redis';
+import {
+  AddContestProblemDto,
+  CreateContestDto,
+  FilterContestDto,
+  UpdateContestDto,
+} from '../dto';
+import { Contest, ContestParticipant, ContestProblem } from '../entities';
+import { ContestStatus, UserContestStatus } from '../enums';
+
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  ContestCreatedEvent,
+  ContestDeletedEvent,
+  ContestUpdatedEvent,
+} from '../events/contest-scheduled.events';
 
 @Injectable()
 export class ContestService {
@@ -36,6 +42,7 @@ export class ContestService {
     @InjectRepository(Problem)
     private readonly problemRepository: Repository<Problem>,
     private readonly cacheService: CacheService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -61,23 +68,28 @@ export class ContestService {
       rules: dto.rules ?? null,
       startTime: dto.startTime,
       endTime: dto.endTime,
-      status: ContestStatus.DRAFT,
+      status: dto.status ?? ContestStatus.DRAFT,
       maxParticipants: dto.maxParticipants ?? 0,
       durationMinutes,
       createdBy: { id: userId } as User,
     });
-
     const savedContest = await this.contestRepository.save(contest);
+
+    // Emit created event
+    this.eventEmitter.emit(
+      ContestCreatedEvent.name,
+      new ContestCreatedEvent(savedContest.id),
+    );
 
     // Add problems if provided
     if (dto.problems && dto.problems.length > 0) {
       for (let i = 0; i < dto.problems.length; i++) {
         const prob = dto.problems[i];
-        await this.addProblemToContest(savedContest.id, {
+        await this.addProblemToContest(savedContest, {
           problemId: prob.problemId,
           points: prob.points ?? 100,
           label: prob.label ?? this.getDefaultLabel(i),
-          orderIndex: i,
+          orderIndex: prob.orderIndex ?? i,
         });
       }
     }
@@ -90,36 +102,88 @@ export class ContestService {
    */
   async updateContest(id: number, dto: UpdateContestDto): Promise<Contest> {
     const contest = await this.getContestById(id);
+    // Check if contest is not running or ended
+    if (
+      contest.status === ContestStatus.RUNNING ||
+      contest.status === ContestStatus.ENDED
+    ) {
+      throw new BadRequestException(
+        'Cannot add problems to running or ended contests',
+      );
+    }
 
     // Validate timing if provided
     const startTime = dto.startTime ?? contest.startTime;
     const endTime = dto.endTime ?? contest.endTime;
     this.validateContestTiming(startTime, endTime);
 
+    // Prepare update data
+    const updateData: Partial<Contest> = {};
+
     // Update fields
     if (dto.title !== undefined) {
-      contest.title = dto.title;
-      contest.slug = await this.generateUniqueSlug(dto.title, id);
+      updateData.title = dto.title;
+      updateData.slug = await this.generateUniqueSlug(dto.title, id);
     }
-    if (dto.description !== undefined) contest.description = dto.description;
-    if (dto.rules !== undefined) contest.rules = dto.rules;
-    if (dto.startTime !== undefined) contest.startTime = dto.startTime;
-    if (dto.endTime !== undefined) contest.endTime = dto.endTime;
-    if (dto.status !== undefined) contest.status = dto.status;
+    if (dto.description !== undefined) updateData.description = dto.description;
+    if (dto.rules !== undefined) updateData.rules = dto.rules;
+    if (dto.startTime !== undefined) updateData.startTime = dto.startTime;
+    if (dto.endTime !== undefined) updateData.endTime = dto.endTime;
+    if (dto.status !== undefined) updateData.status = dto.status;
     if (dto.maxParticipants !== undefined)
-      contest.maxParticipants = dto.maxParticipants;
+      updateData.maxParticipants = dto.maxParticipants;
 
-    // Recalculate duration
-    contest.durationMinutes = Math.round(
-      (contest.endTime.getTime() - contest.startTime.getTime()) / 60000,
+    // Recalculate duration if time changed
+    if (dto.startTime || dto.endTime) {
+      const s = dto.startTime ?? contest.startTime;
+      const e = dto.endTime ?? contest.endTime;
+      updateData.durationMinutes = Math.round(
+        (e.getTime() - s.getTime()) / 60000,
+      );
+    }
+
+    // Save implementation:
+    // Use update() to avoid cascade issues with relations (contestProblems)
+    // trying to nullify foreign keys.
+    if (Object.keys(updateData).length > 0) {
+      await this.contestRepository.update(id, updateData);
+    }
+
+    // We need the updated entity for problem association if we changed keys,
+    // but ID is constant.
+    const updated = await this.getContestById(id);
+
+    // Update problems if provided
+    if (dto.problems !== undefined) {
+      // Delete existing problems directly from repo
+      await this.contestProblemRepository.delete({ contestId: id });
+
+      // Add new problems
+      if (dto.problems.length > 0) {
+        for (let i = 0; i < dto.problems.length; i++) {
+          const prob = dto.problems[i];
+          // We pass 'updated' contest entity which has the ID.
+          await this.addProblemToContest(updated, {
+            problemId: prob.problemId,
+            points: prob.points ?? 100,
+            label: prob.label ?? this.getDefaultLabel(i),
+            orderIndex: prob.orderIndex ?? i,
+          });
+        }
+      }
+    }
+
+    // Emit updated event
+    this.eventEmitter.emit(
+      ContestUpdatedEvent.name,
+      new ContestUpdatedEvent(updated.id),
     );
-
-    const updated = await this.contestRepository.save(contest);
 
     // Invalidate cache
     await this.invalidateContestCache(id, contest.slug);
 
-    return updated;
+    // Return fresh entity to ensure we get the latest problems from DB
+    return this.getContestById(updated.id);
   }
 
   /**
@@ -139,6 +203,10 @@ export class ContestService {
     }
 
     await this.contestRepository.delete(id);
+    this.eventEmitter.emit(
+      ContestDeletedEvent.name,
+      new ContestDeletedEvent(id),
+    );
     await this.invalidateContestCache(id, contest.slug);
   }
 
@@ -177,8 +245,33 @@ export class ContestService {
   /**
    * Get contests with filtering and pagination
    */
+  async getContestsForNotAdminUser(
+    filter: FilterContestDto,
+    userId?: number,
+  ): Promise<PaginatedResultDto<Contest>> {
+    return this.queryContests(filter, userId, {
+      excludeDrafts: true,
+      populateUserStatus: true,
+    });
+  }
+
   async getContests(
     filter: FilterContestDto,
+    userId?: number,
+  ): Promise<PaginatedResultDto<Contest>> {
+    return this.queryContests(filter, userId, {
+      excludeDrafts: false,
+      populateUserStatus: false,
+    });
+  }
+
+  private async queryContests(
+    filter: FilterContestDto,
+    userId?: number,
+    options: { excludeDrafts: boolean; populateUserStatus: boolean } = {
+      excludeDrafts: false,
+      populateUserStatus: false,
+    },
   ): Promise<PaginatedResultDto<Contest>> {
     const queryBuilder = this.contestRepository
       .createQueryBuilder('contest')
@@ -223,6 +316,36 @@ export class ContestService {
       });
     }
 
+    if (options.excludeDrafts) {
+      queryBuilder.andWhere('contest.status != :draft', {
+        draft: ContestStatus.DRAFT,
+      });
+    }
+
+    if (options.populateUserStatus && userId && filter.userStatus) {
+      if (filter.userStatus === UserContestStatus.JOINED) {
+        queryBuilder.innerJoin(
+          'contest.participants',
+          'participant',
+          'participant.user.id = :userId',
+          { userId },
+        );
+      } else if (filter.userStatus === UserContestStatus.NOT_JOINED) {
+        queryBuilder.andWhere(
+          (qb) => {
+            const subQuery = qb
+              .subQuery()
+              .select('p.contestId')
+              .from('contest_participants', 'p')
+              .where('p.userId = :userId', { userId })
+              .getQuery();
+            return `contest.id NOT IN ${subQuery}`;
+          },
+          { userId },
+        );
+      }
+    }
+
     // Apply sorting
     const sortBy = filter.sortBy || 'startTime';
     const sortOrder = filter.sortOrder || 'DESC';
@@ -232,6 +355,29 @@ export class ContestService {
     queryBuilder.skip(filter.skip).take(filter.take);
 
     const [contests, total] = await queryBuilder.getManyAndCount();
+
+    // Map userStatus property to each contest if userId is provided
+    if (options.populateUserStatus && userId) {
+      const contestIds = contests.map((c) => c.id);
+      if (contestIds.length > 0) {
+        const participations = await this.participantRepository.find({
+          where: {
+            userId,
+            contestId: In(contestIds),
+          },
+          select: ['contestId'],
+        });
+        const joinedContestIds = new Set(
+          participations.map((p) => p.contestId),
+        );
+        contests.forEach((c) => {
+          (c as Contest & { userStatus?: UserContestStatus }).userStatus =
+            joinedContestIds.has(c.id)
+              ? UserContestStatus.JOINED
+              : UserContestStatus.NOT_JOINED;
+        });
+      }
+    }
 
     return new PaginatedResultDto(contests, {
       page: filter.page ?? 1,
@@ -244,21 +390,9 @@ export class ContestService {
    * Add problem to contest
    */
   async addProblemToContest(
-    contestId: number,
+    contest: Contest,
     dto: AddContestProblemDto,
   ): Promise<ContestProblem> {
-    const contest = await this.getContestById(contestId);
-
-    // Check if contest is not running or ended
-    if (
-      contest.status === ContestStatus.RUNNING ||
-      contest.status === ContestStatus.ENDED
-    ) {
-      throw new BadRequestException(
-        'Cannot add problems to running or ended contests',
-      );
-    }
-
     // Check if problem exists
     const problem = await this.problemRepository.findOne({
       where: { id: dto.problemId },
@@ -269,7 +403,7 @@ export class ContestService {
 
     // Check if already added
     const existing = await this.contestProblemRepository.findOne({
-      where: { contestId, problemId: dto.problemId },
+      where: { contestId: contest.id, problemId: dto.problemId },
     });
     if (existing) {
       throw new ConflictException('Problem already added to contest');
@@ -279,14 +413,14 @@ export class ContestService {
     const maxOrder = await this.contestProblemRepository
       .createQueryBuilder('cp')
       .select('MAX(cp.orderIndex)', 'max')
-      .where('cp.contestId = :contestId', { contestId })
+      .where('cp.contestId = :contestId', { contestId: contest.id })
       .getRawOne<{ max: number }>();
 
     const orderIndex = dto.orderIndex ?? (maxOrder?.max ?? -1) + 1;
     const label = dto.label ?? this.getDefaultLabel(orderIndex);
 
     const contestProblem = this.contestProblemRepository.create({
-      contestId,
+      contestId: contest.id,
       problemId: dto.problemId,
       points: dto.points ?? 100,
       orderIndex,
@@ -294,8 +428,6 @@ export class ContestService {
     });
 
     const saved = await this.contestProblemRepository.save(contestProblem);
-    await this.invalidateContestCache(contestId, contest.slug);
-
     return saved;
   }
 
@@ -383,25 +515,33 @@ export class ContestService {
   }
 
   /**
-   * Register user for contest
+   * Join a contest (Idempotent)
    */
-  async registerForContest(
+  async joinContest(
     contestId: number,
     userId: number,
   ): Promise<ContestParticipant> {
     const contest = await this.getContestById(contestId);
 
-    // Check if registration is allowed
+    // 1. Check if already registered
+    const existing = await this.participantRepository.findOne({
+      where: { contestId, userId },
+    });
+    if (existing) {
+      return existing;
+    }
+
+    // 2. Validate Status
     if (
       contest.status !== ContestStatus.SCHEDULED &&
       contest.status !== ContestStatus.RUNNING
     ) {
       throw new BadRequestException(
-        'Registration is only allowed for scheduled or running contests',
+        'Can only join scheduled or running contests',
       );
     }
 
-    // Check max participants
+    // 3. Check max participants
     if (
       contest.maxParticipants > 0 &&
       contest.participantCount >= contest.maxParticipants
@@ -409,15 +549,7 @@ export class ContestService {
       throw new BadRequestException('Contest has reached maximum participants');
     }
 
-    // Check if already registered
-    const existing = await this.participantRepository.findOne({
-      where: { contestId, userId },
-    });
-    if (existing) {
-      throw new ConflictException('Already registered for this contest');
-    }
-
-    // Create participant
+    // 4. Create participant
     const participant = this.participantRepository.create({
       contestId,
       userId,
@@ -426,6 +558,7 @@ export class ContestService {
       totalScore: 0,
       problemScores: {},
       totalSubmissions: 0,
+      startedAt: new Date(), // Set join time
     });
 
     const saved = await this.participantRepository.save(participant);
@@ -520,8 +653,23 @@ export class ContestService {
   async endContest(id: number): Promise<Contest> {
     const contest = await this.getContestById(id);
 
-    if (contest.status !== ContestStatus.RUNNING) {
-      throw new BadRequestException('Can only end running contests');
+    if (
+      contest.status !== ContestStatus.RUNNING &&
+      contest.status !== ContestStatus.SCHEDULED
+    ) {
+      throw new BadRequestException(
+        'Can only end running or scheduled contests',
+      );
+    }
+
+    // If ending a scheduled contest, ensure time has passed
+    if (
+      contest.status === ContestStatus.SCHEDULED &&
+      contest.endTime > new Date()
+    ) {
+      throw new BadRequestException(
+        'Cannot end a scheduled contest before its end time',
+      );
     }
 
     contest.status = ContestStatus.ENDED;

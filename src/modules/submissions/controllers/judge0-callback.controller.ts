@@ -2,7 +2,7 @@ import { Body, Controller, HttpCode, Logger, Put, Query } from '@nestjs/common';
 import { ApiExcludeController, ApiTags } from '@nestjs/swagger';
 
 import type { Judge0Response } from '../../judge0/interfaces';
-import { CallbackProcessorService } from '../services/callback-processor.service';
+import { CallbackProcessorService } from '../services';
 
 /**
  * Controller for handling Judge0 callbacks

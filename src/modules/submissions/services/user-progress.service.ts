@@ -2,36 +2,23 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import { PaginatedResultDto, PaginationQueryDto } from '../../../common';
-import { UserProblemProgressDetailResponseDto } from '../dto/user-problem-progress-detail-response.dto';
-import { UserProblemProgressResponseDto } from '../dto/user-problem-progress-response.dto';
+import { PaginatedResultDto } from '../../../common';
 import { Submission } from '../entities/submission.entity';
 import { UserProblemProgress } from '../entities/user-problem-progress.entity';
-import { ProgressStatus } from '../enums/progress-status.enum';
-import { SubmissionStatus } from '../enums/submission-status.enum';
+import { ProgressStatus, SubmissionStatus } from '../enums';
+import { UserProblemProgressResponseDto } from '../dto/user-problem-progress-response.dto';
+import { UserProblemProgressDetailResponseDto } from '../dto/user-problem-progress-detail-response.dto';
+import { PracticeSortBy } from '../enums/practice-sort-by.enum';
+import { UserPracticeHistoryDto } from '../dto/user-practice-history.dto';
+import { GetPracticeHistoryDto } from '../dto/get-practice-history.dto';
 
-export interface UserProgressStats {
-  userId: number;
-  problemId: number;
-  status: ProgressStatus;
-  totalAttempts: number;
-  totalAccepted: number;
-  bestRuntimeMs: number | null;
-  bestMemoryKb: number | null;
-  firstAttemptedAt: Date;
-  firstSolvedAt: Date | null;
-  lastAttemptedAt: Date;
-}
-
-/**
- * Service responsible for managing user problem progress
- * Follows Single Responsibility Principle
- */
 @Injectable()
 export class UserProgressService {
   constructor(
     @InjectRepository(UserProblemProgress)
     private readonly progressRepository: Repository<UserProblemProgress>,
+    @InjectRepository(Submission)
+    private readonly submissionRepository: Repository<Submission>,
   ) {}
 
   /**
@@ -56,23 +43,167 @@ export class UserProgressService {
    */
   async getAllUserProgress(
     userId: number,
-    paginationDto: PaginationQueryDto,
-  ): Promise<PaginatedResultDto<UserProblemProgressResponseDto>> {
-    const page = paginationDto.page ?? 1;
-    const limit = paginationDto.take;
-    const skip = paginationDto.skip;
+    query: GetPracticeHistoryDto,
+  ): Promise<PaginatedResultDto<UserPracticeHistoryDto>> {
+    const page = query.page ?? 1;
+    const limit = query.take;
+    const skip = query.skip;
 
-    const [data, total] = await this.progressRepository.findAndCount({
-      where: { userId },
-      relations: ['problem'],
-      order: { lastAttemptedAt: 'DESC' },
-      skip,
-      take: limit,
+    // 1. Fetch paginated progress records with simplified problem fields
+    const queryBuilder = this.progressRepository
+      .createQueryBuilder('progress')
+      .leftJoin('progress.problem', 'problem')
+      .select([
+        'progress.userId', // Include PK
+        'progress.problemId', // Include PK
+        'progress.status',
+        'progress.lastAttemptedAt',
+        'progress.totalAttempts',
+        'problem.id',
+        'problem.title',
+        'problem.slug',
+        'problem.difficulty',
+      ])
+      .where('progress.userId = :userId', { userId });
+
+    // Filter by status
+    if (query.status) {
+      queryBuilder.andWhere('progress.status = :status', {
+        status: query.status,
+      });
+    }
+
+    // Filter by difficulty
+    if (query.difficulty) {
+      queryBuilder.andWhere('problem.difficulty = :difficulty', {
+        difficulty: query.difficulty,
+      });
+    }
+
+    // Sorting
+    const sortOrder = query.sortOrder ?? 'DESC';
+
+    if (query.sortBy === PracticeSortBy.SUBMISSION_COUNT) {
+      queryBuilder.orderBy('progress.totalAttempts', sortOrder);
+    } else {
+      // Default to LAST_SUBMITTED_AT
+      queryBuilder.orderBy('progress.lastAttemptedAt', sortOrder);
+    }
+
+    const [progressRecords, total] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    if (progressRecords.length === 0) {
+      return new PaginatedResultDto([], { page, limit, total });
+    }
+
+    // 2. Fetch submissions for these problems with optimized selection
+    const problemIds = progressRecords.map((p) => p.problemId);
+
+    const submissions = await this.submissionRepository
+      .createQueryBuilder('submission')
+      .leftJoin('submission.language', 'language')
+      .select([
+        'submission.id',
+        'submission.status',
+        'submission.runtimeMs',
+        'submission.memoryKb',
+        'submission.passedTestcases',
+        'submission.totalTestcases',
+        'submission.submittedAt',
+        'submission.problemId',
+        'language.id',
+        'language.name',
+      ])
+      .where('submission.userId = :userId', { userId })
+      .andWhere('submission.problemId IN (:...problemIds)', { problemIds })
+      .orderBy('submission.submittedAt', 'DESC')
+      .getMany();
+
+    // 3. Group submissions by problemId
+    const submissionsByProblem: Record<number, Submission[]> = {};
+    submissions.forEach((s) => {
+      // s.problemId is available because we selected it
+      if (!submissionsByProblem[s.problemId]) {
+        submissionsByProblem[s.problemId] = [];
+      }
+      submissionsByProblem[s.problemId].push(s);
     });
 
-    const mappedData = data.map((item) => this.mapToDto(item));
+    // 4. Map to enriched DTO
+    const enrichedData: UserPracticeHistoryDto[] = progressRecords.map(
+      (progress) => {
+        const problemSubmissions =
+          submissionsByProblem[progress.problemId] || [];
 
-    return new PaginatedResultDto(mappedData, { page, limit, total });
+        return {
+          problem: {
+            id: progress.problem.id,
+            title: progress.problem.title,
+            slug: progress.problem.slug,
+            difficulty: progress.problem.difficulty,
+          },
+          status: progress.status,
+          lastSubmittedAt: progress.lastAttemptedAt,
+          lastResult: problemSubmissions[0]?.status ?? null,
+          submissionCount: progress.totalAttempts,
+          submissions: problemSubmissions.map((s) => ({
+            id: s.id,
+            status: s.status,
+            executionTime: s.runtimeMs ?? 0,
+            memoryUsed: s.memoryKb ?? 0,
+            testcasesPassed: s.passedTestcases,
+            totalTestcases: s.totalTestcases,
+            submittedAt: s.submittedAt,
+            problemId: s.problemId,
+            language: {
+              id: s.language.id,
+              name: s.language.name,
+            },
+          })),
+        };
+      },
+    );
+
+    return new PaginatedResultDto(enrichedData, { page, limit, total });
+  }
+
+  /**
+   * Get recent solved problems
+   */
+  async getRecentSolvedProblems(
+    userId: number,
+    limit = 15,
+  ): Promise<UserProblemProgress[]> {
+    return (
+      this.progressRepository
+        .createQueryBuilder('progress')
+        .leftJoin('progress.problem', 'problem')
+        .select([
+          'progress.userId', // Include PK
+          'progress.problemId', // Include PK
+          'progress.status',
+          'progress.totalAttempts',
+          'progress.lastAttemptedAt',
+          'progress.firstSolvedAt', // Important for "recent solved" context
+          'problem.id',
+          'problem.title',
+          'problem.slug',
+          'problem.difficulty',
+        ])
+        .where('progress.userId = :userId', { userId })
+        .andWhere('progress.status = :status', {
+          status: ProgressStatus.SOLVED,
+        })
+        .orderBy('progress.lastAttemptedAt', 'DESC') // Or firstSolvedAt? User asked for recent AC. Usually last solve time if re-solving, or first solve.
+        // If we track firstSolvedAt, we should sort by that to show "Recent First Solves".
+        // But LeetCode "Recent AC" usually shows most recent submission.
+        // Let's stick to lastAttemptedAt as it's updated on every submission.
+        .take(limit)
+        .getMany()
+    );
   }
 
   /**

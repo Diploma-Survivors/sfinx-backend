@@ -8,7 +8,7 @@ import {
 import { Injectable } from '@nestjs/common';
 import { RefreshToken } from '../../auth/entities/refresh-token.entity';
 import { User } from '../../auth/entities/user.entity';
-import { Comment } from '../../problems/comments/entities/comment.entity';
+import { ProblemComment } from '../../problems/comments/entities/problem-comment.entity';
 import { CommentReport } from '../../problems/comments/entities/comment-report.entity';
 import { Problem } from '../../problems/entities/problem.entity';
 import { SampleTestcase } from '../../problems/entities/sample-testcase.entity';
@@ -57,7 +57,7 @@ export type Subjects =
       | typeof Role
       | typeof Permission
       | typeof ProgrammingLanguage
-      | typeof Comment
+      | typeof ProblemComment
       | typeof CommentReport
     >
   | 'Problem'
@@ -237,7 +237,7 @@ export class CaslAbilityFactory {
       user: User,
       refresh_token: RefreshToken,
       post: 'Post',
-      comment: 'Comment',
+      comment: ProblemComment,
       admin: 'Admin',
       ai: 'AI',
       payment: 'Payment',
