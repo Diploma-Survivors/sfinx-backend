@@ -55,6 +55,9 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AdminModule } from './modules/admin/admin.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
+import { AiInterviewsModule } from './modules/ai-interviews/ai-interviews.module';
+import { LiveKitModule } from './modules/livekit/livekit.module';
+import { livekitConfig } from './config';
 
 @Module({
   imports: [
@@ -73,6 +76,7 @@ import { SystemConfigModule } from './modules/system-config/system-config.module
         submissionConfig,
         vnpayConfig,
         paymentConfig,
+        livekitConfig,
       ],
       validationSchema: environmentValidation,
       envFilePath: '.env',
@@ -137,6 +141,10 @@ import { SystemConfigModule } from './modules/system-config/system-config.module
     PaymentsModule,
     AdminModule,
     SystemConfigModule,
+    AiInterviewsModule,
+    LiveKitModule,
+    // UsersModule,
+    // PaymentsModule,
     // AiModule,
     // CommunityModule,
   ],
