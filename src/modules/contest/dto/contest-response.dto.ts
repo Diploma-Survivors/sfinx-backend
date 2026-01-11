@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ContestStatus, UserContestStatus } from '../enums';
+import { ContestProblem } from '../entities';
 
 export class ContestProblemResponseDto {
   @ApiProperty({ description: 'Problem ID' })
@@ -65,9 +66,9 @@ export class ContestDetailResponseDto extends ContestListResponseDto {
 
   @ApiPropertyOptional({
     description: 'Problems in contest (hidden until start)',
-    type: [ContestProblemResponseDto],
+    type: [ContestProblem],
   })
-  contestProblems?: ContestProblemResponseDto[];
+  contestProblems?: ContestProblem[];
 
   @ApiProperty({
     description: 'Whether current user is registered',

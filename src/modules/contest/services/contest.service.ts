@@ -829,18 +829,6 @@ export class ContestService {
       ? await this.isUserRegistered(contest.id, userId)
       : false;
 
-    // Map problems
-    const problems =
-      contest.contestProblems?.map((cp) => ({
-        problemId: cp.problemId,
-        title: cp.problem.title,
-        slug: cp.problem.slug,
-        points: cp.points,
-        orderIndex: cp.orderIndex,
-        label: cp.label,
-        difficulty: cp.problem.difficulty,
-      })) || [];
-
     return {
       id: contest.id,
       title: contest.title,
@@ -853,8 +841,8 @@ export class ContestService {
       durationMinutes: contest.durationMinutes,
       participantCount: contest.participantCount,
       maxParticipants: contest.maxParticipants,
-      problemCount: problems.length,
-      contestProblems: problems,
+      problemCount: contest.contestProblems.length,
+      contestProblems: contest.contestProblems,
       userStatus: isRegistered
         ? UserContestStatus.JOINED
         : UserContestStatus.NOT_JOINED,
