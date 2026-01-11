@@ -67,7 +67,7 @@ export class ContestDetailResponseDto extends ContestListResponseDto {
     description: 'Problems in contest (hidden until start)',
     type: [ContestProblemResponseDto],
   })
-  problems?: ContestProblemResponseDto[];
+  contestProblems?: ContestProblemResponseDto[];
 
   @ApiProperty({
     description: 'Whether current user is registered',
