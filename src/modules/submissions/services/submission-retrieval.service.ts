@@ -57,6 +57,7 @@ export class SubmissionRetrievalService {
    */
   async getSubmissionById(
     id: number,
+    canViewAll: boolean,
     userId?: number,
     includeSourceCode = false,
   ): Promise<SubmissionResponseDto> {
@@ -79,7 +80,7 @@ export class SubmissionRetrievalService {
     const isOwner = submission.user?.id === userId;
 
     return SubmissionMapper.toResponseDto(submission, {
-      includeSourceCode: includeSourceCode && isOwner,
+      includeSourceCode: includeSourceCode && (isOwner || canViewAll),
       includeUser: !userId,
       storageService: this.storageService,
     });

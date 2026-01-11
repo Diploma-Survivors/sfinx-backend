@@ -271,7 +271,7 @@ export class SubmissionsController {
     @GetUser() user: User,
   ): Promise<SubmissionResponseDto> {
     // Users can only see their own submissions with source code
-    return this.submissionsService.getSubmissionById(+id, true, user.id);
+    return this.submissionsService.getSubmissionById(+id, true, false, user.id);
   }
 
   @Get(':id/can-view-all')
@@ -291,7 +291,7 @@ export class SubmissionsController {
   async getSubmissionByIdUserCanViewAll(
     @Param('id') id: string,
   ): Promise<SubmissionResponseDto> {
-    return this.submissionsService.getSubmissionById(+id, true);
+    return this.submissionsService.getSubmissionById(+id, true, true);
   }
 
   @SkipTransformResponse()

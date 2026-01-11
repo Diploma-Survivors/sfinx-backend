@@ -429,10 +429,12 @@ export class SubmissionsService {
   async getSubmissionById(
     id: number,
     includeSourceCode = false,
+    canViewAll: boolean,
     userId?: number,
   ): Promise<SubmissionResponseDto> {
     return this.retrievalService.getSubmissionById(
       id,
+      canViewAll,
       userId,
       includeSourceCode,
     );
