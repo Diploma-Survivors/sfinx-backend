@@ -396,19 +396,7 @@ export class SubmissionsService {
       submission.user.id,
       submission.problem.id,
     );
-    const wasFirstSolve = progressBefore?.status !== ProgressStatus.SOLVED;
-
-    // Update progress
-    await this.userProgress.updateProgressAfterJudge(
-      submission.user.id,
-      submission.problem.id,
-      submission.id,
-      status,
-      runtimeMs,
-      memoryKb,
-    );
-
-    return wasFirstSolve;
+    return progressBefore?.status !== ProgressStatus.SOLVED;
   }
 
   // ==================== Delegation Methods ====================

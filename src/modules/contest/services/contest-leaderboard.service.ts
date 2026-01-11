@@ -1,19 +1,20 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { PaginatedResultDto, SortOrder } from '../../../common';
-import { getAvatarUrl } from '../../../common';
-import { CacheService } from '../../redis';
-import { PubSubService } from '../../redis';
+import { getAvatarUrl, PaginatedResultDto, SortOrder } from '../../../common';
+import { CacheKeys, CacheService, PubSubService } from '../../redis';
 import { StorageService } from '../../storage/storage.service';
-import { CacheKeys } from '../../redis';
 import {
   LeaderboardEntryDto,
   LeaderboardProblemStatus,
   ProblemStatusDto,
 } from '../dto';
-import { ContestParticipant, ProblemScore } from '../entities';
-import { ContestProblem } from '../entities';
+import {
+  ContestParticipant,
+  ContestProblem,
+  ProblemScore,
+  Contest,
+} from '../entities';
 import {
   ILeaderboardEntry,
   ILeaderboardUpdateEvent,
@@ -21,6 +22,7 @@ import {
 } from '../interfaces';
 import { SystemConfigService } from '../../system-config/system-config.service';
 import { ContestService } from './contest.service';
+import { SubmissionStatus } from '../../submissions/enums';
 
 /** Cache TTL for leaderboard (30 seconds for near-real-time) */
 const LEADERBOARD_CACHE_TTL = 30;
@@ -160,18 +162,26 @@ export class ContestLeaderboardService {
     contestId: number,
     userId: number,
     problemId: number,
+    submissionStatus: SubmissionStatus,
   ): Promise<void> {
-    const contest = await this.contestService.getContestById(contestId);
+    // Optimization: Only fetch contest/problem if needed for score calculation
+    const isAccepted = submissionStatus === SubmissionStatus.ACCEPTED;
+    let contest, contestProblem;
 
-    const contestProblem = await this.contestProblemRepository.findOne({
-      where: { contestId, problemId },
-    });
+    if (isAccepted) {
+      [contest, contestProblem] = await Promise.all([
+        this.contestService.getContestById(contestId),
+        this.contestProblemRepository.findOne({
+          where: { contestId, problemId },
+        }),
+      ]);
 
-    if (!contestProblem) {
-      this.logger.warn(
-        `Problem ${problemId} not found in contest ${contestId}`,
-      );
-      return;
+      if (!contestProblem) {
+        this.logger.warn(
+          `Problem ${problemId} not found in contest ${contestId}`,
+        );
+        return;
+      }
     }
 
     const maxRetries = this.systemConfigService.getInt(
@@ -186,86 +196,27 @@ export class ContestLeaderboardService {
           where: { contestId, userId },
         });
 
-        if (!participant) {
-          throw new Error('Participant not found');
-        }
+        if (!participant) throw new Error('Participant not found');
 
-        // --- IOI + Time Scoring Logic ---
         const now = new Date();
-        const startTime = contest.startTime;
-        const durationMinutes = contest.durationMinutes;
+        let scoreToApply = 0;
 
-        // Base Score
-        const baseScore = contestProblem.points;
+        if (isAccepted && contest && contestProblem) {
+          scoreToApply = this.calculateDecayedScore(
+            contest,
+            contestProblem,
+            now,
+          );
+        }
 
-        // Apply Time Decay
-        // Score = Base * (1 - (Time / Duration) * DecayRate)
-        const decayRate = this.systemConfigService.getFloat(
-          'CONTEST_DECAY_RATE',
-          0,
+        this.applyParticipantUpdate(
+          participant,
+          problemId,
+          isAccepted,
+          scoreToApply,
+          now,
+          contest,
         );
-        const timeTakenMs = Math.max(0, now.getTime() - startTime.getTime());
-        const timeTakenMinutes = timeTakenMs / 60000;
-
-        let finalProblemScore = baseScore;
-        if (durationMinutes > 0 && baseScore > 0) {
-          const decayFactor = (timeTakenMinutes / durationMinutes) * decayRate;
-          // Ensure penalty doesn't exceed base score or make it negative
-          const penalty = baseScore * Math.min(decayFactor, 1);
-          finalProblemScore = Math.max(0, baseScore - penalty);
-          finalProblemScore = Math.round(finalProblemScore * 100) / 100;
-        }
-
-        // Get existing score
-        const currentProblemScore = participant.problemScores[problemId] ?? {
-          score: 0,
-          submissions: 0,
-          lastSubmitTime: null,
-          firstAcTime: null,
-        };
-
-        // Update Logic: Keep Max Score
-        const newProblemScore: ProblemScore = {
-          score: Math.max(finalProblemScore, currentProblemScore.score),
-          submissions: currentProblemScore.submissions + 1,
-          lastSubmitTime: now.toISOString(),
-          firstAcTime: currentProblemScore.firstAcTime,
-        };
-
-        // If AC (Full Score) and no previous AC -> Set firstAcTime
-        // This method is now only called for AC submissions
-        if (!currentProblemScore.firstAcTime) {
-          newProblemScore.firstAcTime = now.toISOString();
-        }
-
-        participant.problemScores = {
-          ...participant.problemScores,
-          [problemId]: newProblemScore,
-        };
-
-        // Recalculate Totals
-        participant.totalScore = Object.values(
-          participant.problemScores,
-        ).reduce((sum, ps) => sum + ps.score, 0);
-
-        // Solved Count: Number of problems with firstAcTime set
-        participant.solvedCount = Object.values(
-          participant.problemScores,
-        ).filter((ps) => ps.firstAcTime != null).length;
-
-        // Finish Time: Sum of (firstAcTime - contestStart) for solved problems
-        let totalFinishTimeMs = 0;
-        Object.values(participant.problemScores).forEach((ps) => {
-          if (ps.firstAcTime) {
-            const acTime = new Date(ps.firstAcTime).getTime();
-            const timeTaken = Math.max(0, acTime - startTime.getTime());
-            totalFinishTimeMs += timeTaken;
-          }
-        });
-
-        participant.finishTime = totalFinishTimeMs;
-        participant.totalSubmissions += 1;
-        participant.lastSubmissionAt = now;
 
         await this.participantRepository.save(participant);
 
@@ -274,35 +225,137 @@ export class ContestLeaderboardService {
         );
         break;
       } catch (error: unknown) {
-        const err = error as Error & { name?: string };
-        if (err.name === 'OptimisticLockVersionMismatchError') {
-          attempt++;
-          if (attempt >= maxRetries) {
-            this.logger.error(
-              `Failed to update score for user ${userId} after ${maxRetries} attempts`,
-              error,
-            );
-            throw error;
-          }
-          this.logger.warn(
-            `Optimistic lock mismatch for user ${userId}, retrying... (Attempt ${attempt})`,
-          );
-          // Small delay backoff?
-          await new Promise((res) => setTimeout(res, 50));
-        } else {
+        attempt++;
+        if (!this.handleRetryError(error, attempt, maxRetries, userId)) {
           throw error;
         }
+        await new Promise((res) => setTimeout(res, 50));
       }
     }
 
-    // Invalidate cache
+    // Post-update: Cache & Notify
     await this.invalidateLeaderboardCache(contestId);
-
-    // Publish update
     const entry = await this.getParticipantStanding(contestId, userId);
     if (entry) {
       await this.publishLeaderboardUpdate(contestId, entry);
     }
+  }
+
+  /**
+   * Calculate IOI-style score with time decay
+   */
+  private calculateDecayedScore(
+    contest: Contest,
+    problem: ContestProblem,
+    submissionTime: Date,
+  ): number {
+    const startTime = contest.startTime;
+    const durationMinutes = contest.durationMinutes;
+    const baseScore = problem.points;
+
+    if (durationMinutes <= 0 || baseScore <= 0) return baseScore;
+
+    const decayRate = this.systemConfigService.getFloat(
+      'CONTEST_DECAY_RATE',
+      0,
+    );
+    const timeTakenMs = Math.max(
+      0,
+      submissionTime.getTime() - startTime.getTime(),
+    );
+    const timeTakenMinutes = timeTakenMs / 60000;
+
+    const decayFactor = (timeTakenMinutes / durationMinutes) * decayRate;
+    const penalty = baseScore * Math.min(decayFactor, 1);
+
+    return Math.round(Math.max(0, baseScore - penalty) * 100) / 100;
+  }
+
+  /**
+   * Apply updates to participant state
+   */
+  private applyParticipantUpdate(
+    participant: ContestParticipant,
+    problemId: number,
+    isAccepted: boolean,
+    newScore: number,
+    now: Date,
+    contest?: Contest,
+  ): void {
+    // 1. Global Stats
+    participant.totalSubmissions += 1;
+    participant.lastSubmissionAt = now;
+
+    // 2. Problem Stats
+    const currentScore = participant.problemScores[problemId] ?? {
+      score: 0,
+      submissions: 0,
+      lastSubmitTime: null,
+      firstAcTime: null,
+    };
+
+    const updatedScore: ProblemScore = {
+      ...currentScore,
+      submissions: currentScore.submissions + 1,
+      lastSubmitTime: now.toISOString(),
+    };
+
+    if (isAccepted) {
+      updatedScore.score = Math.max(newScore, currentScore.score);
+      if (!updatedScore.firstAcTime) {
+        updatedScore.firstAcTime = now.toISOString();
+      }
+    }
+
+    participant.problemScores = {
+      ...participant.problemScores,
+      [problemId]: updatedScore,
+    };
+
+    // 3. Recalculate Aggregates (Only if Accepted and contest provided)
+    if (isAccepted && contest) {
+      const scores = Object.values(participant.problemScores);
+      participant.totalScore = scores.reduce((sum, ps) => sum + ps.score, 0);
+      participant.solvedCount = scores.filter(
+        (ps) => ps.firstAcTime != null,
+      ).length;
+
+      let totalFinishTimeMs = 0;
+      scores.forEach((ps) => {
+        if (ps.firstAcTime) {
+          const acTime = new Date(ps.firstAcTime).getTime();
+          const timeTaken = Math.max(0, acTime - contest.startTime.getTime());
+          totalFinishTimeMs += timeTaken;
+        }
+      });
+      participant.finishTime = totalFinishTimeMs;
+    }
+  }
+
+  /**
+   * Helper to handle retry logic
+   */
+  private handleRetryError(
+    error: unknown,
+    attempt: number,
+    maxRetries: number,
+    userId: number,
+  ): boolean {
+    const err = error as Error & { name?: string };
+    if (err.name === 'OptimisticLockVersionMismatchError') {
+      if (attempt >= maxRetries) {
+        this.logger.error(
+          `Failed to update score for user ${userId} after ${maxRetries} attempts`,
+          error,
+        );
+        return false;
+      }
+      this.logger.warn(
+        `Optimistic lock mismatch for user ${userId}, retrying... (Attempt ${attempt})`,
+      );
+      return true;
+    }
+    return false;
   }
 
   /**

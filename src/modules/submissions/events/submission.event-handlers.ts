@@ -83,7 +83,7 @@ export class SubmissionEventHandlers {
       await this.userStatisticsService.incrementTotalAttempts(event.userId);
 
       // 4. Update Contest Leaderboard (Attempts & Score)
-      await this.contestSubmissionService.handleSubmissionResult(event);
+      await this.contestSubmissionService.handleContestSubmissionResult(event);
 
       // 5. Notifications (Optional)
       // await this.sendSubmissionResultEmail(event);

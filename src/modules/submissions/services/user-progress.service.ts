@@ -322,13 +322,13 @@ export class UserProgressService {
     status: SubmissionStatus,
     runtimeMs?: number,
     memoryKb?: number,
-  ): Promise<void> {
+  ): Promise<ProgressStatus | null> {
     const progress = await this.progressRepository.findOne({
       where: { userId, problemId },
     });
 
     if (!progress) {
-      return; // Should not happen, but handle gracefully
+      return null; // Should not happen, but handle gracefully
     }
 
     // Update if submission was accepted
@@ -365,5 +365,6 @@ export class UserProgressService {
     }
 
     await this.progressRepository.save(progress);
+    return progress.status;
   }
 }

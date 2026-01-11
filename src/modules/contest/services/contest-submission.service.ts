@@ -17,7 +17,6 @@ import { ContestLeaderboardService } from './contest-leaderboard.service';
 import { ContestService } from './contest.service';
 import { SubmissionJudgedEvent } from '../../submissions/events/submission.events';
 import { SubmissionRetrievalService } from '../../submissions/services';
-import { SubmissionStatus } from '../../submissions/enums';
 
 @Injectable()
 export class ContestSubmissionService {
@@ -99,7 +98,9 @@ export class ContestSubmissionService {
    * Handle submission result and update leaderboard
    * Called when a contest submission is judged
    */
-  async handleSubmissionResult(event: SubmissionJudgedEvent): Promise<void> {
+  async handleContestSubmissionResult(
+    event: SubmissionJudgedEvent,
+  ): Promise<void> {
     // Get submission with contest info
     const submission = await this.submissionRepository.findOne({
       where: { id: event.submissionId },
@@ -114,19 +115,18 @@ export class ContestSubmissionService {
       this.logger.debug(
         `Submission ${event.submissionId} is NOT a contest submission. Skipping.`,
       );
-    } else {
-      // Update participant score and leaderboard
-      this.logger.debug(
-        `Updating leaderboard for contest ${submission.contestId}, user ${submission.userId}, status ${event.status}`,
-      );
-      if (event.status === SubmissionStatus.ACCEPTED) {
-        await this.leaderboardService.updateParticipantScore(
-          submission.contestId,
-          submission.userId,
-          submission.problem.id,
-        );
-      }
+      return;
     }
+    // Update participant score and leaderboard
+    this.logger.debug(
+      `Updating leaderboard for contest ${submission.contestId}, user ${submission.userId}, status ${event.status}`,
+    );
+    await this.leaderboardService.updateParticipantScore(
+      submission.contestId,
+      submission.userId,
+      submission.problem.id,
+      event.status,
+    );
   }
 
   /**
