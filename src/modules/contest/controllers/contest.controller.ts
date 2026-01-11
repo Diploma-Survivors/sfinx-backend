@@ -29,11 +29,17 @@ import {
 import { User } from '../../auth/entities/user.entity';
 import { CaslGuard } from '../../auth/guards/casl.guard';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../../auth/guards/optional-jwt-auth.guard';
 import { ManageContestsPolicy } from '../../rbac/casl';
 import { CreateSubmissionDto } from '../../submissions/dto/create-submission.dto';
 import { FilterSubmissionDto } from '../../submissions/dto/filter-submission.dto';
 import { SubmissionListResponseDto } from '../../submissions/dto/submission-response.dto';
-import { CreateContestDto, FilterContestDto, UpdateContestDto } from '../dto';
+import {
+  CreateContestDto,
+  FilterContestDto,
+  UpdateContestDto,
+  ContestDetailResponseDto,
+} from '../dto';
 import {
   ContestProblemStatsDto,
   ContestStatisticsDto,
@@ -73,27 +79,44 @@ export class ContestController {
   @CheckPolicies(new ManageContestsPolicy())
   async getContests(
     @Query() filterDto: FilterContestDto,
-    @GetUser() user: User,
   ): Promise<PaginatedResultDto<Contest>> {
-    return this.contestService.getContests(filterDto, user.id);
+    return this.contestService.getContests(filterDto);
   }
 
   @Get(':id')
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get contest by ID' })
   @ApiParam({ name: 'id', description: 'Contest ID', type: Number })
-  @ApiResponse({ status: 200, description: 'Contest retrieved', type: Contest })
+  @ApiResponse({
+    status: 200,
+    description: 'Contest retrieved',
+    type: ContestDetailResponseDto,
+  })
   @ApiResponse({ status: 404, description: 'Contest not found' })
-  async getContestById(@Param('id') id: string): Promise<Contest> {
-    return this.contestService.getContestById(+id);
+  async getContestById(
+    @Param('id') id: string,
+    @GetUser() user?: User,
+  ): Promise<ContestDetailResponseDto> {
+    return this.contestService.getContestDetailById(+id, user?.id);
   }
 
   @Get('slug/:slug')
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get contest by slug' })
   @ApiParam({ name: 'slug', description: 'Contest slug', type: String })
-  @ApiResponse({ status: 200, description: 'Contest retrieved', type: Contest })
+  @ApiResponse({
+    status: 200,
+    description: 'Contest retrieved',
+    type: ContestDetailResponseDto,
+  })
   @ApiResponse({ status: 404, description: 'Contest not found' })
-  async getContestBySlug(@Param('slug') slug: string): Promise<Contest> {
-    return this.contestService.getContestBySlug(slug);
+  async getContestBySlug(
+    @Param('slug') slug: string,
+    @GetUser() user?: User,
+  ): Promise<ContestDetailResponseDto> {
+    return this.contestService.getContestDetailBySlug(slug, user?.id);
   }
 
   @Post()
@@ -233,10 +256,9 @@ export class ContestController {
     'Submissions retrieved successfully',
   )
   async getAllContestSubmissions(
-    @Param('id') id: string,
     @Query() filterDto: FilterSubmissionDto,
   ): Promise<PaginatedResultDto<SubmissionListResponseDto>> {
-    return this.contestSubmissionService.getContestSubmissions(+id, filterDto);
+    return this.contestSubmissionService.getContestSubmissions(filterDto);
   }
 
   @Throttle({ default: { limit: 6, ttl: 60 } })

@@ -33,7 +33,7 @@ export class CronRebuildRankingJob {
 
       while (true) {
         const users = await this.userRepository.find({
-          select: ['id', 'globalScore', 'lastSolveAt'],
+          relations: ['statistics'],
           where: { isActive: true },
           order: { id: 'ASC' },
           take: this.BATCH_SIZE,
@@ -43,13 +43,14 @@ export class CronRebuildRankingJob {
         if (users.length === 0) break;
 
         for (const user of users) {
+          const globalScore = user.statistics?.globalScore ?? 0;
           // Only rank users with score > 0
-          if (Number(user.globalScore) > 0) {
-            const lastSolveTime = user.lastSolveAt
-              ? Math.floor(user.lastSolveAt.getTime() / 1000)
+          if (Number(globalScore) > 0) {
+            const lastSolveTime = user.statistics?.lastSolveAt
+              ? Math.floor(user.statistics.lastSolveAt.getTime() / 1000)
               : 0;
             const encodedScore =
-              Number(user.globalScore) * 1e10 + (MAX_TIMESTAMP - lastSolveTime);
+              Number(globalScore) * 1e10 + (MAX_TIMESTAMP - lastSolveTime);
             await this.redisService.zadd(
               this.GLOBAL_RANKING_KEY,
               encodedScore,

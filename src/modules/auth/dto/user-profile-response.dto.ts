@@ -1,5 +1,5 @@
 import { OmitType } from '@nestjs/swagger';
-import { Exclude } from 'class-transformer';
+import { Exclude, Expose } from 'class-transformer';
 import { User } from '../entities/user.entity';
 
 export class UserProfileResponseDto extends OmitType(User, [
@@ -27,4 +27,7 @@ export class UserProfileResponseDto extends OmitType(User, [
 
   @Exclude()
   updatedAt: Date;
+
+  @Expose()
+  lastSolveAt: Date | null;
 }

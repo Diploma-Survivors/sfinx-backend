@@ -17,6 +17,7 @@ import {
   CreateContestDto,
   FilterContestDto,
   UpdateContestDto,
+  ContestDetailResponseDto,
 } from '../dto';
 import { Contest, ContestParticipant, ContestProblem } from '../entities';
 import { ContestStatus, UserContestStatus } from '../enums';
@@ -226,6 +227,14 @@ export class ContestService {
     return contest;
   }
 
+  async getContestDetailById(
+    id: number,
+    userId?: number,
+  ): Promise<ContestDetailResponseDto> {
+    const contest = await this.getContestById(id);
+    return this.mapToDetailDto(contest, userId);
+  }
+
   /**
    * Get contest by slug
    */
@@ -240,6 +249,14 @@ export class ContestService {
     }
 
     return contest;
+  }
+
+  async getContestDetailBySlug(
+    slug: string,
+    userId?: number,
+  ): Promise<ContestDetailResponseDto> {
+    const contest = await this.getContestBySlug(slug);
+    return this.mapToDetailDto(contest, userId);
   }
 
   /**
@@ -257,9 +274,8 @@ export class ContestService {
 
   async getContests(
     filter: FilterContestDto,
-    userId?: number,
   ): Promise<PaginatedResultDto<Contest>> {
-    return this.queryContests(filter, userId, {
+    return this.queryContests(filter, undefined, {
       excludeDrafts: false,
       populateUserStatus: false,
     });
@@ -427,8 +443,7 @@ export class ContestService {
       label,
     });
 
-    const saved = await this.contestProblemRepository.save(contestProblem);
-    return saved;
+    return await this.contestProblemRepository.save(contestProblem);
   }
 
   /**
@@ -804,6 +819,47 @@ export class ContestService {
    */
   private getDefaultLabel(index: number): string {
     return String.fromCharCode(65 + index); // A, B, C, ...
+  }
+
+  private async mapToDetailDto(
+    contest: Contest,
+    userId?: number,
+  ): Promise<ContestDetailResponseDto> {
+    const isRegistered = userId
+      ? await this.isUserRegistered(contest.id, userId)
+      : false;
+
+    // Map problems
+    const problems =
+      contest.contestProblems?.map((cp) => ({
+        problemId: cp.problemId,
+        title: cp.problem.title,
+        slug: cp.problem.slug,
+        points: cp.points,
+        orderIndex: cp.orderIndex,
+        label: cp.label,
+        difficulty: cp.problem.difficulty,
+      })) || [];
+
+    return {
+      id: contest.id,
+      title: contest.title,
+      slug: contest.slug,
+      description: contest.description,
+      rules: contest.rules,
+      status: contest.status,
+      startTime: contest.startTime,
+      endTime: contest.endTime,
+      durationMinutes: contest.durationMinutes,
+      participantCount: contest.participantCount,
+      maxParticipants: contest.maxParticipants,
+      problemCount: problems.length,
+      problems: problems,
+      userStatus: isRegistered
+        ? UserContestStatus.JOINED
+        : UserContestStatus.NOT_JOINED,
+      createdAt: contest.createdAt,
+    };
   }
 
   /**

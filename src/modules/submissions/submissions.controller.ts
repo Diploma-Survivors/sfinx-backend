@@ -271,7 +271,27 @@ export class SubmissionsController {
     @GetUser() user: User,
   ): Promise<SubmissionResponseDto> {
     // Users can only see their own submissions with source code
-    return this.submissionsService.getSubmissionById(+id, user.id, true);
+    return this.submissionsService.getSubmissionById(+id, true, user.id);
+  }
+
+  @Get(':id/can-view-all')
+  @UseGuards(CaslGuard)
+  @CheckPolicies(new ViewAllSubmissionsPolicy())
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Get submission by ID (Admin view with source code)',
+  })
+  @ApiParam({ name: 'id', description: 'Submission ID', type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'Submission retrieved successfully',
+    type: SubmissionResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Submission not found' })
+  async getSubmissionByIdUserCanViewAll(
+    @Param('id') id: string,
+  ): Promise<SubmissionResponseDto> {
+    return this.submissionsService.getSubmissionById(+id, true);
   }
 
   @SkipTransformResponse()

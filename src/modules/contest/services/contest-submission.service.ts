@@ -15,8 +15,9 @@ import { ContestProblem } from '../entities/contest-problem.entity';
 import { ContestStatus } from '../enums/contest-status.enum';
 import { ContestLeaderboardService } from './contest-leaderboard.service';
 import { ContestService } from './contest.service';
-import { SubmissionAcceptedEvent } from '../../submissions/events/submission.events';
+import { SubmissionJudgedEvent } from '../../submissions/events/submission.events';
 import { SubmissionRetrievalService } from '../../submissions/services';
+import { SubmissionStatus } from '../../submissions/enums';
 
 @Injectable()
 export class ContestSubmissionService {
@@ -98,42 +99,55 @@ export class ContestSubmissionService {
    * Handle submission result and update leaderboard
    * Called when a contest submission is judged
    */
-  async handleSubmissionResult(event: SubmissionAcceptedEvent): Promise<void> {
+  async handleSubmissionResult(event: SubmissionJudgedEvent): Promise<void> {
     // Get submission with contest info
     const submission = await this.submissionRepository.findOne({
       where: { id: event.submissionId },
       relations: ['user', 'problem'],
     });
 
-    if (!submission || !submission.contestId) {
-      return; // Not a contest submission
-    }
-
-    // Update participant score and leaderboard
-    await this.leaderboardService.updateParticipantScore(
-      submission.contestId,
-      submission.userId,
-      submission.problem.id,
-    );
-
     this.logger.debug(
-      `Processed contest submission ${submission.id}: updated leaderboard for contest ${submission.contestId}`,
+      `Checking submission ${event.submissionId} for contest linkage. ContestId: ${submission?.contestId}`,
     );
+
+    if (!submission || !submission.contestId) {
+      this.logger.debug(
+        `Submission ${event.submissionId} is NOT a contest submission. Skipping.`,
+      );
+    } else {
+      // Update participant score and leaderboard
+      this.logger.debug(
+        `Updating leaderboard for contest ${submission.contestId}, user ${submission.userId}, status ${event.status}`,
+      );
+      if (event.status === SubmissionStatus.ACCEPTED) {
+        await this.leaderboardService.updateParticipantScore(
+          submission.contestId,
+          submission.userId,
+          submission.problem.id,
+        );
+      }
+    }
   }
 
   /**
    * Get all submissions for a contest (admin view)
    */
   async getContestSubmissions(
-    contestId: number,
     filterDto: FilterSubmissionDto,
   ): Promise<PaginatedResultDto<SubmissionListResponseDto>> {
     const queryBuilder = this.submissionRepository
       .createQueryBuilder('submission')
       .leftJoinAndSelect('submission.problem', 'problem')
       .leftJoinAndSelect('submission.language', 'language')
-      .leftJoinAndSelect('submission.user', 'user')
-      .where('submission.contestId = :contestId', { contestId });
+      .leftJoinAndSelect('submission.user', 'user');
+
+    // Filter by contest
+    if (!filterDto.contestId) {
+      throw new BadRequestException('Contest ID is required');
+    }
+    queryBuilder.where('submission.contestId = :contestId', {
+      contestId: filterDto.contestId,
+    });
 
     // Apply filters
     if (filterDto.problemId) {

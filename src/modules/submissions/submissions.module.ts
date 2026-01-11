@@ -18,8 +18,8 @@ import { SUBMISSION_QUEUES } from './constants/submission.constants';
 import { Judge0CallbackController } from './controllers/judge0-callback.controller';
 import { Submission } from './entities/submission.entity';
 import { UserProblemProgress } from './entities/user-problem-progress.entity';
+import { UserStatistics } from './entities/user-statistics.entity';
 import { SubmissionEventHandlers } from './events/submission.event-handlers';
-import { GlobalRankingListener } from './listeners/global-ranking.listener';
 import { CronRebuildRankingJob } from './jobs/cron-rebuild-ranking.job';
 import { SubmissionFinalizeProcessor } from './processors/submission-finalize.processor';
 import {
@@ -42,7 +42,13 @@ import { SubmissionsService } from './submissions.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Submission, UserProblemProgress, Problem, User]),
+    TypeOrmModule.forFeature([
+      Submission,
+      UserProblemProgress,
+      Problem,
+      User,
+      UserStatistics,
+    ]),
     BullModule.registerQueueAsync({
       name: SUBMISSION_QUEUES.FINALIZE,
       inject: [ConfigService],
@@ -104,14 +110,12 @@ import { SubmissionsService } from './submissions.service';
 
     // Event handlers
     SubmissionEventHandlers,
-    GlobalRankingListener,
 
     // Processors
     SubmissionFinalizeProcessor,
 
     // Jobs
     CronRebuildRankingJob,
-    SubmissionFinalizeProcessor,
   ],
   exports: [
     SubmissionsService,

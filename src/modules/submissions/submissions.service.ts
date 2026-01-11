@@ -199,6 +199,9 @@ export class SubmissionsService {
       true,
     );
 
+    // Update user progress (tracks attempts)
+    await this.userProgress.updateProgressOnSubmit(userId, problemId);
+
     return { submissionId: submission.id.toString(), contestId };
   }
 
@@ -425,8 +428,8 @@ export class SubmissionsService {
    */
   async getSubmissionById(
     id: number,
-    userId?: number,
     includeSourceCode = false,
+    userId?: number,
   ): Promise<SubmissionResponseDto> {
     return this.retrievalService.getSubmissionById(
       id,
