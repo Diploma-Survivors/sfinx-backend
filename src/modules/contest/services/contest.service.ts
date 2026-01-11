@@ -854,7 +854,7 @@ export class ContestService {
       participantCount: contest.participantCount,
       maxParticipants: contest.maxParticipants,
       problemCount: problems.length,
-      problems: problems,
+      contestProblems: problems,
       userStatus: isRegistered
         ? UserContestStatus.JOINED
         : UserContestStatus.NOT_JOINED,
