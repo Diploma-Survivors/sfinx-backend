@@ -11,6 +11,8 @@ import {
 } from 'typeorm';
 import { Role } from '../../rbac/entities/role.entity';
 import { Language } from '../enums';
+import { UserStatistics } from '../../submissions/entities/user-statistics.entity';
+import { OneToOne } from 'typeorm';
 
 @Entity('users')
 export class User {
@@ -88,36 +90,14 @@ export class User {
   rank: number;
 
   @ApiProperty({
-    description: 'Global score based on problem difficulty',
-    default: 0,
+    description: 'User statistics',
+    type: () => UserStatistics,
   })
-  @Column({
-    name: 'global_score',
-    type: 'decimal',
-    precision: 10,
-    scale: 2,
-    default: 0,
+  @OneToOne(() => UserStatistics, (stats) => stats.user, {
+    cascade: false, // We handle creation manually or via signals
+    eager: true, // Always load stats with user
   })
-  globalScore: number;
-
-  @ApiProperty({ description: 'Count of solved Easy problems', default: 0 })
-  @Column({ name: 'solved_easy', default: 0 })
-  solvedEasy: number;
-
-  @ApiProperty({ description: 'Count of solved Medium problems', default: 0 })
-  @Column({ name: 'solved_medium', default: 0 })
-  solvedMedium: number;
-
-  @ApiProperty({ description: 'Count of solved Hard problems', default: 0 })
-  @Column({ name: 'solved_hard', default: 0 })
-  solvedHard: number;
-
-  @ApiProperty({
-    description: 'Timestamp of the last solved problem (for tie-breaking)',
-    required: false,
-  })
-  @Column({ name: 'last_solve_at', type: 'timestamptz', nullable: true })
-  lastSolveAt: Date | null;
+  statistics: UserStatistics;
 
   @ApiProperty({
     description: 'Website URL',

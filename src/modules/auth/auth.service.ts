@@ -273,7 +273,7 @@ export class AuthService {
   async getUserProfile(userId: number): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      relations: ['role', 'role.permissions'],
+      relations: ['role', 'role.permissions', 'statistics'],
     });
 
     if (!user) {
@@ -710,6 +710,11 @@ export class AuthService {
    */
   transformUserResponse(user: User): UserProfileResponseDto {
     const dto = plainToInstance(UserProfileResponseDto, user);
+
+    // Map lastSolveAt from statistics
+    if (user.statistics) {
+      dto.lastSolveAt = user.statistics.lastSolveAt;
+    }
 
     if (dto.avatarKey && this.isS3Key(dto.avatarKey)) {
       (dto as UserProfileResponseDto & { avatarUrl?: string }).avatarUrl =

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ContestStatus } from '../enums/contest-status.enum';
+import { ContestStatus, UserContestStatus } from '../enums';
 
 export class ContestProblemResponseDto {
   @ApiProperty({ description: 'Problem ID' })
@@ -69,8 +69,12 @@ export class ContestDetailResponseDto extends ContestListResponseDto {
   })
   problems?: ContestProblemResponseDto[];
 
-  @ApiPropertyOptional({ description: 'Whether current user is registered' })
-  isRegistered?: boolean;
+  @ApiProperty({
+    description: 'Whether current user is registered',
+    enum: UserContestStatus,
+    example: UserContestStatus.JOINED,
+  })
+  userStatus: UserContestStatus;
 
   @ApiProperty({ description: 'Creation timestamp' })
   createdAt: Date;
