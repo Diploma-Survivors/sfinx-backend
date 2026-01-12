@@ -24,34 +24,34 @@ services:
       - redis_data:/data
     command: redis-server --appendonly yes
 
-  judge0-server:
-    image: judge0/judge0:1.13.1
-    volumes:
-      - ./src/modules/judge0/judge0-v1.13.1/judge0.conf:/judge0.conf:ro
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
-    ports:
-      - '2358:2358'
-    privileged: true
-    <<: *default-logging
-    depends_on:
-      - postgres
-      - redis
-    restart: always
+  # judge0-server:
+  #   image: judge0/judge0:1.13.1
+  #   volumes:
+  #     - ./src/modules/judge0/judge0-v1.13.1/judge0.conf:/judge0.conf:ro
+  #   extra_hosts:
+  #     - 'host.docker.internal:host-gateway'
+  #   ports:
+  #     - '2358:2358'
+  #   privileged: true
+  #   <<: *default-logging
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #   restart: always
 
-  judge0-workers:
-    image: judge0/judge0:1.13.1
-    command: ['./scripts/workers']
-    volumes:
-      - ./src/modules/judge0/judge0-v1.13.1/judge0.conf:/judge0.conf:ro
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
-    privileged: true
-    <<: *default-logging
-    depends_on:
-      - postgres
-      - redis
-    restart: always
+  # judge0-workers:
+  #   image: judge0/judge0:1.13.1
+  #   command: ['./scripts/workers']
+  #   volumes:
+  #     - ./src/modules/judge0/judge0-v1.13.1/judge0.conf:/judge0.conf:ro
+  #   extra_hosts:
+  #     - 'host.docker.internal:host-gateway'
+  #   privileged: true
+  #   <<: *default-logging
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #   restart: always
 
 volumes:
   postgres_data:
