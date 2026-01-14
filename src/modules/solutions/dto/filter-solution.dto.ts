@@ -17,7 +17,7 @@ export enum SolutionSortBy {
 export class FilterSolutionDto extends PaginationQueryDto {
   @ApiPropertyOptional({ description: 'Filter by Problem ID' })
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }: { value: string }) => parseInt(value, 10))
   @IsNumber()
   problemId?: number;
 
@@ -28,9 +28,9 @@ export class FilterSolutionDto extends PaginationQueryDto {
 
   @ApiPropertyOptional({ description: 'Filter by Tag IDs' })
   @IsOptional()
-  @Transform(({ value }) => {
+  @Transform(({ value }: { value: string | string[] }) => {
     if (!value) return undefined;
-    if (Array.isArray(value)) return value.map((v) => parseInt(v, 10));
+    if (Array.isArray(value)) return value.map((v: string) => parseInt(v, 10));
     return [parseInt(value, 10)];
   })
   @IsArray()
@@ -41,7 +41,7 @@ export class FilterSolutionDto extends PaginationQueryDto {
   @IsOptional()
   @Transform(({ value }: { value: string | string[] }) => {
     if (!value) return undefined;
-    if (Array.isArray(value)) return value.map((v) => parseInt(v, 10));
+    if (Array.isArray(value)) return value.map((v: string) => parseInt(v, 10));
     return [parseInt(value, 10)];
   })
   @IsArray()

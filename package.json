@@ -24,7 +24,8 @@
     "migration:generate": "npm run typeorm -- migration:generate",
     "migration:create": "npm run typeorm -- migration:create",
     "migration:run": "npm run typeorm -- migration:run",
-    "migration:revert": "npm run typeorm -- migration:revert"
+    "migration:revert": "npm run typeorm -- migration:revert",
+    "generate:keypair": "node scripts/generate-jwt-keys.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.940.0",

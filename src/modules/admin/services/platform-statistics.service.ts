@@ -350,13 +350,25 @@ export class PlatformStatisticsService {
    * Get time series metrics for the specified date range (default: last 30 days)
    */
   @Cacheable({
-    key: (args: any[]) => {
-      const format = (d: any) => {
+    key: (args: unknown[]) => {
+      const format = (d: unknown): string => {
         if (!d) return 'default';
         try {
-          return new Date(d).toISOString().split('T')[0];
+          const dateValue = d as string | number | Date;
+          return new Date(dateValue).toISOString().split('T')[0];
         } catch {
-          return String(d);
+          // Handle non-date values - check for object type to avoid [object Object]
+          if (typeof d === 'object') {
+            return 'invalid-date';
+          }
+          if (
+            typeof d === 'string' ||
+            typeof d === 'number' ||
+            typeof d === 'boolean'
+          ) {
+            return String(d);
+          }
+          return 'invalid-type';
         }
       };
       const from = format(args[0]);

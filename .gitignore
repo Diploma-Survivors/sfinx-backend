@@ -42,6 +42,11 @@ lerna-debug.log*
 .env.production.local
 .env.local
 
+# secrets and keys
+/secrets/
+*.pem
+*.pub
+
 # temp directory
 .temp
 .tmp

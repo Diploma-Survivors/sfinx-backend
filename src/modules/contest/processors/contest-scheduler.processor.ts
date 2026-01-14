@@ -33,17 +33,19 @@ export class ContestSchedulerProcessor extends WorkerHost {
         default:
           this.logger.warn(`Unknown job name: ${job.name}`);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // If error is "Can only start scheduled contests" (already started), ignore it
-      if (error.message && error.message.includes('Can only start')) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('Can only start')) {
         this.logger.warn(
-          `Skipped start for contest ${contestId}: ${error.message}`,
+          `Skipped start for contest ${contestId}: ${errorMessage}`,
         );
         return;
       }
-      if (error.message && error.message.includes('Can only end')) {
+      if (errorMessage.includes('Can only end')) {
         this.logger.warn(
-          `Skipped end for contest ${contestId}: ${error.message}`,
+          `Skipped end for contest ${contestId}: ${errorMessage}`,
         );
         return;
       }

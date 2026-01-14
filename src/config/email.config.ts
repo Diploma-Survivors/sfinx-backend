@@ -25,6 +25,22 @@ export interface EmailConfig {
   };
 }
 
+const TEMPLATE_BASE_PATH = 'modules/mail/templates';
+const DEFAULT_TEMPLATE_LAYOUT = 'layouts/base';
+const QUEUE_ATTEMPTS = 3;
+const QUEUE_BACKOFF_DELAY = 2000;
+
+/**
+ * Resolve templates directory based on environment
+ * - Dev: src/modules/mail/templates
+ * - Prod: dist/src/modules/mail/templates
+ */
+function resolveTemplatesDir(): string {
+  const isDev = process.env.NODE_ENV !== 'production';
+  const envPath = isDev ? 'src' : 'dist/src';
+  return path.join(process.cwd(), envPath, TEMPLATE_BASE_PATH);
+}
+
 export const emailConfig = registerAs(
   'email',
   (): EmailConfig => ({
@@ -39,14 +55,14 @@ export const emailConfig = registerAs(
       name: process.env.SMTP_FROM_NAME || 'sFinx Platform',
       address: process.env.SMTP_FROM!,
     },
-    templatesDir: path.join(__dirname, '..', 'modules', 'mail', 'templates'),
-    defaultLayout: process.env.MAIL_DEFAULT_LAYOUT || 'layouts/base',
+    templatesDir: resolveTemplatesDir(),
+    defaultLayout: process.env.MAIL_DEFAULT_LAYOUT || DEFAULT_TEMPLATE_LAYOUT,
     queue: {
       enabled: process.env.MAIL_QUEUE_ENABLED !== 'false',
-      attempts: 3,
+      attempts: QUEUE_ATTEMPTS,
       backoff: {
         type: 'exponential',
-        delay: 2000,
+        delay: QUEUE_BACKOFF_DELAY,
       },
     },
   }),
