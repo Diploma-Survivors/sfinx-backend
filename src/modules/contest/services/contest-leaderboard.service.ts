@@ -167,7 +167,7 @@ export class ContestLeaderboardService {
     // Optimization: Only fetch contest/problem if needed for score calculation
     const isAccepted = submissionStatus === SubmissionStatus.ACCEPTED;
     let contest: Contest | undefined;
-    let contestProblem: ContestProblem | undefined;
+    let contestProblem: ContestProblem | null | undefined;
 
     if (isAccepted) {
       [contest, contestProblem] = await Promise.all([
