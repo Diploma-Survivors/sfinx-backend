@@ -52,6 +52,6 @@ export const jwtConfig = registerAs('jwt', (): JwtConfig => {
       10,
     ),
 
-    algorithm: (process.env.JWT_ALGORITHM || 'EdDSA') as Algorithm,
+    algorithm: (process.env.JWT_ALGORITHM || 'ES256') as Algorithm,
   };
 });

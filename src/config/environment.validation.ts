@@ -35,7 +35,7 @@ export const environmentValidation = Joi.object({
   JWT_PUBLIC_KEY_PATH: Joi.string().required(),
   JWT_ACCESS_EXPIRES_IN_MS: Joi.number().default(900000), // 15 minutes in milliseconds
   JWT_REFRESH_EXPIRES_IN_MS: Joi.number().default(604800000), // 7 days in milliseconds
-  JWT_ALGORITHM: Joi.string().default('EdDSA'),
+  JWT_ALGORITHM: Joi.string().default('ES256'),
 
   // Google OAuth
   GOOGLE_CLIENT_ID: Joi.string().required(),
