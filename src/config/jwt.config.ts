@@ -1,4 +1,6 @@
 import { registerAs } from '@nestjs/config';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 
 import { Algorithm } from 'jsonwebtoken';
 
@@ -13,10 +15,29 @@ export interface JwtConfig {
 }
 
 export const jwtConfig = registerAs('jwt', (): JwtConfig => {
-  // Replace escaped newlines with actual newlines (if using \n format)
-  // Also handle actual newlines in multi-line strings
-  const privateKey = process.env.JWT_PRIVATE_KEY!.replace(/\\n/g, '\n');
-  const publicKey = process.env.JWT_PUBLIC_KEY!.replace(/\\n/g, '\n');
+  if (!process.env.JWT_PRIVATE_KEY_PATH || !process.env.JWT_PUBLIC_KEY_PATH) {
+    throw new Error('Missing JWT environment variables');
+  }
+
+  let privateKey: string;
+  let publicKey: string;
+
+  try {
+    privateKey = readFileSync(
+      resolve(process.env.JWT_PRIVATE_KEY_PATH),
+      'utf-8',
+    );
+    publicKey = readFileSync(resolve(process.env.JWT_PUBLIC_KEY_PATH), 'utf-8');
+
+    if (!privateKey?.trim() || !publicKey?.trim()) {
+      throw new Error('Key files are empty');
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Failed to load JWT keys. Generate them using: npm run generat:keypair. Error: ${errorMessage}`,
+    );
+  }
 
   return {
     privateKey,
@@ -25,12 +46,12 @@ export const jwtConfig = registerAs('jwt', (): JwtConfig => {
     accessExpiresInMs: Number.parseInt(
       process.env.JWT_ACCESS_EXPIRES_IN_MS || '900000',
       10,
-    ), // 15 minutes
+    ),
     refreshExpiresInMs: Number.parseInt(
       process.env.JWT_REFRESH_EXPIRES_IN_MS || '604800000',
       10,
-    ), // 7 days
+    ),
 
-    algorithm: (process.env.JWT_ALGORITHM || 'RS256') as Algorithm,
+    algorithm: (process.env.JWT_ALGORITHM || 'EdDSA') as Algorithm,
   };
 });
