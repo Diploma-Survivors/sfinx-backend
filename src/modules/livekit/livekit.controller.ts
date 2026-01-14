@@ -1,4 +1,3 @@
-
 import { Controller, Post, Body, UseGuards, Get, Param } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -46,7 +45,6 @@ export class LiveKitController {
     return token;
   }
 
-  
   @Get('room/:interviewId/status')
   @ApiOperation({ summary: 'Get voice room status' })
   async getRoomStatus(
@@ -57,8 +55,7 @@ export class LiveKitController {
 
     const roomName = `interview-${interviewId}`;
     try {
-      const participants =
-        await this.livekitService.listParticipants(roomName);
+      const participants = await this.livekitService.listParticipants(roomName);
       return {
         active: true,
         participants: participants.length,

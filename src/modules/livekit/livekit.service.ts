@@ -77,10 +77,12 @@ export class LiveKitService {
   async deleteRoom(roomName: string): Promise<void> {
     try {
       await this.roomService.deleteRoom(roomName);
-    } catch {
+    } catch (error) {
+      throw new Error(
+        `Failed to delete room ${roomName}: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
-
 
   async listParticipants(roomName: string) {
     return this.roomService.listParticipants(roomName);

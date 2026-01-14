@@ -1,7 +1,6 @@
 import { IsString, IsUUID, IsOptional } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-
 export class GenerateTokenDto {
   @ApiProperty({
     description: 'The UUID of the active interview session',

@@ -80,7 +80,7 @@ export class AiInterviewsInternalController {
       interviewId: interview.id,
       userId: interview.userId,
       problemId: interview.problemId,
-      problemSnapshot: interview.problemSnapshot,
+      problemSnapshot: interview.problemSnapshot as Record<string, unknown>,
       systemPrompt,
       status: interview.status,
       existingMessages: existingMessages.map((m) => ({
@@ -90,7 +90,6 @@ export class AiInterviewsInternalController {
       })),
     };
   }
-
 
   @Post(':id/transcript')
   @ApiOperation({
@@ -126,7 +125,6 @@ export class AiInterviewsInternalController {
       messageId: message.id,
     };
   }
-
 
   @Post(':id/transcript/bulk')
   @ApiOperation({

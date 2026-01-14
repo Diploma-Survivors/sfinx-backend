@@ -1,7 +1,7 @@
 import { Transform } from 'class-transformer';
 
 export function ToBoolean() {
-  return Transform(({ value }) => {
+  return Transform(({ value }: { value: unknown }) => {
     if (typeof value === 'boolean') {
       return value;
     }
