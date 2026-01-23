@@ -10,6 +10,12 @@ import { SubscriptionPlan } from '../entities/subscription-plan.entity';
 import type { PaymentProvider } from '../interfaces/payment-provider.interface';
 import { VnPayProvider } from '../providers/vnpay.provider';
 import { ExchangeRateService } from './exchange-rate.service';
+import { MailService } from '../../mail/mail.service';
+import { Language } from '../../auth/enums';
+
+import { PaymentHistoryResponseDto } from '../dto/payment-history-response.dto';
+import { CurrentPlanResponseDto } from '../dto/current-plan-response.dto';
+import { SubscriptionStatus } from '../enums/subscription-status.enum';
 
 @Injectable()
 export class PaymentsService {
@@ -26,6 +32,7 @@ export class PaymentsService {
     // Start with VNPAY as the default provider
     @Inject(VnPayProvider)
     private readonly paymentProvider: PaymentProvider,
+    private readonly mailService: MailService,
   ) {}
 
   /**
@@ -85,7 +92,7 @@ export class PaymentsService {
     const transactionId = parseInt(validation.transactionId); // VNPAY returns txnRef (our ID)
     const transaction = await this.transactionRepo.findOne({
       where: { id: transactionId },
-      relations: ['user', 'plan'],
+      relations: ['user', 'plan', 'plan.translations'],
     });
 
     if (!transaction) {
@@ -107,6 +114,35 @@ export class PaymentsService {
 
       // Upgrade User
       await this.upgradeUser(transaction.user, transaction.plan);
+
+      // Send Email
+      try {
+        const userLang = transaction.user.preferredLanguage || Language.EN;
+        const planTranslation = transaction.plan.translations.find(
+          (t) => t.languageCode === String(userLang),
+        );
+        // Fallback to English or the first translation if specific language not found
+        const fallbackTranslation =
+          transaction.plan.translations.find(
+            (t) => t.languageCode === String(Language.EN),
+          ) || transaction.plan.translations[0];
+
+        const planName =
+          planTranslation?.name ||
+          fallbackTranslation?.name ||
+          `Plan #${transaction.plan.id}`;
+
+        await this.mailService.sendPaymentSuccessEmail(transaction.user.email, {
+          name: transaction.user.fullName || transaction.user.username,
+          planName: planName,
+          amount: transaction.amount,
+          currency: transaction.currency,
+          transactionId: transaction.transactionId || String(transaction.id),
+          paymentDate: transaction.paymentDate.toISOString().split('T')[0],
+        });
+      } catch (error) {
+        this.logger.error('Failed to send payment success email', error);
+      }
 
       this.logger.log(
         `Payment success for user ${transaction.userId}, plan ${transaction.planId}`,
@@ -145,5 +181,98 @@ export class PaymentsService {
     user.premiumExpiresAt = endDate;
 
     await this.userRepo.save(user);
+  }
+
+  async getPaymentHistory(user: User): Promise<PaymentHistoryResponseDto[]> {
+    const transactions = await this.transactionRepo.find({
+      where: { userId: user.id },
+      relations: ['plan', 'plan.translations'],
+      order: { createdAt: 'DESC' },
+    });
+
+    const userLang = user.preferredLanguage || Language.EN;
+
+    return transactions.map((tx) => {
+      const planTranslation = tx.plan.translations.find(
+        (t) => t.languageCode === String(userLang),
+      );
+      const fallbackTranslation =
+        tx.plan.translations.find(
+          (t) => t.languageCode === String(Language.EN),
+        ) || tx.plan.translations[0];
+
+      const planName =
+        planTranslation?.name ||
+        fallbackTranslation?.name ||
+        `Plan #${tx.planId}`;
+
+      return {
+        id: tx.id,
+        amount: tx.amount,
+        currency: tx.currency,
+        provider: tx.provider,
+        status: tx.status,
+        planName: planName,
+        paymentDate: tx.paymentDate || tx.createdAt,
+        transactionId: tx.transactionId,
+      };
+    });
+  }
+
+  /**
+   * Get current plan for user
+   */
+  async getCurrentPlan(user: User): Promise<CurrentPlanResponseDto | null> {
+    if (!user.isPremium) {
+      return null;
+    }
+
+    // Find the latest successful transaction to identify the plan
+    const lastTransaction = await this.transactionRepo.findOne({
+      where: { userId: user.id, status: PaymentStatus.SUCCESS },
+      order: { createdAt: 'DESC' },
+      relations: ['plan', 'plan.translations'],
+    });
+
+    if (!lastTransaction) {
+      return null;
+    }
+
+    const plan = lastTransaction.plan;
+    const userLang = user.preferredLanguage || Language.EN;
+    const planTranslation = plan.translations.find(
+      (t) => t.languageCode === String(userLang),
+    );
+    const fallbackTranslation =
+      plan.translations.find((t) => t.languageCode === String(Language.EN)) ||
+      plan.translations[0];
+    const planName =
+      planTranslation?.name || fallbackTranslation?.name || `Plan #${plan.id}`;
+    const planDesc =
+      planTranslation?.description ||
+      fallbackTranslation?.description ||
+      'No description';
+
+    const now = new Date();
+    const expiresAt = user.premiumExpiresAt || now;
+    const daysRemaining = Math.max(
+      0,
+      Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
+    );
+
+    return {
+      planId: plan.id,
+      name: planName,
+      description: planDesc,
+      price: plan.priceUsd,
+      type: plan.type,
+      startDate: user.premiumStartedAt || lastTransaction.createdAt,
+      expiresAt: expiresAt,
+      daysRemaining: daysRemaining,
+      status:
+        daysRemaining > 0
+          ? SubscriptionStatus.ACTIVE
+          : SubscriptionStatus.EXPIRED,
+    };
   }
 }

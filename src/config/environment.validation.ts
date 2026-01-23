@@ -74,6 +74,10 @@ export const environmentValidation = Joi.object({
   EXCHANGE_RATE_API_URL: Joi.string().uri().optional(),
   EXCHANGE_RATE_API_KEY: Joi.string().optional(),
   PAYMENT_CRON_SCHEDULE: Joi.string().default('0 0 * * *'),
+  PAYMENT_CRON_ENABLED: Joi.boolean().default(false),
+  PAYMENT_WARNING_DAYS_BEFORE: Joi.number().default(3),
+  PAYMENT_BATCH_SIZE: Joi.number().default(100),
+  PAYMENT_RENEW_URL_PATH: Joi.string().default('/pricing'),
 
   // Email Configuration
   SMTP_HOST: Joi.string().hostname().required(),

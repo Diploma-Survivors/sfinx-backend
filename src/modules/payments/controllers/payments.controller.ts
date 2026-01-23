@@ -18,13 +18,15 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import type { Response, Request } from 'express';
-import { GetUser } from '../../../common/decorators/get-user.decorator';
+import { GetUser } from '../../../common';
 import { User } from '../../auth/entities/user.entity';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PaymentsService } from '../services/payments.service';
 import { ConfigService } from '@nestjs/config';
 import { CreatePaymentDto } from '../dto/create-payment.dto';
 import { VnpayCallbackDto } from '../dto/vnpay-callback.dto';
+import { PaymentHistoryResponseDto } from '../dto/payment-history-response.dto';
+import { CurrentPlanResponseDto } from '../dto/current-plan-response.dto';
 
 @ApiTags('Payments')
 @Controller('payments')
@@ -113,5 +115,27 @@ export class PaymentsController {
     } catch {
       return { RspCode: '99', Message: 'Unknown Error' };
     }
+  }
+
+  @Get('history')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get payment history' })
+  @ApiOkResponse({ type: [PaymentHistoryResponseDto] })
+  async getPaymentHistory(
+    @GetUser() user: User,
+  ): Promise<PaymentHistoryResponseDto[]> {
+    return this.paymentsService.getPaymentHistory(user);
+  }
+
+  @Get('current-plan')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get current subscription plan' })
+  @ApiOkResponse({ type: CurrentPlanResponseDto })
+  async getCurrentPlan(
+    @GetUser() user: User,
+  ): Promise<CurrentPlanResponseDto | null> {
+    return this.paymentsService.getCurrentPlan(user);
   }
 }

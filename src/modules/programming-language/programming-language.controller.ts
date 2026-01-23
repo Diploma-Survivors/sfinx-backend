@@ -20,8 +20,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import { ApiPaginatedResponse, RequirePermissions } from 'src/common';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { ApiPaginatedResponse, CheckAbility } from 'src/common';
+// PermissionsGuard removed as unused
 
 import {
   CreateProgrammingLanguageDto,
@@ -30,6 +30,8 @@ import {
 } from './dto';
 import { ProgrammingLanguage } from './entities/programming-language.entity';
 import { ProgrammingLanguageService } from './programming-language.service';
+import { CaslGuard } from '../auth/guards/casl.guard';
+import { Action } from '../rbac/casl/casl-ability.factory';
 
 @ApiTags('Programming Languages')
 @Controller('programming-languages')
@@ -119,8 +121,8 @@ export class ProgrammingLanguageController {
   }
 
   @Post()
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('language:create')
+  @UseGuards(CaslGuard)
+  @CheckAbility({ action: Action.Create, subject: ProgrammingLanguage })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Create programming language',
@@ -153,8 +155,8 @@ export class ProgrammingLanguageController {
   }
 
   @Patch(':id')
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('language:update')
+  @UseGuards(CaslGuard)
+  @CheckAbility({ action: Action.Update, subject: ProgrammingLanguage })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Update programming language',
@@ -199,8 +201,8 @@ export class ProgrammingLanguageController {
   }
 
   @Delete(':id')
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('language:delete')
+  @UseGuards(CaslGuard)
+  @CheckAbility({ action: Action.Delete, subject: ProgrammingLanguage })
   @ApiBearerAuth('JWT-auth')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
@@ -234,8 +236,8 @@ export class ProgrammingLanguageController {
   }
 
   @Patch(':id/activate')
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('language:activate')
+  @UseGuards(CaslGuard)
+  @CheckAbility({ action: Action.Activate, subject: ProgrammingLanguage })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Activate programming language',
@@ -269,8 +271,8 @@ export class ProgrammingLanguageController {
   }
 
   @Patch(':id/deactivate')
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions('language:deactivate')
+  @UseGuards(CaslGuard)
+  @CheckAbility({ action: Action.Deactivate, subject: ProgrammingLanguage })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Deactivate programming language',
