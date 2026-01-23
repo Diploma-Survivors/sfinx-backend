@@ -12,6 +12,7 @@ import { ExchangeRateService } from './services/exchange-rate.service';
 import { PaymentSubscriptionService } from './services/payment-subscription.service';
 import { PaymentsService } from './services/payments.service';
 import { SubscriptionPlansService } from './services/subscription-plans.service';
+import { MailService, TemplateService } from '../mail';
 
 @Module({
   imports: [
@@ -30,6 +31,8 @@ import { SubscriptionPlansService } from './services/subscription-plans.service'
     VnPayProvider,
     PaymentSubscriptionService,
     SubscriptionPlansService,
+    MailService,
+    TemplateService,
   ],
 
   exports: [PaymentsService],

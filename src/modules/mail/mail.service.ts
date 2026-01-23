@@ -192,4 +192,48 @@ export class MailService implements OnModuleInit {
       `Submission Result: ${submissionData.problemTitle}`,
     );
   }
+
+  /**
+   * Send payment success email
+   */
+  async sendPaymentSuccessEmail(
+    to: string,
+    data: {
+      name: string;
+      planName: string;
+      amount: number;
+      currency: string;
+      transactionId: string;
+      paymentDate: string;
+    },
+  ): Promise<void> {
+    const currentYear = new Date().getFullYear();
+    await this.sendTemplatedEmail(
+      'payment-success',
+      { ...data, currentYear },
+      to,
+      'Payment Successful - sFinx Subscription',
+    );
+  }
+
+  /**
+   * Send premium expiring email
+   */
+  async sendPremiumExpiringEmail(
+    to: string,
+    data: {
+      name: string;
+      planName: string;
+      expiryDate: string;
+      renewUrl: string;
+    },
+  ): Promise<void> {
+    const currentYear = new Date().getFullYear();
+    await this.sendTemplatedEmail(
+      'premium-expiring',
+      { ...data, currentYear },
+      to,
+      'Your Premium Subscription is Expiring Soon',
+    );
+  }
 }

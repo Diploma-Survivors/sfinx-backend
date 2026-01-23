@@ -13,7 +13,7 @@ import {
 
 import { Problem } from '../../problems/entities/problem.entity';
 import { Tag } from '../../problems/entities/tag.entity';
-import { ProgrammingLanguage } from '../../programming-language';
+import { ProgrammingLanguage } from '../../programming-language/entities/programming-language.entity';
 import { User } from '../../auth/entities/user.entity';
 
 @Entity('solutions')

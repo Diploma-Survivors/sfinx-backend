@@ -10,7 +10,7 @@ import {
 import { User } from '../../auth/entities/user.entity';
 import { Contest } from '../../contest/entities';
 import { Problem } from '../../problems/entities/problem.entity';
-import { ProgrammingLanguage } from '../../programming-language';
+import { ProgrammingLanguage } from '../../programming-language/entities/programming-language.entity';
 import { SubmissionStatus } from '../enums';
 import { ResultDescription } from '../dto/result-description.dto';
 
