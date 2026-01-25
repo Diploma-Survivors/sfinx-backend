@@ -14,23 +14,35 @@ import { PaymentsService } from './services/payments.service';
 import { SubscriptionPlansService } from './services/subscription-plans.service';
 import { MailService, TemplateService } from '../mail';
 
+import { SubscriptionFeature } from './entities/subscription-feature.entity';
+import { SubscriptionFeatureTranslation } from './entities/subscription-feature-translation.entity';
+import { SubscriptionFeatureService } from './services/subscription-feature.service';
+import { SubscriptionFeaturesController } from './controllers/subscription-features.controller';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       PaymentTransaction,
       SubscriptionPlan,
       SubscriptionPlanTranslation,
+      SubscriptionFeature,
+      SubscriptionFeatureTranslation,
       User,
     ]),
     ConfigModule,
   ],
-  controllers: [PaymentsController, SubscriptionPlansController],
+  controllers: [
+    PaymentsController,
+    SubscriptionPlansController,
+    SubscriptionFeaturesController,
+  ],
   providers: [
     PaymentsService,
     ExchangeRateService,
     VnPayProvider,
     PaymentSubscriptionService,
     SubscriptionPlansService,
+    SubscriptionFeatureService,
     MailService,
     TemplateService,
   ],

@@ -19,6 +19,8 @@ import { Submission } from '../../submissions/entities/submission.entity';
 import { UserProblemProgress } from '../../submissions/entities/user-problem-progress.entity';
 import { Permission } from '../entities/permission.entity';
 import { Role } from '../entities/role.entity';
+import { SubscriptionPlan } from '../../payments/entities/subscription-plan.entity';
+import { SubscriptionFeature } from '../../payments/entities/subscription-feature.entity';
 
 // Define all possible actions
 export enum Action {
@@ -59,6 +61,8 @@ export type Subjects =
       | typeof ProgrammingLanguage
       | typeof ProblemComment
       | typeof CommentReport
+      | typeof SubscriptionPlan
+      | typeof SubscriptionFeature
     >
   | 'Problem'
   | 'Tag'

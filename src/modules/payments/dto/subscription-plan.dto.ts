@@ -31,4 +31,8 @@ export class SubscriptionPlanDto {
   @Expose()
   @ApiProperty()
   isActive: boolean;
+
+  @Expose()
+  @ApiProperty()
+  features: any[]; // Using any[] for now, or define SubscriptionFeatureDto
 }
