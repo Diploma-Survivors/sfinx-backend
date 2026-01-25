@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Cacheable } from '../../../common';
 import { User } from '../../auth/entities/user.entity';
 import {
   PaymentStatus,
@@ -9,13 +10,42 @@ import {
 import { SubscriptionPlan } from '../entities/subscription-plan.entity';
 import type { PaymentProvider } from '../interfaces/payment-provider.interface';
 import { VnPayProvider } from '../providers/vnpay.provider';
-import { ExchangeRateService } from './exchange-rate.service';
 import { MailService } from '../../mail/mail.service';
+import { ExchangeRateService } from './exchange-rate.service';
 import { Language } from '../../auth/enums';
 
 import { PaymentHistoryResponseDto } from '../dto/payment-history-response.dto';
 import { CurrentPlanResponseDto } from '../dto/current-plan-response.dto';
 import { SubscriptionStatus } from '../enums/subscription-status.enum';
+import { TransactionFilterDto } from '../dto/transaction-filter.dto';
+import { RevenueStatsQueryDto } from '../dto/revenue-stats-query.dto';
+import {
+  RevenueStatsResponseDto,
+  SubscriptionPlanStatsDto,
+  RevenueChartItemDto,
+} from '../dto/revenue-stats-response.dto';
+
+export interface TotalRevenueResult {
+  totalRevenue: string;
+}
+
+export interface ActiveSubscribersResult {
+  count: string;
+}
+
+export interface PlanSalesResult {
+  planId: number;
+  count: string;
+}
+
+export interface RevenueChartResult {
+  period: string;
+  amount: string;
+}
+
+export interface ChurnRateResult {
+  churn_count: string;
+}
 
 @Injectable()
 export class PaymentsService {
@@ -107,8 +137,7 @@ export class PaymentsService {
 
     if (validation.isSuccess) {
       transaction.status = PaymentStatus.SUCCESS;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      transaction.transactionId = query['vnp_TransactionNo'] || ''; // Gateway's ID
+      transaction.transactionId = (query['vnp_TransactionNo'] as string) || ''; // Gateway's ID
       transaction.paymentDate = new Date();
       await this.transactionRepo.save(transaction);
 
@@ -274,5 +303,299 @@ export class PaymentsService {
           ? SubscriptionStatus.ACTIVE
           : SubscriptionStatus.EXPIRED,
     };
+  }
+
+  /**
+   * Get all transactions with filtering (Admin)
+   */
+  async getAllTransactions(
+    filter: TransactionFilterDto,
+    lang = Language.EN,
+  ): Promise<{ data: any[]; meta: any }> {
+    const query = this.transactionRepo
+      .createQueryBuilder('pt')
+      .leftJoinAndSelect('pt.user', 'u')
+      .leftJoinAndSelect('pt.plan', 'p')
+      .leftJoinAndSelect('p.translations', 'pt_trans')
+      .orderBy('pt.createdAt', filter.sortOrder || 'DESC');
+
+    if (filter.status) {
+      query.andWhere('pt.status = :status', { status: filter.status });
+    }
+
+    if (filter.search) {
+      query.andWhere(
+        '(u.username ILIKE :search OR pt.transactionId ILIKE :search OR u.email ILIKE :search)',
+        { search: `%${filter.search}%` },
+      );
+    }
+
+    if (filter.startDate) {
+      query.andWhere('pt.createdAt >= :startDate', {
+        startDate: filter.startDate,
+      });
+    }
+
+    if (filter.endDate) {
+      query.andWhere('pt.createdAt <= :endDate', { endDate: filter.endDate });
+    }
+
+    const total = await query.getCount();
+    const transactions = await query
+      .skip(filter.skip)
+      .take(filter.take)
+      .getMany();
+
+    const data = transactions.map((tx) => {
+      // Find translation based on user lang
+      const planName =
+        tx.plan?.translations?.find((t) => t.languageCode === String(lang))
+          ?.name || `Plan #${tx.planId}`;
+
+      return {
+        id: tx.id,
+        transactionId: tx.transactionId,
+        userId: tx.userId,
+        username: tx.user?.username,
+        planName: planName,
+        amount: Number(tx.amount), // Ensure number
+        amountVnd: Number(tx.amountVnd),
+        currency: tx.currency,
+        provider: tx.provider,
+        status: tx.status,
+        paymentDate: tx.paymentDate || tx.createdAt,
+      };
+    });
+
+    return {
+      data,
+      meta: {
+        page: filter.page,
+        limit: filter.limit,
+        total,
+        totalPages: Math.ceil(total / (filter.limit || 20)),
+      },
+    };
+  }
+
+  /**
+   * Get revenue statistics
+   */
+  @Cacheable({
+    key: (query: RevenueStatsQueryDto, lang: string) =>
+      `revenue_stats:${query.startDate || 'all'}:${query.endDate || 'all'}:${lang}`,
+    ttl: 300, // 5 minutes cache
+  })
+  async getRevenueStats(
+    query: RevenueStatsQueryDto,
+    lang = Language.EN,
+  ): Promise<RevenueStatsResponseDto> {
+    const { startDate, endDate } = query;
+
+    const [
+      totalRevenue,
+      activeSubscribers,
+      subscriptionsByPlan,
+      revenueByMonth,
+      churnRate,
+    ] = await Promise.all([
+      this.getTotalRevenue(startDate, endDate),
+      this.getActiveSubscribers(startDate, endDate),
+      this.getSubscriptionsByPlan(startDate, endDate, lang),
+      this.getRevenueChart(startDate, endDate),
+      this.getChurnRate(startDate, endDate),
+    ]);
+
+    return {
+      totalRevenue,
+      activeSubscribers,
+      churnRate,
+      revenueByMonth,
+      subscriptionsByPlan,
+    };
+  }
+
+  private async getTotalRevenue(
+    startDate?: string,
+    endDate?: string,
+  ): Promise<number> {
+    const query = this.transactionRepo
+      .createQueryBuilder('pt')
+      .select('SUM(pt.amount)', 'totalRevenue')
+      .where('pt.status = :status', { status: PaymentStatus.SUCCESS });
+
+    if (startDate) {
+      query.andWhere('pt.paymentDate >= :startDate', { startDate });
+    }
+    if (endDate) {
+      query.andWhere('pt.paymentDate <= :endDate', { endDate });
+    }
+
+    const result = await query.getRawOne<TotalRevenueResult>();
+    return Number(result?.totalRevenue || 0);
+  }
+
+  private async getActiveSubscribers(
+    startDate?: string,
+    endDate?: string,
+  ): Promise<number> {
+    // 2. Active Subscribers (In the selected period)
+    const activeParams: any[] = [PaymentStatus.SUCCESS];
+    let activeFilter = '';
+
+    if (endDate) {
+      activeFilter += ` AND (pt.payment_date <= $${activeParams.length + 1})`;
+      activeParams.push(endDate);
+    }
+
+    // If startDate/endDate provided: Check overlap.
+    // If NOT provided: Check "Currently Active" (expiry >= NOW)
+    if (startDate) {
+      activeFilter += ` AND ((pt.payment_date + (p.duration_months || ' months')::interval) >= $${activeParams.length + 1})`;
+      activeParams.push(startDate);
+    } else if (!endDate) {
+      // No range provided = Default to "Active NOW"
+      activeFilter += ` AND ((pt.payment_date + (p.duration_months || ' months')::interval) >= NOW())`;
+    }
+
+    const activeRawQuery = `
+      SELECT COUNT(DISTINCT pt.user_id) as count
+      FROM payment_transactions pt
+      LEFT JOIN subscription_plans p ON pt.plan_id = p.id
+      WHERE pt.status = $1 ${activeFilter}
+    `;
+
+    const activeResult = (await this.transactionRepo.query(
+      activeRawQuery,
+      activeParams,
+    )) as unknown as ActiveSubscribersResult[];
+    return Number(activeResult[0]?.count || 0);
+  }
+
+  private async getSubscriptionsByPlan(
+    startDate?: string,
+    endDate?: string,
+    lang = Language.EN,
+  ): Promise<SubscriptionPlanStatsDto[]> {
+    const salesByPlanQuery = this.transactionRepo
+      .createQueryBuilder('pt')
+      .select('pt.planId', 'planId')
+      .addSelect('COUNT(pt.id)', 'count')
+      .where('pt.status = :status', { status: PaymentStatus.SUCCESS })
+      .groupBy('pt.planId');
+
+    if (startDate) {
+      salesByPlanQuery.andWhere('pt.paymentDate >= :startDate', { startDate });
+    }
+    if (endDate) {
+      salesByPlanQuery.andWhere('pt.paymentDate <= :endDate', { endDate });
+    }
+
+    const salesByPlanId = await salesByPlanQuery.getRawMany<PlanSalesResult>();
+    const plans = await this.planRepo.find({ relations: ['translations'] });
+
+    return salesByPlanId.map((item) => {
+      const planId = Number(item.planId);
+      const plan = plans.find((p) => p.id === planId);
+      const planTranslation =
+        plan?.translations.find((t) => t.languageCode === String(lang)) ||
+        plan?.translations.find(
+          (t) => t.languageCode === String(Language.EN),
+        ) ||
+        plan?.translations[0];
+
+      return {
+        plan: planTranslation?.name || plan?.type || `Plan #${planId}`,
+        count: Number(item.count),
+      };
+    });
+  }
+
+  private async getRevenueChart(
+    startDate?: string,
+    endDate?: string,
+  ): Promise<RevenueChartItemDto[]> {
+    let chartStartDate = startDate ? new Date(startDate) : new Date(0);
+    if (!startDate && !endDate) {
+      chartStartDate = new Date();
+      chartStartDate.setFullYear(chartStartDate.getFullYear() - 1);
+    }
+    const chartEndDate = endDate ? new Date(endDate) : new Date();
+
+    const revenueByMonth = await this.transactionRepo
+      .createQueryBuilder('pt')
+      .select("TO_CHAR(pt.paymentDate, 'YYYY-MM')", 'period')
+      .addSelect('SUM(pt.amount)', 'amount')
+      .where('pt.status = :status', { status: PaymentStatus.SUCCESS })
+      .andWhere('pt.paymentDate >= :chartStartDate', { chartStartDate })
+      .andWhere('pt.paymentDate <= :chartEndDate', { chartEndDate })
+      .groupBy("TO_CHAR(pt.paymentDate, 'YYYY-MM')")
+      .orderBy("TO_CHAR(pt.paymentDate, 'YYYY-MM')", 'ASC')
+      .getRawMany<RevenueChartResult>();
+
+    return revenueByMonth.map((r) => ({
+      month: r.period,
+      amount: Number(r.amount),
+    }));
+  }
+
+  private async getChurnRate(
+    startDate?: string,
+    endDate?: string,
+  ): Promise<number> {
+    const activeSubscribers = await this.getActiveSubscribers(
+      startDate,
+      endDate,
+    );
+    if (activeSubscribers === 0) return 0;
+
+    const params: any[] = [PaymentStatus.SUCCESS];
+    let dateFilter = '';
+
+    if (startDate) {
+      dateFilter += ` AND e.expiry_date >= $${params.length + 1}`;
+      params.push(startDate);
+    }
+
+    const cutoff = endDate ?? new Date();
+    dateFilter += ` AND e.expiry_date <= $${params.length + 1}`;
+    params.push(cutoff);
+
+    // Churn Logic (Anti-Join / User-Level / Last Expiry):
+    // 1. Find the LATEST expiration date per user in the window.
+    // 2. Identify the DISTINCT user.
+    // 3. LEFT JOIN for any NEWER transaction (win-back/renewal).
+    // 4. Filter where NEWER is NULL (meaning no renewal found).
+    // 5. AND check if user is currently NOT premium (double verify state).
+
+    const churnQuery = `
+    SELECT COUNT(DISTINCT e.user_id) AS churn_count
+    FROM (
+      SELECT
+        pt.user_id,
+        MAX(pt.payment_date + (p.duration_months * INTERVAL '1 month')) AS expiry_date
+      FROM payment_transactions pt
+      JOIN subscription_plans p ON p.id = pt.plan_id
+      WHERE pt.status = $1
+      GROUP BY pt.user_id
+    ) e
+    LEFT JOIN payment_transactions newer
+      ON newer.user_id = e.user_id
+     AND newer.payment_date > e.expiry_date
+     AND newer.status = $1
+    JOIN users u ON u.id = e.user_id
+    WHERE
+      newer.id IS NULL
+      AND u.is_premium = false
+      ${dateFilter}
+    `;
+
+    const result = (await this.transactionRepo.query(
+      churnQuery,
+      params,
+    )) as unknown as ChurnRateResult[];
+    const churnedUsers = Number(result[0]?.churn_count || 0);
+
+    return Number(((churnedUsers / activeSubscribers) * 100).toFixed(2));
   }
 }

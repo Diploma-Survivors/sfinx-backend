@@ -140,8 +140,6 @@ export class PaymentSubscriptionService implements OnModuleInit {
       .update()
       .set({
         isPremium: false,
-        premiumStartedAt: null,
-        premiumExpiresAt: null,
       })
       .where('isPremium = :isPremium', { isPremium: true })
       .andWhere('premiumExpiresAt < :now', { now: new Date() })

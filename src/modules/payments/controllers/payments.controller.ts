@@ -11,14 +11,15 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
-  ApiOperation,
-  ApiTags,
-  ApiOkResponse,
-  ApiNotFoundResponse,
   ApiBody,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
 } from '@nestjs/swagger';
-import type { Response, Request } from 'express';
-import { GetUser } from '../../../common';
+import type { Request, Response } from 'express';
+import { CheckPolicies, GetUser } from '../../../common';
 import { User } from '../../auth/entities/user.entity';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PaymentsService } from '../services/payments.service';
@@ -27,6 +28,13 @@ import { CreatePaymentDto } from '../dto/create-payment.dto';
 import { VnpayCallbackDto } from '../dto/vnpay-callback.dto';
 import { PaymentHistoryResponseDto } from '../dto/payment-history-response.dto';
 import { CurrentPlanResponseDto } from '../dto/current-plan-response.dto';
+import { CaslGuard } from '../../auth/guards/casl.guard';
+import { Action } from '../../rbac/casl';
+import { PaymentTransaction } from '../entities/payment-transaction.entity';
+import { TransactionFilterDto } from '../dto/transaction-filter.dto';
+import { RevenueStatsQueryDto } from '../dto/revenue-stats-query.dto';
+import { RevenueStatsResponseDto } from '../dto/revenue-stats-response.dto';
+import { Language } from '../../auth/enums';
 
 @ApiTags('Payments')
 @Controller('payments')
@@ -137,5 +145,33 @@ export class PaymentsController {
     @GetUser() user: User,
   ): Promise<CurrentPlanResponseDto | null> {
     return this.paymentsService.getCurrentPlan(user);
+  }
+
+  @Get('transactions')
+  @UseGuards(CaslGuard)
+  @ApiBearerAuth('JWT-auth')
+  @CheckPolicies((ability) => ability.can(Action.Manage, PaymentTransaction))
+  @ApiOperation({ summary: 'Get payment transactions (Admin)' })
+  @ApiResponse({ status: 200, description: 'Paginated list of transactions' })
+  async getTransactions(
+    @Query() filter: TransactionFilterDto,
+    @GetUser() user: User,
+  ) {
+    const lang = user.preferredLanguage || Language.EN;
+    return this.paymentsService.getAllTransactions(filter, lang);
+  }
+
+  @Get('stats')
+  @UseGuards(CaslGuard)
+  @ApiBearerAuth('JWT-auth')
+  @CheckPolicies((ability) => ability.can(Action.Manage, PaymentTransaction))
+  @ApiOperation({ summary: 'Get revenue and subscription statistics' })
+  @ApiResponse({ status: 200, description: 'Revenue statistics' })
+  async getStats(
+    @Query() query: RevenueStatsQueryDto,
+    @GetUser() user: User,
+  ): Promise<RevenueStatsResponseDto> {
+    const lang = user.preferredLanguage || Language.EN;
+    return this.paymentsService.getRevenueStats(query, lang);
   }
 }
