@@ -1,0 +1,140 @@
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { In, Repository } from 'typeorm';
+import { PaginatedResultDto } from '../../../common';
+import { CreatePostDto, FilterPostDto, UpdatePostDto } from '../dto';
+import { DiscussTag } from '../entities/discuss-tag.entity';
+import { Post } from '../entities/post.entity';
+
+@Injectable()
+export class DiscussService {
+  constructor(
+    @InjectRepository(Post)
+    private readonly postRepository: Repository<Post>,
+    @InjectRepository(DiscussTag)
+    private readonly tagRepository: Repository<DiscussTag>,
+  ) {}
+
+  async createPost(userId: number, dto: CreatePostDto): Promise<Post> {
+    const post = this.postRepository.create({
+      ...dto,
+      author: { id: userId },
+      slug: this.generateSlug(dto.title),
+    });
+
+    if (dto.tagIds && dto.tagIds.length > 0) {
+      const tags = await this.tagRepository.findBy({ id: In(dto.tagIds) });
+      post.tags = tags;
+    }
+
+    return this.postRepository.save(post);
+  }
+
+  async findAll(query: FilterPostDto): Promise<PaginatedResultDto<Post>> {
+    const { page = 1, limit = 20, search, tagIds, sortBy, sortOrder } = query;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.postRepository
+      .createQueryBuilder('post')
+      .leftJoinAndSelect('post.author', 'author')
+      .leftJoinAndSelect('post.tags', 'tags')
+      .loadRelationCountAndMap('post.replyCount', 'post.comments')
+      .where('post.isDeleted = :isDeleted', { isDeleted: false });
+
+    if (search) {
+      queryBuilder.andWhere('post.title ILIKE :search', {
+        search: `%${search}%`,
+      });
+    }
+
+    if (tagIds && tagIds.length > 0) {
+      queryBuilder.andWhere('tags.id IN (:...tagIds)', { tagIds });
+    }
+
+    if (sortBy) {
+      queryBuilder.orderBy(`post.${sortBy}`, sortOrder);
+    } else {
+      queryBuilder.orderBy('post.created_at', 'DESC');
+    }
+
+    const [items, total] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    return new PaginatedResultDto(items, {
+      page,
+      limit,
+      total,
+    });
+  }
+
+  async findOne(id: string): Promise<Post> {
+    const post = await this.postRepository.findOne({
+      where: { id, isDeleted: false },
+      relations: ['author', 'tags'],
+    });
+
+    if (!post) {
+      throw new NotFoundException(`Post with ID ${id} not found`);
+    }
+
+    // Increment view count
+    await this.postRepository.increment({ id }, 'viewCount', 1);
+
+    return post;
+  }
+
+  async updatePost(
+    id: string,
+    userId: number,
+    dto: UpdatePostDto,
+  ): Promise<Post> {
+    const post = await this.findOne(id);
+
+    if (post.author.id !== userId) {
+      throw new ForbiddenException('You can only update your own posts');
+    }
+
+    if (dto.title) {
+      post.title = dto.title;
+      post.slug = this.generateSlug(dto.title);
+    }
+    if (dto.content) {
+      post.content = dto.content;
+    }
+
+    if (dto.tagIds) {
+      const tags = await this.tagRepository.findBy({ id: In(dto.tagIds) });
+      post.tags = tags;
+    }
+
+    return this.postRepository.save(post);
+  }
+
+  async deletePost(id: string, userId: number): Promise<void> {
+    const post = await this.findOne(id);
+
+    if (post.author.id !== userId) {
+      throw new ForbiddenException('You can only delete your own posts');
+    }
+
+    post.isDeleted = true;
+    await this.postRepository.save(post);
+  }
+
+  private generateSlug(title: string): string {
+    return (
+      title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)+/g, '') +
+      '-' +
+      Math.random().toString(36).substring(2, 7)
+    );
+  }
+}
