@@ -105,6 +105,20 @@ export class SubscriptionFeaturesController {
     return this.featureService.update(id, dto);
   }
 
+  @Get(':id')
+  @UseGuards(CaslGuard)
+  @ApiBearerAuth('JWT-auth')
+  @CheckPolicies((ability) => ability.can(Action.Manage, SubscriptionFeature))
+  @ApiOperation({ summary: 'Get a subscription feature by ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Feature retrieved successfully',
+    type: SubscriptionFeature,
+  })
+  async findOne(@Param('id') id: number): Promise<SubscriptionFeature> {
+    return this.featureService.findOne(id);
+  }
+
   @Delete(':id')
   @UseGuards(CaslGuard)
   @ApiBearerAuth('JWT-auth')

@@ -55,6 +55,19 @@ export class SubscriptionFeatureService {
     });
   }
 
+  async findOne(id: number): Promise<SubscriptionFeature> {
+    const feature = await this.featureRepository.findOne({
+      where: { id },
+      relations: ['translations'],
+    });
+
+    if (!feature) {
+      throw new NotFoundException(`Feature with ID ${id} not found`);
+    }
+
+    return feature;
+  }
+
   @CacheInvalidate({
     keys: () => [
       `subscription_features:all:${Language.EN}:true`,
