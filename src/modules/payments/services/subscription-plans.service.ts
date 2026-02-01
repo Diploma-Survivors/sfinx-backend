@@ -83,6 +83,22 @@ export class SubscriptionPlansService {
   }
 
   /**
+   * Get a single subscription plan by ID with all details (Admin)
+   */
+  async findOne(id: number): Promise<SubscriptionPlan> {
+    const plan = await this.planRepo.findOne({
+      where: { id },
+      relations: ['translations', 'features', 'features.translations'],
+    });
+
+    if (!plan) {
+      throw new NotFoundException(`Subscription plan ${id} not found`);
+    }
+
+    return plan;
+  }
+
+  /**
    * Create a new subscription plan
    */
   @CacheInvalidate({

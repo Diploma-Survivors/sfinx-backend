@@ -94,6 +94,20 @@ export class SubscriptionPlansController {
     return this.plansService.getPlan(id, lang);
   }
 
+  @Get(':id/details')
+  @UseGuards(CaslGuard)
+  @CheckPolicies((ability) => ability.can(Action.Manage, SubscriptionPlan))
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Get subscription plan details (Admin - full info)',
+  })
+  @ApiResponse({ type: SubscriptionPlan })
+  async findOne(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<SubscriptionPlan> {
+    return this.plansService.findOne(id);
+  }
+
   @Put(':id')
   @UseGuards(CaslGuard)
   @CheckPolicies((ability) => ability.can(Action.Update, SubscriptionPlan))
