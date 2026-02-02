@@ -1,7 +1,6 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Cacheable } from '../../../common';
 import { User } from '../../auth/entities/user.entity';
 import {
   PaymentStatus,
@@ -381,16 +380,20 @@ export class PaymentsService {
   /**
    * Get revenue statistics
    */
-  @Cacheable({
-    key: (query: RevenueStatsQueryDto, lang: string) =>
-      `revenue_stats:${query.startDate || 'all'}:${query.endDate || 'all'}:${lang}`,
-    ttl: 300, // 5 minutes cache
-  })
   async getRevenueStats(
     query: RevenueStatsQueryDto,
     lang = Language.EN,
   ): Promise<RevenueStatsResponseDto> {
-    const { startDate, endDate } = query;
+    const { startDate, groupBy = 'month' } = query;
+    let { endDate } = query;
+
+    // Ensure endDate includes the full day (23:59:59.999) if provided
+    // This fixes the issue where transactions on the last day are excluded because the default time is 00:00:00
+    if (endDate) {
+      const d = new Date(endDate);
+      d.setUTCHours(23, 59, 59, 999);
+      endDate = d.toISOString();
+    }
 
     const [
       totalRevenue,
@@ -402,13 +405,53 @@ export class PaymentsService {
       this.getTotalRevenue(startDate, endDate),
       this.getActiveSubscribers(startDate, endDate),
       this.getSubscriptionsByPlan(startDate, endDate, lang),
-      this.getRevenueChart(startDate, endDate),
+      this.getRevenueChart(startDate, endDate, groupBy),
       this.getChurnRate(startDate, endDate),
     ]);
+
+    // Calculate previous period for growth metrics
+    // Handle undefined dates by defaulting to last 30 days if not provided (matching typical default)
+    // Or use the revenueByMonth range if available
+    const effectiveEndDate = endDate ? new Date(endDate) : new Date();
+    const effectiveStartDate = startDate
+      ? new Date(startDate)
+      : new Date(new Date().setDate(new Date().getDate() - 30));
+
+    const duration = effectiveEndDate.getTime() - effectiveStartDate.getTime();
+
+    // Previous period end is immediately before current start (minus 1ms to prevent overlap)
+    const previousEndDate = new Date(effectiveStartDate.getTime() - 1);
+    const previousStartDate = new Date(previousEndDate.getTime() - duration);
+
+    const [previousTotalRevenue, previousActiveSubscribers] = await Promise.all(
+      [
+        this.getTotalRevenue(
+          previousStartDate.toISOString(),
+          previousEndDate.toISOString(),
+        ),
+        this.getActiveSubscribers(
+          previousStartDate.toISOString(),
+          previousEndDate.toISOString(),
+        ),
+      ],
+    );
+
+    const calculateGrowth = (current: number, previous: number) => {
+      if (previous === 0) return current > 0 ? 100 : 0;
+      return Number((((current - previous) / previous) * 100).toFixed(1));
+    };
+
+    const revenueGrowth = calculateGrowth(totalRevenue, previousTotalRevenue);
+    const subscriberGrowth = calculateGrowth(
+      activeSubscribers,
+      previousActiveSubscribers,
+    );
 
     return {
       totalRevenue,
       activeSubscribers,
+      revenueGrowth,
+      subscriberGrowth,
       churnRate,
       revenueByMonth,
       subscriptionsByPlan,
@@ -514,6 +557,7 @@ export class PaymentsService {
   private async getRevenueChart(
     startDate?: string,
     endDate?: string,
+    groupBy: 'day' | 'week' | 'month' | 'year' = 'month',
   ): Promise<RevenueChartItemDto[]> {
     let chartStartDate = startDate ? new Date(startDate) : new Date(0);
     if (!startDate && !endDate) {
@@ -521,22 +565,86 @@ export class PaymentsService {
       chartStartDate.setFullYear(chartStartDate.getFullYear() - 1);
     }
     const chartEndDate = endDate ? new Date(endDate) : new Date();
+    if (endDate) {
+      // Ensure we include the full end date (until 23:59:59.999)
+      chartEndDate.setUTCHours(23, 59, 59, 999);
+    }
 
-    const revenueByMonth = await this.transactionRepo
+    let dateFormat = 'YYYY-MM'; // Default month
+    if (groupBy === 'day') {
+      dateFormat = 'YYYY-MM-DD';
+    } else if (groupBy === 'week') {
+      dateFormat = 'YYYY-IW'; // ISO Week
+    } else if (groupBy === 'year') {
+      dateFormat = 'YYYY';
+    }
+
+    const revenueByPeriod = await this.transactionRepo
       .createQueryBuilder('pt')
-      .select("TO_CHAR(pt.paymentDate, 'YYYY-MM')", 'period')
+      .select(
+        `TO_CHAR(pt.paymentDate AT TIME ZONE 'UTC', '${dateFormat}')`,
+        'period',
+      )
       .addSelect('SUM(pt.amount)', 'amount')
       .where('pt.status = :status', { status: PaymentStatus.SUCCESS })
       .andWhere('pt.paymentDate >= :chartStartDate', { chartStartDate })
       .andWhere('pt.paymentDate <= :chartEndDate', { chartEndDate })
-      .groupBy("TO_CHAR(pt.paymentDate, 'YYYY-MM')")
-      .orderBy("TO_CHAR(pt.paymentDate, 'YYYY-MM')", 'ASC')
+      .groupBy(`TO_CHAR(pt.paymentDate AT TIME ZONE 'UTC', '${dateFormat}')`)
+      .orderBy(
+        `TO_CHAR(pt.paymentDate AT TIME ZONE 'UTC', '${dateFormat}')`,
+        'ASC',
+      )
       .getRawMany<RevenueChartResult>();
 
-    return revenueByMonth.map((r) => ({
-      month: r.period,
-      amount: Number(r.amount),
-    }));
+    // Fill missing periods
+    const filledData: RevenueChartItemDto[] = [];
+    const currentDate = new Date(chartStartDate);
+    const end = new Date(chartEndDate);
+
+    // Ensure we handle timezones correctly by just comparing date parts or iterating safely
+    // A simple way is to iterate until we pass the end date
+    // Clone loop start date
+    const loopDate = new Date(currentDate);
+
+    while (loopDate <= end) {
+      let periodKey = '';
+      if (groupBy === 'day') {
+        // YYYY-MM-DD
+        const yyyy = loopDate.getUTCFullYear();
+        const mm = (loopDate.getUTCMonth() + 1).toString().padStart(2, '0');
+        const dd = loopDate.getUTCDate().toString().padStart(2, '0');
+        periodKey = `${yyyy}-${mm}-${dd}`;
+
+        loopDate.setUTCDate(loopDate.getUTCDate() + 1);
+      } else if (groupBy === 'month') {
+        // YYYY-MM
+        const yyyy = loopDate.getUTCFullYear();
+        const mm = (loopDate.getUTCMonth() + 1).toString().padStart(2, '0');
+        periodKey = `${yyyy}-${mm}`;
+
+        loopDate.setUTCMonth(loopDate.getUTCMonth() + 1);
+      } else if (groupBy === 'year') {
+        // YYYY
+        periodKey = `${loopDate.getUTCFullYear()}`;
+
+        loopDate.setUTCFullYear(loopDate.getUTCFullYear() + 1);
+      } else {
+        // Week - skip filling for now or handle ISO week later if needed
+        // Just return as is for week to avoid complexity without moment/date-fns
+        return revenueByPeriod.map((r) => ({
+          month: r.period,
+          amount: Number(r.amount),
+        }));
+      }
+
+      const match = revenueByPeriod.find((r) => r.period === periodKey);
+      filledData.push({
+        month: periodKey,
+        amount: match ? Number(match.amount) : 0,
+      });
+    }
+
+    return filledData;
   }
 
   private async getChurnRate(

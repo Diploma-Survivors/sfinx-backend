@@ -17,4 +17,12 @@ export class RevenueStatsQueryDto {
   @IsOptional()
   @IsString()
   endDate?: string;
+  @ApiPropertyOptional({
+    description: 'Group by period (day, week, month, year)',
+    enum: ['day', 'week', 'month', 'year'],
+    default: 'month',
+  })
+  @IsOptional()
+  @IsString()
+  groupBy?: 'day' | 'week' | 'month' | 'year';
 }

@@ -24,6 +24,12 @@ export class RevenueStatsResponseDto {
   activeSubscribers: number;
 
   @ApiProperty()
+  revenueGrowth: number;
+
+  @ApiProperty()
+  subscriberGrowth: number;
+
+  @ApiProperty()
   churnRate: number;
 
   @ApiProperty({ type: [RevenueChartItemDto] })
