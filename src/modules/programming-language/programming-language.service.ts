@@ -256,16 +256,25 @@ export class ProgrammingLanguageService {
   async delete(id: number): Promise<void> {
     const language = await this.findById(id);
 
-    // Soft delete by setting isActive to false
-    language.isActive = false;
-    await this.languageRepository.save(language);
+    try {
+      // Hard delete from database
+      await this.languageRepository.delete(id);
+
+      this.logger.log(
+        `Hard deleted programming language: ${language.name} (ID: ${id})`,
+      );
+    } catch (error: any) {
+      // Check for foreign key violation (PostgreSQL code 23503)
+      if (error?.code === '23503') {
+        throw new ConflictException(
+          `Cannot delete programming language "${language.name}" because it is being used by other resources (e.g., submissions). Please deactivate it instead.`,
+        );
+      }
+      throw error;
+    }
 
     // Also invalidate slug cache
     await this.invalidateSlugCache(language.slug);
-
-    this.logger.log(
-      `Deleted programming language: ${language.name} (ID: ${id})`,
-    );
   }
 
   /**
