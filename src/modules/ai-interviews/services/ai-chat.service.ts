@@ -104,10 +104,8 @@ export class AiChatService {
     });
     await this.messageRepo.save(aiMsg);
 
-    return {
-      messageId: aiMsg.id,
-      aiResponse: aiText,
-    };
+    // Return the AI message object for frontend compatibility
+    return aiMsg;
   }
 
   async getHistory(interviewId: string, userId: number) {
