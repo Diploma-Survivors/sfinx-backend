@@ -26,6 +26,7 @@ import { ApiPaginatedResponse, CheckAbility } from 'src/common';
 import {
   CreateProgrammingLanguageDto,
   QueryProgrammingLanguageDto,
+  ReorderProgrammingLanguageDto,
   UpdateProgrammingLanguageDto,
 } from './dto';
 import { ProgrammingLanguage } from './entities/programming-language.entity';
@@ -152,6 +153,30 @@ export class ProgrammingLanguageController {
   async create(@Body() dto: CreateProgrammingLanguageDto) {
     const language = await this.programmingLanguageService.create(dto);
     return language;
+  }
+
+  @Patch('reorder')
+  @UseGuards(CaslGuard)
+  @CheckAbility({ action: Action.Update, subject: ProgrammingLanguage })
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Reorder programming languages',
+    description: 'Update the order index of programming languages (Admin only)',
+  })
+  @ApiResponse({
+    status: 204,
+    description: 'Programming languages reordered successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
+  async reorder(@Body() dto: ReorderProgrammingLanguageDto) {
+    await this.programmingLanguageService.reorder(dto.ids);
   }
 
   @Patch(':id')

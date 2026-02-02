@@ -39,16 +39,6 @@ export class ProgrammingLanguageService {
     private readonly cacheManager: Cache,
   ) {}
 
-  @Cacheable({
-    key: (query: QueryProgrammingLanguageDto) =>
-      CACHE_KEYS.PROGRAMMING_LANGUAGES.LIST(
-        query.isActive,
-        query.search,
-        query.page,
-        query.limit,
-      ),
-    ttl: CACHE_TTL.ONE_DAY,
-  })
   async findAll(
     query: QueryProgrammingLanguageDto,
   ): Promise<PaginatedResultDto<ProgrammingLanguage>> {
@@ -86,10 +76,6 @@ export class ProgrammingLanguageService {
    * Get all active programming languages
    * Most frequently accessed endpoint - cached with static key
    */
-  @Cacheable({
-    key: CACHE_KEYS.PROGRAMMING_LANGUAGES.ALL_ACTIVE,
-    ttl: CACHE_TTL.ONE_DAY,
-  })
   async findAllActive(): Promise<ProgrammingLanguage[]> {
     return this.languageRepository.find({
       where: { isActive: true },
@@ -145,9 +131,6 @@ export class ProgrammingLanguageService {
    * Create a new programming language
    * Invalidates all list caches since a new item affects all lists
    */
-  @CacheInvalidate({
-    keys: [CACHE_KEYS.PROGRAMMING_LANGUAGES.ALL_ACTIVE],
-  })
   @Transactional()
   async create(
     dto: CreateProgrammingLanguageDto,
@@ -181,6 +164,12 @@ export class ProgrammingLanguageService {
       );
     }
 
+    // Auto-calculate orderIndex if not provided
+    if (dto.orderIndex === undefined || dto.orderIndex === null) {
+      const maxOrder = await this.languageRepository.maximum('orderIndex');
+      dto.orderIndex = (maxOrder || 0) + 1;
+    }
+
     // Create and save
     const language = this.languageRepository.create({
       ...dto,
@@ -200,10 +189,7 @@ export class ProgrammingLanguageService {
    * Invalidates specific language cache and all list caches
    */
   @CacheInvalidate({
-    keys: (id: number) => [
-      CACHE_KEYS.PROGRAMMING_LANGUAGES.BY_ID(id),
-      CACHE_KEYS.PROGRAMMING_LANGUAGES.ALL_ACTIVE,
-    ],
+    keys: (id: number) => [CACHE_KEYS.PROGRAMMING_LANGUAGES.BY_ID(id)],
   })
   @Transactional()
   async update(
@@ -264,10 +250,7 @@ export class ProgrammingLanguageService {
    * Invalidates specific language cache and all list caches
    */
   @CacheInvalidate({
-    keys: (id: number) => [
-      CACHE_KEYS.PROGRAMMING_LANGUAGES.BY_ID(id),
-      CACHE_KEYS.PROGRAMMING_LANGUAGES.ALL_ACTIVE,
-    ],
+    keys: (id: number) => [CACHE_KEYS.PROGRAMMING_LANGUAGES.BY_ID(id)],
   })
   @Transactional()
   async delete(id: number): Promise<void> {
@@ -290,10 +273,7 @@ export class ProgrammingLanguageService {
    * Invalidates caches since active status affects list queries
    */
   @CacheInvalidate({
-    keys: (id: number) => [
-      CACHE_KEYS.PROGRAMMING_LANGUAGES.BY_ID(id),
-      CACHE_KEYS.PROGRAMMING_LANGUAGES.ALL_ACTIVE,
-    ],
+    keys: (id: number) => [CACHE_KEYS.PROGRAMMING_LANGUAGES.BY_ID(id)],
   })
   @Transactional()
   async activate(id: number): Promise<ProgrammingLanguage> {
@@ -321,10 +301,7 @@ export class ProgrammingLanguageService {
    * Invalidates caches since active status affects list queries
    */
   @CacheInvalidate({
-    keys: (id: number) => [
-      CACHE_KEYS.PROGRAMMING_LANGUAGES.BY_ID(id),
-      CACHE_KEYS.PROGRAMMING_LANGUAGES.ALL_ACTIVE,
-    ],
+    keys: (id: number) => [CACHE_KEYS.PROGRAMMING_LANGUAGES.BY_ID(id)],
   })
   @Transactional()
   async deactivate(id: number): Promise<ProgrammingLanguage> {
@@ -345,6 +322,29 @@ export class ProgrammingLanguageService {
     );
 
     return updated;
+  }
+
+  /**
+   * Reorder programming languages
+   */
+  @CacheInvalidate({
+    keys: [CACHE_KEYS.PROGRAMMING_LANGUAGES.ALL_ACTIVE],
+  })
+  @Transactional()
+  async reorder(ids: number[]): Promise<void> {
+    // Process in chunks to avoid overwhelming the DB in case of many items
+    // But typically languages are few (e.g. < 100), so processing sequentially in a transaction is fine
+    for (let i = 0; i < ids.length; i++) {
+      const id = ids[i];
+      await this.languageRepository.update({ id }, { orderIndex: i });
+
+      // We also need to invalidate individual cache for each updated language
+      // Since orderIndex is part of the entity
+      const cacheKey = CACHE_KEYS.PROGRAMMING_LANGUAGES.BY_ID(id);
+      await this.cacheManager.del(cacheKey);
+    }
+
+    this.logger.log(`Reordered ${ids.length} programming languages`);
   }
 
   /**
