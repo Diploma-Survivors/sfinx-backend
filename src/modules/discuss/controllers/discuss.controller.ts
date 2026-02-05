@@ -21,7 +21,12 @@ import {
 import { GetUser, PaginatedResultDto } from '../../../common';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../auth/guards/optional-jwt-auth.guard';
-import { CreatePostDto, FilterPostDto, UpdatePostDto } from '../dto';
+import {
+  CreatePostDto,
+  FilterPostDto,
+  FilterTagDto,
+  UpdatePostDto,
+} from '../dto';
 import { Post as DiscussPost } from '../entities/post.entity';
 import { DiscussService } from '../services/discuss.service';
 
@@ -45,6 +50,16 @@ export class DiscussController {
     @GetUser('id') userId: number,
   ): Promise<DiscussPost> {
     return this.discussService.createPost(userId, dto);
+  }
+
+  @Get('tags')
+  @ApiOperation({ summary: 'Get all discuss tags' })
+  @ApiResponse({
+    status: 200,
+    description: 'Tags retrieved successfully',
+  })
+  async getTags(@Query() query: FilterTagDto) {
+    return this.discussService.findAllTags(query);
   }
 
   @Get()

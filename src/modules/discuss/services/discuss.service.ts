@@ -6,7 +6,12 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { PaginatedResultDto } from '../../../common';
-import { CreatePostDto, FilterPostDto, UpdatePostDto } from '../dto';
+import {
+  CreatePostDto,
+  FilterPostDto,
+  FilterTagDto,
+  UpdatePostDto,
+} from '../dto';
 import { DiscussTag } from '../entities/discuss-tag.entity';
 import { Post } from '../entities/post.entity';
 
@@ -56,9 +61,9 @@ export class DiscussService {
     }
 
     if (sortBy) {
-      queryBuilder.orderBy(`post.${sortBy}`, sortOrder);
+      queryBuilder.orderBy(`post.${sortBy}`, sortOrder || 'DESC');
     } else {
-      queryBuilder.orderBy('post.created_at', 'DESC');
+      queryBuilder.orderBy('post.createdAt', 'DESC');
     }
 
     const [items, total] = await queryBuilder
@@ -125,6 +130,32 @@ export class DiscussService {
 
     post.isDeleted = true;
     await this.postRepository.save(post);
+  }
+
+  async findAllTags(
+    query: FilterTagDto = {},
+  ): Promise<PaginatedResultDto<DiscussTag>> {
+    const { page = 1, limit = 100, isActive } = query;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.tagRepository.createQueryBuilder('tag');
+
+    if (isActive !== undefined) {
+      queryBuilder.where('tag.isActive = :isActive', { isActive });
+    }
+
+    queryBuilder.orderBy('tag.name', 'ASC');
+
+    const [items, total] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    return new PaginatedResultDto(items, {
+      page,
+      limit,
+      total,
+    });
   }
 
   private generateSlug(title: string): string {
