@@ -28,4 +28,7 @@ export class UserProfileResponseDto extends OmitType(User, [
 
   @Expose()
   lastSolveAt: Date | null;
+
+  @Expose()
+  avatarUrl: string | null;
 }
