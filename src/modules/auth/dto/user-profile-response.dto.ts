@@ -6,7 +6,6 @@ export class UserProfileResponseDto extends OmitType(User, [
   'bannedAt',
   'banReason',
   'role',
-  'createdAt',
   'updatedAt',
 ]) {
   @Expose()
@@ -21,7 +20,7 @@ export class UserProfileResponseDto extends OmitType(User, [
   @Exclude()
   role: string;
 
-  @Exclude()
+  @Expose()
   createdAt: Date;
 
   @Exclude()
