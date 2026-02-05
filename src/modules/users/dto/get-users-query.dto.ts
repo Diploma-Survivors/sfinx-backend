@@ -46,4 +46,11 @@ export class GetUsersQueryDto extends PaginationQueryDto {
     return value;
   })
   emailVerified?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Filter by account status (active, banned, not_verified)',
+  })
+  @IsOptional()
+  @IsString()
+  status?: 'active' | 'banned' | 'not_verified';
 }

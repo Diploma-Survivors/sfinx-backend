@@ -3,14 +3,13 @@ import { Exclude, Expose } from 'class-transformer';
 import { User } from '../entities/user.entity';
 
 export class UserProfileResponseDto extends OmitType(User, [
-  'isBanned',
   'bannedAt',
   'banReason',
   'role',
   'createdAt',
   'updatedAt',
 ]) {
-  @Exclude()
+  @Expose()
   isBanned: boolean;
 
   @Exclude()
