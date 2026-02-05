@@ -58,6 +58,7 @@ import { SystemConfigModule } from './modules/system-config/system-config.module
 import { AiInterviewsModule } from './modules/ai-interviews/ai-interviews.module';
 import { LiveKitModule } from './modules/livekit/livekit.module';
 import { livekitConfig } from './config';
+import { DiscussModule } from './modules/discuss/discuss.module';
 
 @Module({
   imports: [
@@ -143,6 +144,7 @@ import { livekitConfig } from './config';
     SystemConfigModule,
     AiInterviewsModule,
     LiveKitModule,
+    DiscussModule,
     // UsersModule,
     // PaymentsModule,
     // AiModule,
