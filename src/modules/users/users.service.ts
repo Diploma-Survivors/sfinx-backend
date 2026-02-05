@@ -81,8 +81,19 @@ export class UsersService {
       .orderBy('user.id', 'DESC')
       .getManyAndCount();
 
+    const DEFAULT_AVATAR =
+      'https://cdn.pixabay.com/photo/2018/11/13/21/43/avatar-3814049_1280.png';
+
+    const usersWithAvatar = users.map((user) => {
+      const userWithAvatar = user as User & { avatarUrl?: string };
+      if (!user.avatarKey && !userWithAvatar.avatarUrl) {
+        userWithAvatar.avatarUrl = DEFAULT_AVATAR;
+      }
+      return user;
+    });
+
     return {
-      data: users,
+      data: usersWithAvatar,
       meta: {
         total,
         page,
