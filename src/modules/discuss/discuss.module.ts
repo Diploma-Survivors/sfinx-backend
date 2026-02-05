@@ -6,7 +6,10 @@ import { PostComment } from './entities/post-comment.entity';
 import { PostVote } from './entities/post-vote.entity';
 import { PostCommentVote } from './entities/post-comment-vote.entity';
 import { DiscussController } from './controllers/discuss.controller';
+import { DiscussCommentController } from './controllers/discuss-comment.controller';
 import { DiscussService } from './services/discuss.service';
+import { DiscussCommentService } from './services/discuss-comment.service';
+import { StorageModule } from '../storage/storage.module';
 
 @Module({
   imports: [
@@ -17,9 +20,10 @@ import { DiscussService } from './services/discuss.service';
       PostVote,
       PostCommentVote,
     ]),
+    StorageModule,
   ],
-  controllers: [DiscussController],
-  providers: [DiscussService],
+  controllers: [DiscussController, DiscussCommentController],
+  providers: [DiscussService, DiscussCommentService],
   exports: [DiscussService],
 })
 export class DiscussModule {}
