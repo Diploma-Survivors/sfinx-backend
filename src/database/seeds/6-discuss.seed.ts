@@ -163,8 +163,8 @@ Keep practicing!`,
     for (const commentData of commentsData) {
       const newComment = new PostComment();
       newComment.content = commentData.content;
-      newComment.post = { id: commentData.postId } as Post;
-      newComment.author = { id: commentData.authorId } as User;
+      newComment.postId = commentData.postId;
+      newComment.authorId = commentData.authorId;
 
       await commentRepository.save(newComment);
     }

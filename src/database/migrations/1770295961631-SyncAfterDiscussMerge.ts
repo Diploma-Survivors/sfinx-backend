@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddDiscuss1769328560743 implements MigrationInterface {
-  name = 'AddDiscuss1769328560743';
+export class SyncAfterDiscussMerge1770295961631 implements MigrationInterface {
+  name = 'SyncAfterDiscussMerge1770295961631';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
@@ -27,6 +27,31 @@ export class AddDiscuss1769328560743 implements MigrationInterface {
     );
     await queryRunner.query(
       `CREATE INDEX "IDX_3a1ef157fa603f167f2ec61edd" ON "discuss_post_tags" ("tag_id") `,
+    );
+    await queryRunner.query(`COMMENT ON COLUMN "users"."phone" IS NULL`);
+    await queryRunner.query(
+      `ALTER TABLE "comment_reports" DROP CONSTRAINT "FK_45a6086948851a5e791f1b7964f"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "problem_comments" DROP CONSTRAINT "FK_2c6fb2e60b906efb0088554f320"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "problem_comment_votes" DROP CONSTRAINT "FK_17c2e386ce61098b9c0df19de96"`,
+    );
+    await queryRunner.query(
+      `CREATE SEQUENCE IF NOT EXISTS "problem_comments_id_seq" OWNED BY "problem_comments"."id"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "problem_comments" ALTER COLUMN "id" SET DEFAULT nextval('"problem_comments_id_seq"')`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "problem_comments" ADD CONSTRAINT "FK_2c6fb2e60b906efb0088554f320" FOREIGN KEY ("parent_id") REFERENCES "problem_comments"("id") ON DELETE SET NULL ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "problem_comment_votes" ADD CONSTRAINT "FK_17c2e386ce61098b9c0df19de96" FOREIGN KEY ("comment_id") REFERENCES "problem_comments"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "comment_reports" ADD CONSTRAINT "FK_45a6086948851a5e791f1b7964f" FOREIGN KEY ("comment_id") REFERENCES "problem_comments"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
     );
     await queryRunner.query(
       `ALTER TABLE "discuss_comment_votes" ADD CONSTRAINT "FK_64d400f08ea1e86a68164a59be2" FOREIGN KEY ("comment_id") REFERENCES "discuss_comments"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
@@ -90,6 +115,31 @@ export class AddDiscuss1769328560743 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE "discuss_comment_votes" DROP CONSTRAINT "FK_64d400f08ea1e86a68164a59be2"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "comment_reports" DROP CONSTRAINT "FK_45a6086948851a5e791f1b7964f"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "problem_comment_votes" DROP CONSTRAINT "FK_17c2e386ce61098b9c0df19de96"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "problem_comments" DROP CONSTRAINT "FK_2c6fb2e60b906efb0088554f320"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "problem_comments" ALTER COLUMN "id" DROP DEFAULT`,
+    );
+    await queryRunner.query(`DROP SEQUENCE "problem_comments_id_seq"`);
+    await queryRunner.query(
+      `ALTER TABLE "problem_comment_votes" ADD CONSTRAINT "FK_17c2e386ce61098b9c0df19de96" FOREIGN KEY ("comment_id") REFERENCES "problem_comments"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "problem_comments" ADD CONSTRAINT "FK_2c6fb2e60b906efb0088554f320" FOREIGN KEY ("parent_id") REFERENCES "problem_comments"("id") ON DELETE SET NULL ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "comment_reports" ADD CONSTRAINT "FK_45a6086948851a5e791f1b7964f" FOREIGN KEY ("comment_id") REFERENCES "problem_comments"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `COMMENT ON COLUMN "users"."phone" IS 'User phone number in E.164 format'`,
     );
     await queryRunner.query(
       `DROP INDEX "public"."IDX_3a1ef157fa603f167f2ec61edd"`,
