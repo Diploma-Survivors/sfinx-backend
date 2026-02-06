@@ -111,10 +111,19 @@ export class DiscussService {
       throw new NotFoundException(`Post with ID ${id} not found`);
     }
 
-    // Increment view count
-    await this.postRepository.increment({ id }, 'viewCount', 1);
-
     return post;
+  }
+
+  async incrementViewCount(id: string): Promise<void> {
+    const post = await this.postRepository.findOne({
+      where: { id, isDeleted: false },
+    });
+
+    if (!post) {
+      throw new NotFoundException(`Post with ID ${id} not found`);
+    }
+
+    await this.postRepository.increment({ id }, 'viewCount', 1);
   }
 
   async updatePost(

@@ -94,6 +94,19 @@ export class DiscussController {
     return this.discussService.findOne(idOrSlug);
   }
 
+  @Post(':id/view')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Increment view count for a post' })
+  @ApiParam({ name: 'id', description: 'Post ID' })
+  @ApiResponse({
+    status: 204,
+    description: 'View count incremented successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Post not found' })
+  async incrementViewCount(@Param('id') id: string): Promise<void> {
+    return this.discussService.incrementViewCount(id);
+  }
+
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
