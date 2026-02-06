@@ -270,6 +270,7 @@ export abstract class BaseCommentsService<
     const author: AuthorDto = {
       id: comment.author.id,
       username: comment.author.username,
+      fullName: comment.author.fullName,
       avatarUrl:
         getAvatarUrl(comment.author.avatarKey, this.storageService) ??
         undefined,

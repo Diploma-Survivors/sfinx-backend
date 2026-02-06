@@ -14,3 +14,6 @@ export const ALLOWED_AVATAR_EXTENSIONS = [
   'webp',
   'gif',
 ] as const;
+
+export const DEFAULT_AVATAR_URL =
+  'https://cdn.pixabay.com/photo/2018/11/13/21/43/avatar-3814049_1280.png';

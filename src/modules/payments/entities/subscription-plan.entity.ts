@@ -3,11 +3,14 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinTable,
+  ManyToMany,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { SubscriptionPlanTranslation } from './subscription-plan-translation.entity';
+import { SubscriptionFeature } from './subscription-feature.entity';
 
 export enum SubscriptionType {
   MONTHLY = 'MONTHLY',
@@ -53,4 +56,12 @@ export class SubscriptionPlan {
     (translation) => translation.plan,
   )
   translations: SubscriptionPlanTranslation[];
+
+  @ManyToMany(() => SubscriptionFeature)
+  @JoinTable({
+    name: 'subscription_plan_features',
+    joinColumn: { name: 'plan_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'feature_id', referencedColumnName: 'id' },
+  })
+  features: SubscriptionFeature[];
 }

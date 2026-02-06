@@ -103,7 +103,7 @@ export async function seedRolesAndPermissions(dataSource: DataSource) {
   }
 
   let adminUser = await userRepository.findOne({
-    where: { email: adminEmail },
+    where: [{ email: adminEmail }, { username: adminUsername }],
   });
 
   if (!adminUser) {

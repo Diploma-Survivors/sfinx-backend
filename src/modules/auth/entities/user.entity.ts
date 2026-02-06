@@ -169,7 +169,7 @@ export class User {
     example: '2025-12-19T11:22:11.000Z',
   })
   @Column({ name: 'banned_at', type: 'timestamptz', nullable: true })
-  bannedAt: Date;
+  bannedAt: Date | null;
 
   // Premium subscription
   @ApiProperty({ description: 'Premium subscription status', example: false })

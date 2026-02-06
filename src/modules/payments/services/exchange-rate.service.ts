@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { Cacheable } from '../../../common/decorators/cacheable.decorator';
+import { CACHE_TTL } from '../../../common';
 
 @Injectable()
 export class ExchangeRateService {
@@ -22,11 +23,11 @@ export class ExchangeRateService {
 
   /**
    * Get current exchange rate (USD to VND)
-   * Cached for 12 hours (43200 seconds)
+   * Cached for 1 hour
    */
   @Cacheable({
     key: 'exchange_rate:usd_vnd',
-    ttl: 43200,
+    ttl: CACHE_TTL.ONE_HOUR,
   })
   async getExchangeRate(): Promise<number> {
     this.logger.log('Fetching exchange rate from external API...');

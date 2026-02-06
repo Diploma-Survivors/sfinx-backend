@@ -4,6 +4,7 @@ import {
   SubscriptionPlan,
   SubscriptionType,
 } from '../../modules/payments/entities/subscription-plan.entity';
+import { SubscriptionFeature } from '../../modules/payments/entities/subscription-feature.entity';
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -18,6 +19,7 @@ interface SubscriptionPlanData {
   priceUsd: number;
   durationMonths: number;
   isActive: boolean;
+  featureKeys?: string[];
   translations: Record<string, SubscriptionPlanTranslationData>;
 }
 
@@ -62,6 +64,26 @@ export const CreateSubscriptionPlans = async (dataSource: DataSource) => {
       }
 
       await translationRepo.save(translation);
+    }
+
+    // Link Features
+    if (data.featureKeys && data.featureKeys.length > 0) {
+      const pendingPlan = await planRepo.findOne({
+        where: { id: plan.id },
+        relations: ['features'],
+      });
+
+      const featureRepo = dataSource.getRepository('SubscriptionFeature');
+      const features = (await featureRepo
+        .createQueryBuilder('f')
+        .where('f.key IN (:...keys)', { keys: data.featureKeys })
+        .getMany()) as unknown as SubscriptionFeature[];
+
+      if (pendingPlan) {
+        pendingPlan.features = features;
+        await planRepo.save(pendingPlan);
+        console.log(`Linked ${features.length} features to plan ${data.type}`);
+      }
     }
   }
 };

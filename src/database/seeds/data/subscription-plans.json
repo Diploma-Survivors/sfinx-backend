@@ -4,6 +4,7 @@
     "priceUsd": 5.0,
     "durationMonths": 1,
     "isActive": true,
+    "featureKeys": ["unlimited_submissions", "ai_analysis", "premium_problems"],
     "translations": {
       "en": {
         "name": "Monthly Pro",
@@ -20,6 +21,7 @@
     "priceUsd": 50.0,
     "durationMonths": 12,
     "isActive": true,
+    "featureKeys": ["unlimited_submissions", "ai_analysis", "premium_problems"],
     "translations": {
       "en": {
         "name": "Yearly Pro",

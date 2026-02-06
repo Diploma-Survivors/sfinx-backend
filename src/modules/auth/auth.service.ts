@@ -23,6 +23,7 @@ import {
   ALLOWED_AVATAR_MIME_TYPES,
   AVATAR_MAX_SIZE_BYTES,
   AVATAR_UPLOAD_URL_EXPIRES_IN,
+  DEFAULT_AVATAR_URL,
 } from './constants/avatar.constants';
 import { MailService } from '../mail/mail.service';
 import { Role } from '../rbac/entities/role.entity';
@@ -104,6 +105,7 @@ export class AuthService {
       emailVerified: false,
       isActive: true,
       role: userRole,
+      avatarKey: DEFAULT_AVATAR_URL,
     });
 
     const savedUser = await this.userRepository.save(user);
@@ -716,9 +718,12 @@ export class AuthService {
       dto.lastSolveAt = user.statistics.lastSolveAt;
     }
 
-    if (dto.avatarKey && this.isS3Key(dto.avatarKey)) {
-      (dto as UserProfileResponseDto & { avatarUrl?: string }).avatarUrl =
-        this.storageService.getCloudFrontUrl(dto.avatarKey);
+    const avatarKey = user.avatarKey || DEFAULT_AVATAR_URL;
+
+    if (this.isS3Key(avatarKey)) {
+      dto.avatarUrl = this.storageService.getCloudFrontUrl(avatarKey);
+    } else {
+      dto.avatarUrl = avatarKey;
     }
 
     return dto;

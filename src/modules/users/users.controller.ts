@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -17,6 +17,13 @@ import { UserProfileResponseDto } from '../auth/dto/user-profile-response.dto';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { GetPracticeHistoryDto } from '../submissions/dto/get-practice-history.dto';
 import { Permission } from '../rbac/entities/permission.entity';
+import { GetUsersQueryDto } from './dto/get-users-query.dto';
+import { CheckPolicies } from '../../common';
+import { Action } from '../rbac/casl';
+import { User } from '../auth/entities/user.entity';
+import { PaginatedResultDto } from '../../common/dto/paginated-result.dto';
+import { SystemUserStatisticsDto } from './dto/system-user-statistics.dto';
+import { CaslGuard } from '../auth/guards/casl.guard';
 
 @ApiTags('Users')
 @Controller('users')
@@ -28,7 +35,7 @@ export class UsersController {
   ) {}
 
   @Get('profile')
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(OptionalJwtAuthGuard, CaslGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get user profile' })
   @ApiQuery({ name: 'userId', required: true, type: Number })
@@ -59,6 +66,56 @@ export class UsersController {
     @Query('userId') userId: number,
   ): Promise<Permission[]> {
     return this.usersService.getUserPermisison(userId);
+  }
+
+  @Get()
+  @UseGuards(CaslGuard)
+  @CheckPolicies((ability) => ability.can(Action.Read, User))
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get all users' })
+  @ApiResponse({
+    status: 200,
+    description: 'Users retrieved successfully',
+    type: PaginatedResultDto,
+  })
+  async findAll(
+    @Query() query: GetUsersQueryDto,
+  ): Promise<PaginatedResultDto<User>> {
+    return this.usersService.findAll(query);
+  }
+
+  @Get('statistics')
+  @UseGuards(CaslGuard)
+  @CheckPolicies((ability) => ability.can(Action.Read, User))
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get system-wide user statistics' })
+  @ApiResponse({
+    status: 200,
+    description: 'System user statistics retrieved successfully',
+    type: SystemUserStatisticsDto,
+  })
+  async getSystemStatistics(): Promise<SystemUserStatisticsDto> {
+    return this.usersService.getSystemStatistics();
+  }
+
+  @Post(':userId/ban')
+  @UseGuards(CaslGuard)
+  @CheckPolicies((ability) => ability.can(Action.Manage, User))
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Ban a user' })
+  @ApiResponse({ status: 200, description: 'User banned successfully' })
+  async banUser(@Param('userId') userId: number): Promise<void> {
+    return this.usersService.banUser(userId);
+  }
+
+  @Post(':userId/unban')
+  @UseGuards(CaslGuard)
+  @CheckPolicies((ability) => ability.can(Action.Manage, User))
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Unban a user' })
+  @ApiResponse({ status: 200, description: 'User unbanned successfully' })
+  async unbanUser(@Param('userId') userId: number): Promise<void> {
+    return this.usersService.unbanUser(userId);
   }
 
   @Get(':userId/stats')

@@ -8,6 +8,12 @@ export class AuthorDto {
   username: string;
 
   @ApiPropertyOptional({
+    description: 'Full name',
+    example: 'John Doe',
+  })
+  fullName?: string;
+
+  @ApiPropertyOptional({
     description: 'Avatar URL',
     example: 'https://example.com/avatar.jpg',
   })
