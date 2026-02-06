@@ -9,7 +9,10 @@ import { DiscussController } from './controllers/discuss.controller';
 import { DiscussCommentController } from './controllers/discuss-comment.controller';
 import { DiscussService } from './services/discuss.service';
 import { DiscussCommentService } from './services/discuss-comment.service';
+import { DiscussTagService } from './services/discuss-tag.service';
 import { StorageModule } from '../storage/storage.module';
+
+import { DiscussTagsController } from './controllers/discuss-tags.controller';
 
 @Module({
   imports: [
@@ -22,8 +25,12 @@ import { StorageModule } from '../storage/storage.module';
     ]),
     StorageModule,
   ],
-  controllers: [DiscussController, DiscussCommentController],
-  providers: [DiscussService, DiscussCommentService],
-  exports: [DiscussService],
+  controllers: [
+    DiscussTagsController,
+    DiscussController,
+    DiscussCommentController,
+  ],
+  providers: [DiscussService, DiscussCommentService, DiscussTagService],
+  exports: [DiscussService, DiscussTagService],
 })
 export class DiscussModule {}

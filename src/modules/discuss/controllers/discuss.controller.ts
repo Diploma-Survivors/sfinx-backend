@@ -24,17 +24,20 @@ import { OptionalJwtAuthGuard } from '../../auth/guards/optional-jwt-auth.guard'
 import {
   CreatePostDto,
   FilterPostDto,
-  FilterTagDto,
   UpdatePostDto,
   VotePostDto,
 } from '../dto';
 import { Post as DiscussPost } from '../entities/post.entity';
 import { DiscussService } from '../services/discuss.service';
+import { DiscussTagService } from '../services/discuss-tag.service';
 
 @ApiTags('Discuss')
 @Controller('discuss')
 export class DiscussController {
-  constructor(private readonly discussService: DiscussService) {}
+  constructor(
+    private readonly discussService: DiscussService,
+    private readonly discussTagService: DiscussTagService,
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -53,16 +56,6 @@ export class DiscussController {
     return this.discussService.createPost(userId, dto);
   }
 
-  @Get('tags')
-  @ApiOperation({ summary: 'Get all discuss tags' })
-  @ApiResponse({
-    status: 200,
-    description: 'Tags retrieved successfully',
-  })
-  async getTags(@Query() query: FilterTagDto) {
-    return this.discussService.findAllTags(query);
-  }
-
   @Get('trending-topics')
   @ApiOperation({ summary: 'Get trending topics' })
   @ApiResponse({
@@ -70,7 +63,7 @@ export class DiscussController {
     description: 'Trending topics retrieved successfully',
   })
   async getTrendingTopics() {
-    return this.discussService.getTrendingTopics();
+    return await this.discussTagService.getTrendingTopics();
   }
 
   @Get('getAll')

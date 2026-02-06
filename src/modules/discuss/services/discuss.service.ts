@@ -6,16 +6,12 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { PaginatedResultDto } from '../../../common';
-import {
-  CreatePostDto,
-  FilterPostDto,
-  FilterTagDto,
-  UpdatePostDto,
-} from '../dto';
+import { CreatePostDto, FilterPostDto, UpdatePostDto } from '../dto';
 import { DiscussTag } from '../entities/discuss-tag.entity';
 import { Post } from '../entities/post.entity';
 import { PostVote } from '../entities/post-vote.entity';
 import { VoteType } from '../../comments-base/enums';
+import { DiscussTagService } from './discuss-tag.service';
 
 @Injectable()
 export class DiscussService {
@@ -26,6 +22,7 @@ export class DiscussService {
     private readonly tagRepository: Repository<DiscussTag>,
     @InjectRepository(PostVote)
     private readonly postVoteRepository: Repository<PostVote>,
+    private readonly discussTagService: DiscussTagService,
   ) {}
 
   async createPost(userId: number, dto: CreatePostDto): Promise<Post> {
@@ -144,54 +141,6 @@ export class DiscussService {
 
     post.isDeleted = true;
     await this.postRepository.save(post);
-  }
-
-  async findAllTags(
-    query: FilterTagDto = {},
-  ): Promise<PaginatedResultDto<DiscussTag>> {
-    const { page = 1, limit = 100, isActive } = query;
-    const skip = (page - 1) * limit;
-
-    const queryBuilder = this.tagRepository.createQueryBuilder('tag');
-
-    if (isActive !== undefined) {
-      queryBuilder.where('tag.isActive = :isActive', { isActive });
-    }
-
-    queryBuilder.orderBy('tag.name', 'ASC');
-
-    const [items, total] = await queryBuilder
-      .skip(skip)
-      .take(limit)
-      .getManyAndCount();
-
-    return new PaginatedResultDto(items, {
-      page,
-      limit,
-      total,
-    });
-  }
-
-  async getTrendingTopics(limit: number = 5): Promise<any[]> {
-    const queryBuilder = this.tagRepository
-      .createQueryBuilder('tag')
-      .leftJoin('discuss_post_tags', 'post_tags', 'post_tags.tag_id = tag.id')
-      .select([
-        'tag.id AS id',
-        'tag.name AS name',
-        'tag.slug AS slug',
-        'tag.color AS color',
-        'COUNT(post_tags.post_id) AS "postCount"',
-      ])
-      .groupBy('tag.id, tag.name, tag.slug, tag.color')
-      .orderBy('"postCount"', 'DESC')
-      .limit(limit);
-
-    const result = await queryBuilder.getRawMany();
-    return result.map((item) => ({
-      ...item,
-      postCount: Number(item.postCount),
-    }));
   }
 
   async votePost(

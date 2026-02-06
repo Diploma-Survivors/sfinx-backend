@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { IsArray, IsInt, IsOptional, IsString } from 'class-validator';
 import { PaginationQueryDto } from '../../../common';
 
@@ -20,6 +20,12 @@ export class FilterPostDto extends PaginationQueryDto {
   @IsOptional()
   @IsArray()
   @Type(() => Number)
+  @Transform(({ value }): number[] => {
+    if (typeof value === 'string') {
+      return value.split(',').map((v) => Number(v));
+    }
+    return Array.isArray(value) ? value : [value];
+  })
   @IsInt({ each: true })
   tagIds?: number[];
 }
