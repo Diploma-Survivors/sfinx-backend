@@ -172,6 +172,28 @@ export class DiscussService {
     });
   }
 
+  async getTrendingTopics(limit: number = 5): Promise<any[]> {
+    const queryBuilder = this.tagRepository
+      .createQueryBuilder('tag')
+      .leftJoin('discuss_post_tags', 'post_tags', 'post_tags.tag_id = tag.id')
+      .select([
+        'tag.id AS id',
+        'tag.name AS name',
+        'tag.slug AS slug',
+        'tag.color AS color',
+        'COUNT(post_tags.post_id) AS "postCount"',
+      ])
+      .groupBy('tag.id, tag.name, tag.slug, tag.color')
+      .orderBy('"postCount"', 'DESC')
+      .limit(limit);
+
+    const result = await queryBuilder.getRawMany();
+    return result.map((item) => ({
+      ...item,
+      postCount: Number(item.postCount),
+    }));
+  }
+
   async votePost(
     userId: number,
     postId: string,
@@ -190,15 +212,11 @@ export class DiscussService {
     });
 
     if (existingVote) {
-      // Fix: Cast existingVote.voteType to number for strict comparison
-      // Database might return string if column type is varchar
       const currentVoteType = Number(existingVote.voteType);
 
       if (currentVoteType === Number(voteType)) {
-        // Already voted this way, remove vote (toggle off)
         await this.postVoteRepository.remove(existingVote);
         if (voteType === VoteType.UPVOTE) {
-          // Prevent negative counts
           await this.postRepository.update(
             { id: postId },
             { upvoteCount: () => 'GREATEST(upvote_count - 1, 0)' },

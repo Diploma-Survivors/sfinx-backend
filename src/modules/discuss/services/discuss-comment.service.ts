@@ -9,6 +9,7 @@ import { StorageService } from '../../storage/storage.service';
 import { BaseCommentsService } from '../../comments-base/base-comments.service';
 import { PostCommentVote } from '../entities/post-comment-vote.entity';
 import { PostComment } from '../entities/post-comment.entity';
+import { Post } from '../entities/post.entity';
 import { VoteType } from '../../comments-base/enums';
 import { CreatePostCommentDto } from '../dto/create-post-comment.dto';
 import { UpdatePostCommentDto } from '../dto/update-post-comment.dto';
@@ -26,9 +27,15 @@ export class DiscussCommentService extends BaseCommentsService<
   constructor(
     @InjectRepository(PostComment)
     protected readonly commentRepo: Repository<PostComment>,
+
     @InjectRepository(PostCommentVote)
     protected readonly voteRepo: Repository<PostCommentVote>,
+
+    @InjectRepository(Post)
+    protected readonly postRepo: Repository<Post>,
+
     protected readonly storageService: StorageService,
+
     @InjectDataSource()
     protected readonly dataSource: DataSource,
   ) {
@@ -118,6 +125,9 @@ export class DiscussCommentService extends BaseCommentsService<
 
     const saved = await this.commentRepo.save(comment);
 
+    // Update post comment count
+    await this.postRepo.increment({ id: postId }, 'commentCount', 1);
+
     if (saved.parentId) {
       await this.commentRepo
         .createQueryBuilder()
@@ -182,6 +192,13 @@ export class DiscussCommentService extends BaseCommentsService<
 
     // Delete all identified comments
     await this.commentRepo.delete({ id: In(Array.from(idsToDelete)) });
+
+    // Update post comment count
+    await this.postRepo.decrement(
+      { id: comment.postId },
+      'commentCount',
+      idsToDelete.size,
+    );
 
     // Update parent reply count if this was a reply
     if (comment.parentId) {

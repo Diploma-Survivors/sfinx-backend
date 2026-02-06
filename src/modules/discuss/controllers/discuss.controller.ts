@@ -63,6 +63,16 @@ export class DiscussController {
     return this.discussService.findAllTags(query);
   }
 
+  @Get('trending-topics')
+  @ApiOperation({ summary: 'Get trending topics' })
+  @ApiResponse({
+    status: 200,
+    description: 'Trending topics retrieved successfully',
+  })
+  async getTrendingTopics() {
+    return this.discussService.getTrendingTopics();
+  }
+
   @Get('getAll')
   @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get paginated discuss posts' })
