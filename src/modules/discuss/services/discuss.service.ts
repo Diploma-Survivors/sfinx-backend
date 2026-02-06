@@ -41,7 +41,15 @@ export class DiscussService {
   }
 
   async findAll(query: FilterPostDto): Promise<PaginatedResultDto<Post>> {
-    const { page = 1, limit = 20, search, tagIds, sortBy, sortOrder } = query;
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      tagIds,
+      sortBy,
+      sortOrder,
+      userId,
+    } = query;
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.postRepository
@@ -59,6 +67,10 @@ export class DiscussService {
 
     if (tagIds && tagIds.length > 0) {
       queryBuilder.andWhere('tags.id IN (:...tagIds)', { tagIds });
+    }
+
+    if (userId) {
+      queryBuilder.andWhere('author.id = :userId', { userId });
     }
 
     if (sortBy === 'trending') {

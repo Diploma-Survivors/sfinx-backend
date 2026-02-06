@@ -28,4 +28,13 @@ export class FilterPostDto extends PaginationQueryDto {
   })
   @IsInt({ each: true })
   tagIds?: number[];
+
+  @ApiPropertyOptional({
+    description: 'Filter by user ID (author)',
+    example: 1,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  userId?: number;
 }
