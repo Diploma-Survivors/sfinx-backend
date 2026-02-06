@@ -1,8 +1,7 @@
 import {
   Column,
   Entity,
-  PrimaryGeneratedColumn,
-  Unique,
+  PrimaryColumn,
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
@@ -12,15 +11,11 @@ import { Post } from './post.entity';
 import { User } from '../../auth/entities/user.entity'; // Adjust path if needed
 
 @Entity('discuss_post_votes')
-@Unique(['userId', 'postId'])
 export class PostVote {
-  @PrimaryGeneratedColumn()
-  id: number;
-
-  @Column({ name: 'user_id' })
+  @PrimaryColumn({ name: 'user_id' })
   userId: number;
 
-  @Column({ name: 'post_id', type: 'uuid' }) // Post ID is uuid
+  @PrimaryColumn({ name: 'post_id', type: 'uuid' })
   postId: string;
 
   @Column({

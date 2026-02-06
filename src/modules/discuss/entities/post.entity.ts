@@ -35,6 +35,9 @@ export class Post {
   @Column({ name: 'upvote_count', default: 0 })
   upvoteCount: number;
 
+  @Column({ name: 'downvote_count', default: 0 })
+  downvoteCount: number;
+
   @Column({ name: 'comment_count', default: 0 })
   commentCount: number;
 

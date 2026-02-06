@@ -26,6 +26,7 @@ import {
   FilterPostDto,
   FilterTagDto,
   UpdatePostDto,
+  VotePostDto,
 } from '../dto';
 import { Post as DiscussPost } from '../entities/post.entity';
 import { DiscussService } from '../services/discuss.service';
@@ -126,5 +127,56 @@ export class DiscussController {
     @GetUser('id') userId: number,
   ): Promise<void> {
     return this.discussService.deletePost(id, userId);
+  }
+
+  @Post(':id/vote')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Vote on a discuss post' })
+  @ApiParam({ name: 'id', description: 'Post ID' })
+  @ApiResponse({ status: 200, description: 'Vote recorded successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Post not found' })
+  async votePost(
+    @Param('id') postId: string,
+    @Body() dto: VotePostDto,
+    @GetUser('id') userId: number,
+  ): Promise<{ upvoteCount: number; downvoteCount: number }> {
+    return this.discussService.votePost(userId, postId, dto.voteType);
+  }
+
+  @Get(':id/vote')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get user vote for a post' })
+  @ApiParam({ name: 'id', description: 'Post ID' })
+  @ApiResponse({ status: 200, description: 'Vote retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getUserVote(
+    @Param('id') postId: string,
+    @GetUser('id') userId: number,
+  ) {
+    const voteType = await this.discussService.getUserVoteForPost(
+      userId,
+      postId,
+    );
+    return { voteType };
+  }
+
+  @Delete(':id/vote')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Remove vote from a discuss post' })
+  @ApiParam({ name: 'id', description: 'Post ID' })
+  @ApiResponse({ status: 204, description: 'Vote removed successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Post not found' })
+  async unvotePost(
+    @Param('id') postId: string,
+    @GetUser('id') userId: number,
+  ): Promise<void> {
+    return this.discussService.unvotePost(userId, postId);
   }
 }

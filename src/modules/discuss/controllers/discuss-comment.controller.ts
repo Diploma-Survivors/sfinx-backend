@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  ParseIntPipe,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -29,6 +30,51 @@ import { VotePostCommentDto } from '../dto/vote-post-comment.dto';
 @Controller('discuss-comments')
 export class DiscussCommentController {
   constructor(private readonly commentService: DiscussCommentService) {}
+
+  @Post(':id/vote')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Vote on a comment' })
+  @ApiParam({ name: 'id', description: 'Comment ID' })
+  @ApiResponse({ status: 200, description: 'Vote registered successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async voteComment(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: VotePostCommentDto,
+    @GetUser('id') userId: number,
+  ) {
+    return this.commentService.voteComment(id, userId, dto.voteType);
+  }
+
+  @Delete(':id/vote')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Remove vote from a comment' })
+  @ApiParam({ name: 'id', description: 'Comment ID' })
+  @ApiResponse({ status: 204, description: 'Vote removed successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async unvoteComment(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser('id') userId: number,
+  ) {
+    return this.commentService.unvoteComment(id, userId);
+  }
+
+  @Get(':id/vote')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get user vote for a comment' })
+  @ApiParam({ name: 'id', description: 'Comment ID' })
+  @ApiResponse({ status: 200, description: 'Vote retrieved successfully' })
+  async getUserVote(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser('id') userId: number,
+  ) {
+    const votes = await this.commentService.getUserVotes([id], userId);
+    return { voteType: votes.get(id) || null };
+  }
 
   @Post(':postId')
   @UseGuards(JwtAuthGuard)
@@ -66,11 +112,7 @@ export class DiscussCommentController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Not the comment owner' })
   async updateComment(
-    @Param('id') id: number, // Use number for comment ID (base-comment uses number ID? yes, PostComment extends BaseComment which has number id)
-    // Wait, let me double check BaseComment ID type. Yes, BaseComment uses @PrimaryGeneratedColumn() which defaults to number/integer auto-increment in default TypeORM settings unless uuid is specified.
-    // However, Post uses @PrimaryGeneratedColumn('uuid').
-    // Let's assume comment ID is number as per BaseComment.
-    // Actually, looking at BaseComment: @PrimaryGeneratedColumn() -> number.
+    @Param('id') id: number,
     @Body() dto: UpdatePostCommentDto,
     @GetUser('id') userId: number,
   ) {
@@ -88,21 +130,5 @@ export class DiscussCommentController {
   @ApiResponse({ status: 403, description: 'Not the comment owner' })
   async deleteComment(@Param('id') id: number, @GetUser('id') userId: number) {
     return this.commentService.deleteComment(id, userId);
-  }
-
-  @Post(':id/vote')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
-  @HttpCode(HttpStatus.OK) // Or 204? Usually vote returns void but 200 OK is fine.
-  @ApiOperation({ summary: 'Vote on a comment' })
-  @ApiParam({ name: 'id', description: 'Comment ID' })
-  @ApiResponse({ status: 200, description: 'Vote registered successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async voteComment(
-    @Param('id') id: number,
-    @Body() dto: VotePostCommentDto,
-    @GetUser('id') userId: number,
-  ) {
-    return this.commentService.voteComment(id, userId, dto.voteType);
   }
 }

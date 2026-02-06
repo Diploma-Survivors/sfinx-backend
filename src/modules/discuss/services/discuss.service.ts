@@ -14,6 +14,8 @@ import {
 } from '../dto';
 import { DiscussTag } from '../entities/discuss-tag.entity';
 import { Post } from '../entities/post.entity';
+import { PostVote } from '../entities/post-vote.entity';
+import { VoteType } from '../../comments-base/enums';
 
 @Injectable()
 export class DiscussService {
@@ -22,6 +24,8 @@ export class DiscussService {
     private readonly postRepository: Repository<Post>,
     @InjectRepository(DiscussTag)
     private readonly tagRepository: Repository<DiscussTag>,
+    @InjectRepository(PostVote)
+    private readonly postVoteRepository: Repository<PostVote>,
   ) {}
 
   async createPost(userId: number, dto: CreatePostDto): Promise<Post> {
@@ -156,6 +160,133 @@ export class DiscussService {
       limit,
       total,
     });
+  }
+
+  async votePost(
+    userId: number,
+    postId: string,
+    voteType: VoteType,
+  ): Promise<{ upvoteCount: number; downvoteCount: number }> {
+    const post = await this.postRepository.findOne({
+      where: { id: postId, isDeleted: false },
+    });
+
+    if (!post) {
+      throw new NotFoundException(`Post with ID ${postId} not found`);
+    }
+
+    const existingVote = await this.postVoteRepository.findOne({
+      where: { userId, postId },
+    });
+
+    if (existingVote) {
+      // Fix: Cast existingVote.voteType to number for strict comparison
+      // Database might return string if column type is varchar
+      const currentVoteType = Number(existingVote.voteType);
+
+      if (currentVoteType === Number(voteType)) {
+        // Already voted this way, remove vote (toggle off)
+        await this.postVoteRepository.remove(existingVote);
+        if (voteType === VoteType.UPVOTE) {
+          // Prevent negative counts
+          await this.postRepository.update(
+            { id: postId },
+            { upvoteCount: () => 'GREATEST(upvote_count - 1, 0)' },
+          );
+        } else {
+          await this.postRepository.update(
+            { id: postId },
+            { downvoteCount: () => 'GREATEST(downvote_count - 1, 0)' },
+          );
+        }
+      } else {
+        // Switch vote
+        existingVote.voteType = voteType;
+        await this.postVoteRepository.save(existingVote);
+        if (voteType === VoteType.UPVOTE) {
+          await this.postRepository.increment({ id: postId }, 'upvoteCount', 1);
+          await this.postRepository.update(
+            { id: postId },
+            { downvoteCount: () => 'GREATEST(downvote_count - 1, 0)' },
+          );
+        } else {
+          await this.postRepository.increment(
+            { id: postId },
+            'downvoteCount',
+            1,
+          );
+          await this.postRepository.update(
+            { id: postId },
+            { upvoteCount: () => 'GREATEST(upvote_count - 1, 0)' },
+          );
+        }
+      }
+    } else {
+      const newVote = this.postVoteRepository.create({
+        userId,
+        postId,
+        voteType,
+      });
+      await this.postVoteRepository.save(newVote);
+      if (voteType === VoteType.UPVOTE) {
+        await this.postRepository.increment({ id: postId }, 'upvoteCount', 1);
+      } else {
+        await this.postRepository.increment({ id: postId }, 'downvoteCount', 1);
+      }
+    }
+
+    // Fetch updated post to return accurate counts
+    const updatedPost = await this.postRepository.findOne({
+      where: { id: postId },
+    });
+
+    return {
+      upvoteCount: updatedPost!.upvoteCount,
+      downvoteCount: updatedPost!.downvoteCount,
+    };
+  }
+
+  async unvotePost(userId: number, postId: string): Promise<void> {
+    const post = await this.postRepository.findOne({
+      where: { id: postId, isDeleted: false },
+    });
+
+    if (!post) {
+      throw new NotFoundException(`Post with ID ${postId} not found`);
+    }
+
+    const existingVote = await this.postVoteRepository.findOne({
+      where: { userId, postId },
+    });
+
+    if (existingVote) {
+      await this.postVoteRepository.remove(existingVote);
+      // Fix: Cast existingVote.voteType to number just in case
+      const currentVoteType = Number(existingVote.voteType);
+
+      if (currentVoteType === Number(VoteType.UPVOTE)) {
+        await this.postRepository.update(
+          { id: postId },
+          { upvoteCount: () => 'GREATEST(upvote_count - 1, 0)' },
+        );
+      } else {
+        await this.postRepository.update(
+          { id: postId },
+          { downvoteCount: () => 'GREATEST(downvote_count - 1, 0)' },
+        );
+      }
+    }
+  }
+
+  async getUserVoteForPost(
+    userId: number,
+    postId: string,
+  ): Promise<VoteType | null> {
+    const vote = await this.postVoteRepository.findOne({
+      where: { userId, postId },
+    });
+
+    return vote ? Number(vote.voteType) : null;
   }
 
   private generateSlug(title: string): string {

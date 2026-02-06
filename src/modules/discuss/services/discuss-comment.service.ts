@@ -195,4 +195,65 @@ export class DiscussCommentService extends BaseCommentsService<
         .execute();
     }
   }
+
+  async voteComment(
+    commentId: number,
+    userId: number,
+    voteType: VoteType,
+  ): Promise<void> {
+    const existingVote = await this.voteRepo
+      .createQueryBuilder('vote')
+      .where('vote.commentId = :commentId', { commentId })
+      .andWhere('vote.userId = :userId', { userId })
+      .getOne();
+
+    await this.dataSource.transaction(async (manager) => {
+      if (existingVote) {
+        // Fix: Cast existingVote.voteType to number for strict comparison
+        const currentVoteType = Number(existingVote.voteType);
+
+        if (currentVoteType === Number(voteType)) {
+          // Toggle off
+          await manager.getRepository(this.getVoteEntityName()).delete({
+            commentId,
+            userId,
+          });
+          await this.updateCommentVoteCounts(manager, commentId);
+        } else {
+          // Switch vote
+          existingVote.voteType = voteType;
+          await manager.save(existingVote);
+          await this.updateCommentVoteCounts(manager, commentId);
+        }
+      } else {
+        // Create new vote
+        const newVote = this.createVoteEntity(commentId, userId, voteType);
+        await manager.save(newVote);
+        await this.updateCommentVoteCounts(manager, commentId);
+      }
+    });
+  }
+
+  async unvoteComment(commentId: number, userId: number): Promise<void> {
+    await this.dataSource.transaction(async (manager) => {
+      await manager.getRepository(this.getVoteEntityName()).delete({
+        commentId,
+        userId,
+      });
+      await this.updateCommentVoteCounts(manager, commentId);
+    });
+  }
+
+  // Override getUserVotes to ensure number return type
+  async getUserVotes(
+    commentIds: number[],
+    userId: number,
+  ): Promise<Map<number, number>> {
+    const map = await super.getUserVotes(commentIds, userId);
+    const correctedMap = new Map<number, number>();
+    map.forEach((value, key) => {
+      correctedMap.set(key, Number(value));
+    });
+    return correctedMap;
+  }
 }
