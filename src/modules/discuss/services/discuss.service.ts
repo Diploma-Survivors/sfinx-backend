@@ -64,7 +64,17 @@ export class DiscussService {
       queryBuilder.andWhere('tags.id IN (:...tagIds)', { tagIds });
     }
 
-    if (sortBy) {
+    if (sortBy === 'trending') {
+      queryBuilder
+        .addSelect(
+          '(COALESCE(post.upvoteCount, 0) - COALESCE(post.downvoteCount, 0))',
+          'vote_score',
+        )
+        .orderBy('vote_score', sortOrder || 'DESC')
+        .addOrderBy('post.createdAt', 'DESC');
+    } else if (sortBy === 'newest') {
+      queryBuilder.orderBy('post.createdAt', sortOrder || 'DESC');
+    } else if (sortBy) {
       queryBuilder.orderBy(`post.${sortBy}`, sortOrder || 'DESC');
     } else {
       queryBuilder.orderBy('post.createdAt', 'DESC');

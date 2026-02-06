@@ -63,7 +63,7 @@ export class DiscussController {
     return this.discussService.findAllTags(query);
   }
 
-  @Get()
+  @Get('getAll')
   @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get paginated discuss posts' })
   @ApiResponse({
