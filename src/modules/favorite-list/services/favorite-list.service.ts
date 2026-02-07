@@ -10,6 +10,7 @@ import { Problem } from '../../problems/entities/problem.entity';
 import { CreateFavoriteListDto } from '../dto/create-favorite-list.dto';
 import { UpdateFavoriteListDto } from '../dto/update-favorite-list.dto';
 import { FavoriteList } from '../entities/favorite-list.entity';
+import { ProgressStatus } from '../../submissions/enums/progress-status.enum';
 
 @Injectable()
 export class FavoriteListService {
@@ -157,10 +158,13 @@ export class FavoriteListService {
     return await this.favoriteListRepository.save(list);
   }
 
-  async getProblems(listId: number, userId?: number): Promise<Problem[]> {
+  async getProblems(
+    listId: number,
+    userId?: number,
+  ): Promise<(Problem & { status?: ProgressStatus | null })[]> {
     const list = await this.favoriteListRepository.findOne({
       where: { id: listId },
-      relations: ['problems', 'problems.tags', 'problems.topics'],
+      relations: ['problems'],
     });
 
     if (!list) {
@@ -171,7 +175,40 @@ export class FavoriteListService {
       throw new ForbiddenException('You do not have access to this list');
     }
 
-    return list.problems;
+    if (!list.problems || list.problems.length === 0) {
+      return [];
+    }
+
+    const problemIds = list.problems.map((p) => p.id);
+
+    const queryBuilder = this.problemRepository
+      .createQueryBuilder('problem')
+      .leftJoinAndSelect('problem.tags', 'tags')
+      .leftJoinAndSelect('problem.topics', 'topics')
+      .where('problem.id IN (:...problemIds)', { problemIds });
+
+    if (userId) {
+      queryBuilder.leftJoinAndSelect(
+        'problem.userProgress',
+        'user_progress',
+        'user_progress.userId = :userId',
+        { userId },
+      );
+    }
+
+    const problems = await queryBuilder.getMany();
+
+    // Map status from userProgress
+    if (userId) {
+      problems.forEach((problem) => {
+        const progress = problem.userProgress?.[0];
+        (problem as Problem & { status?: ProgressStatus | null }).status =
+          progress?.status ?? null;
+        delete problem.userProgress;
+      });
+    }
+
+    return problems as (Problem & { status?: ProgressStatus | null })[];
   }
 
   async findPublicLists(): Promise<FavoriteList[]> {
