@@ -23,8 +23,22 @@ export class FavoriteList {
   @Column({ length: 255 })
   name: string;
 
-  @ApiProperty({ description: 'List icon (emoji)', example: '⭐' })
-  @Column({ length: 10, default: '📝' })
+  @ApiProperty({
+    description: 'List description',
+    example: 'A collection of difficult DP problems',
+  })
+  @Column({ type: 'text', nullable: true })
+  description: string;
+
+  @ApiProperty({
+    description: 'List icon (URL or emoji)',
+    example: 'https://...',
+  })
+  @Column({
+    length: 500,
+    default:
+      'https://play-lh.googleusercontent.com/2X1xHmYDF33roRwWqJOUgiFvF4Bi8fUbaw3mkODIasg68WIJM_9kmA9akRZUi3k5jaZ278RqpB4vatLOMRSKERc',
+  })
   icon: string;
 
   @ApiProperty({ description: 'Whether list is public', default: false })

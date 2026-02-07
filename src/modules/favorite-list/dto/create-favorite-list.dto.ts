@@ -13,15 +13,27 @@ export class CreateFavoriteListDto {
   name: string;
 
   @ApiProperty({
-    description: 'List icon (emoji)',
-    example: '⭐',
+    description: 'List description',
+    example: 'A collection of difficult DP problems',
     required: false,
-    default: '📝',
-    maxLength: 10,
+    maxLength: 500,
   })
   @IsOptional()
   @IsString()
-  @MaxLength(10)
+  @MaxLength(500)
+  description?: string;
+
+  @ApiProperty({
+    description: 'List icon (URL or emoji)',
+    example: 'https://example.com/icon.png',
+    required: false,
+    default:
+      'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRqUZVDZwW0xQG3s8dz4qBTZTwx4zWyyDvaYA&s',
+    maxLength: 500,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
   icon?: string;
 
   @ApiProperty({
