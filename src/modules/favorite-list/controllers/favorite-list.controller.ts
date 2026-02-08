@@ -9,13 +9,18 @@ import {
   UseGuards,
   Request,
   ParseIntPipe,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
+  ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { CreateFavoriteListDto } from '../dto/create-favorite-list.dto';
@@ -127,6 +132,40 @@ export class FavoriteListController {
       req.user.id,
       updateFavoriteListDto,
     );
+  }
+
+  @Post(':id/icon')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Upload list icon' })
+  @ApiParam({ name: 'id', description: 'List ID' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Icon uploaded successfully',
+    type: FavoriteList,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Not owner' })
+  @ApiResponse({ status: 404, description: 'List not found' })
+  uploadIcon(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<FavoriteList> {
+    return this.favoriteListService.uploadIcon(id, req.user.id, file);
   }
 
   @Delete(':id')

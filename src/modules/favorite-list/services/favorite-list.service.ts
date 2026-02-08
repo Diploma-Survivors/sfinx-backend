@@ -11,6 +11,7 @@ import { CreateFavoriteListDto } from '../dto/create-favorite-list.dto';
 import { UpdateFavoriteListDto } from '../dto/update-favorite-list.dto';
 import { FavoriteList } from '../entities/favorite-list.entity';
 import { ProgressStatus } from '../../submissions/enums/progress-status.enum';
+import { StorageService } from '../../storage/storage.service';
 
 @Injectable()
 export class FavoriteListService {
@@ -19,6 +20,7 @@ export class FavoriteListService {
     private readonly favoriteListRepository: Repository<FavoriteList>,
     @InjectRepository(Problem)
     private readonly problemRepository: Repository<Problem>,
+    private readonly storageService: StorageService,
   ) {}
 
   async create(
@@ -225,5 +227,36 @@ export class FavoriteListService {
       relations: ['problems'],
       order: { createdAt: 'DESC' },
     });
+  }
+
+  async uploadIcon(
+    listId: number,
+    userId: number,
+    file: Express.Multer.File,
+  ): Promise<FavoriteList> {
+    const list = await this.favoriteListRepository.findOne({
+      where: { id: listId },
+    });
+
+    if (!list) {
+      throw new NotFoundException(`List with ID ${listId} not found`);
+    }
+
+    if (list.userId !== userId) {
+      throw new ForbiddenException('You can only update your own lists');
+    }
+
+    // Generate S3 key
+    const fileExtension =
+      file.originalname.split('.').pop()?.toLowerCase() || 'png';
+    const timestamp = Date.now();
+    const key = `favorite-lists/${listId}/${timestamp}.${fileExtension}`;
+
+    // Upload to S3
+    await this.storageService.uploadFile(key, file.buffer, file.mimetype);
+
+    // Update list icon
+    list.icon = this.storageService.getCloudFrontUrl(key);
+    return await this.favoriteListRepository.save(list);
   }
 }
