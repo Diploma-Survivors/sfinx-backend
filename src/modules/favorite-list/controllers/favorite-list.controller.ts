@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   UseGuards,
-  Request,
   ParseIntPipe,
   UseInterceptors,
   UploadedFile,
@@ -29,6 +28,7 @@ import { CreateFavoriteListDto } from '../dto/create-favorite-list.dto';
 import { UpdateFavoriteListDto } from '../dto/update-favorite-list.dto';
 import { FavoriteList } from '../entities/favorite-list.entity';
 import { FavoriteListService } from '../services/favorite-list.service';
+import { GetUser } from '../../../common';
 
 @ApiTags('Favorite Lists')
 @Controller('favorite-lists')
@@ -46,10 +46,10 @@ export class FavoriteListController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   create(
-    @Request() req,
+    @GetUser('id') userId: number,
     @Body() createFavoriteListDto: CreateFavoriteListDto,
   ): Promise<FavoriteList> {
-    return this.favoriteListService.create(req.user.id, createFavoriteListDto);
+    return this.favoriteListService.create(userId, createFavoriteListDto);
   }
 
   @Get()
@@ -62,8 +62,9 @@ export class FavoriteListController {
     type: [FavoriteList],
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  findAll(@Request() req): Promise<FavoriteList[]> {
-    return this.favoriteListService.findAllByUser(req.user.id);
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  findAll(@GetUser('id') userId: number): Promise<FavoriteList[]> {
+    return this.favoriteListService.findAllByUser(userId);
   }
 
   @Get('public')
@@ -74,13 +75,25 @@ export class FavoriteListController {
     type: Number,
     description: 'Limit number of lists (default: 10)',
   })
+  @ApiQuery({
+    name: 'sort',
+    required: false,
+    enum: ['newest', 'trending'],
+    description: 'Sort order (default: newest)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Public lists retrieved successfully',
     type: [FavoriteList],
   })
-  findPublicLists(@Query('limit') limit?: number): Promise<FavoriteList[]> {
-    return this.favoriteListService.findPublicLists(limit ? Number(limit) : 10);
+  findPublicLists(
+    @Query('limit') limit?: number,
+    @Query('sort') sort?: 'newest' | 'trending',
+  ): Promise<FavoriteList[]> {
+    return this.favoriteListService.findPublicLists(
+      limit ? Number(limit) : 10,
+      sort,
+    );
   }
 
   @Get('user/:userId/public')
@@ -112,9 +125,9 @@ export class FavoriteListController {
   @ApiResponse({ status: 404, description: 'List not found' })
   findOne(
     @Param('id', ParseIntPipe) id: number,
-    @Request() req,
+    @GetUser('id') userId: number,
   ): Promise<FavoriteList> {
-    return this.favoriteListService.findOne(id, req.user.id);
+    return this.favoriteListService.findOne(id, userId);
   }
 
   @Patch(':id')
@@ -132,14 +145,10 @@ export class FavoriteListController {
   @ApiResponse({ status: 404, description: 'List not found' })
   update(
     @Param('id', ParseIntPipe) id: number,
-    @Request() req,
+    @GetUser('id') userId: number,
     @Body() updateFavoriteListDto: UpdateFavoriteListDto,
   ): Promise<FavoriteList> {
-    return this.favoriteListService.update(
-      id,
-      req.user.id,
-      updateFavoriteListDto,
-    );
+    return this.favoriteListService.update(id, userId, updateFavoriteListDto);
   }
 
   @Post(':id/icon')
@@ -170,10 +179,10 @@ export class FavoriteListController {
   @ApiResponse({ status: 404, description: 'List not found' })
   uploadIcon(
     @Param('id', ParseIntPipe) id: number,
-    @Request() req,
+    @GetUser('id') userId: number,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<FavoriteList> {
-    return this.favoriteListService.uploadIcon(id, req.user.id, file);
+    return this.favoriteListService.uploadIcon(id, userId, file);
   }
 
   @Post(':id/save')
@@ -188,8 +197,11 @@ export class FavoriteListController {
   @ApiResponse({ status: 400, description: 'Cannot save own list' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'List not found' })
-  save(@Param('id', ParseIntPipe) id: number, @Request() req): Promise<void> {
-    return this.favoriteListService.saveList(id, req.user.id);
+  save(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser('id') userId: number,
+  ): Promise<void> {
+    return this.favoriteListService.saveList(id, userId);
   }
 
   @Delete(':id/save')
@@ -203,8 +215,11 @@ export class FavoriteListController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'List not found in saved lists' })
-  unsave(@Param('id', ParseIntPipe) id: number, @Request() req): Promise<void> {
-    return this.favoriteListService.unsaveList(id, req.user.id);
+  unsave(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser('id') userId: number,
+  ): Promise<void> {
+    return this.favoriteListService.unsaveList(id, userId);
   }
 
   @Get('saved/me')
@@ -217,8 +232,8 @@ export class FavoriteListController {
     type: [FavoriteList],
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  getSavedLists(@Request() req): Promise<FavoriteList[]> {
-    return this.favoriteListService.getSavedLists(req.user.id);
+  getSavedLists(@GetUser('id') userId: number): Promise<FavoriteList[]> {
+    return this.favoriteListService.getSavedLists(userId);
   }
 
   @Delete(':id')
@@ -231,8 +246,11 @@ export class FavoriteListController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Not owner' })
   @ApiResponse({ status: 404, description: 'List not found' })
-  remove(@Param('id', ParseIntPipe) id: number, @Request() req): Promise<void> {
-    return this.favoriteListService.remove(id, req.user.id);
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser('id') userId: number,
+  ): Promise<void> {
+    return this.favoriteListService.remove(id, userId);
   }
 
   @Post(':id/problems/:problemId')
@@ -253,9 +271,9 @@ export class FavoriteListController {
   addProblem(
     @Param('id', ParseIntPipe) id: number,
     @Param('problemId', ParseIntPipe) problemId: number,
-    @Request() req,
+    @GetUser('id') userId: number,
   ): Promise<FavoriteList> {
-    return this.favoriteListService.addProblem(id, problemId, req.user.id);
+    return this.favoriteListService.addProblem(id, problemId, userId);
   }
 
   @Delete(':id/problems/:problemId')
@@ -275,9 +293,9 @@ export class FavoriteListController {
   removeProblem(
     @Param('id', ParseIntPipe) id: number,
     @Param('problemId', ParseIntPipe) problemId: number,
-    @Request() req,
+    @GetUser('id') userId: number,
   ): Promise<FavoriteList> {
-    return this.favoriteListService.removeProblem(id, problemId, req.user.id);
+    return this.favoriteListService.removeProblem(id, problemId, userId);
   }
 
   @Get(':id/problems')
@@ -292,7 +310,10 @@ export class FavoriteListController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Private list' })
   @ApiResponse({ status: 404, description: 'List not found' })
-  getProblems(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    return this.favoriteListService.getProblems(id, req.user.id);
+  getProblems(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser('id') userId: number,
+  ) {
+    return this.favoriteListService.getProblems(id, userId);
   }
 }

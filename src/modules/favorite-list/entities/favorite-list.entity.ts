@@ -46,6 +46,13 @@ export class FavoriteList {
   isPublic: boolean;
 
   @ApiProperty({
+    description: 'Number of times this list has been saved',
+    default: 0,
+  })
+  @Column({ name: 'saved_count', default: 0 })
+  savedCount: number;
+
+  @ApiProperty({
     description: 'Whether this is the default Favorite list',
     default: false,
   })

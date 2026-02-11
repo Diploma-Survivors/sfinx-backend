@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, FindOptionsOrder } from 'typeorm';
 import { Problem } from '../../problems/entities/problem.entity';
 import { CreateFavoriteListDto } from '../dto/create-favorite-list.dto';
 import { UpdateFavoriteListDto } from '../dto/update-favorite-list.dto';
@@ -248,6 +248,13 @@ export class FavoriteListService {
     });
 
     await this.savedFavoriteListRepository.save(savedList);
+
+    // Increment savedCount
+    await this.favoriteListRepository.increment(
+      { id: listId },
+      'savedCount',
+      1,
+    );
   }
 
   async unsaveList(listId: number, userId: number): Promise<void> {
@@ -260,6 +267,13 @@ export class FavoriteListService {
     }
 
     await this.savedFavoriteListRepository.remove(savedList);
+
+    // Decrement savedCount
+    await this.favoriteListRepository.decrement(
+      { id: listId },
+      'savedCount',
+      1,
+    );
   }
 
   async getSavedLists(userId: number): Promise<FavoriteList[]> {
@@ -272,11 +286,23 @@ export class FavoriteListService {
     return savedLists.map((saved) => saved.favoriteList);
   }
 
-  async findPublicLists(limit = 10): Promise<FavoriteList[]> {
+  async findPublicLists(
+    limit = 10,
+    sortBy: 'newest' | 'trending' = 'newest',
+  ): Promise<FavoriteList[]> {
+    const order: FindOptionsOrder<FavoriteList> = {};
+
+    if (sortBy === 'trending') {
+      order.savedCount = 'DESC';
+      order.createdAt = 'DESC'; // Secondary sort
+    } else {
+      order.createdAt = 'DESC';
+    }
+
     return await this.favoriteListRepository.find({
       where: { isPublic: true },
       relations: ['user', 'problems'],
-      order: { createdAt: 'DESC' },
+      order,
       take: limit,
     });
   }
