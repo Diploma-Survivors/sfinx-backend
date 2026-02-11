@@ -11,6 +11,7 @@ import {
   ParseIntPipe,
   UseInterceptors,
   UploadedFile,
+  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -21,6 +22,7 @@ import {
   ApiParam,
   ApiConsumes,
   ApiBody,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { CreateFavoriteListDto } from '../dto/create-favorite-list.dto';
@@ -66,13 +68,19 @@ export class FavoriteListController {
 
   @Get('public')
   @ApiOperation({ summary: 'Get all public lists' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Limit number of lists (default: 10)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Public lists retrieved successfully',
     type: [FavoriteList],
   })
-  findPublicLists(): Promise<FavoriteList[]> {
-    return this.favoriteListService.findPublicLists();
+  findPublicLists(@Query('limit') limit?: number): Promise<FavoriteList[]> {
+    return this.favoriteListService.findPublicLists(limit ? Number(limit) : 10);
   }
 
   @Get('user/:userId/public')
@@ -166,6 +174,51 @@ export class FavoriteListController {
     @UploadedFile() file: Express.Multer.File,
   ): Promise<FavoriteList> {
     return this.favoriteListService.uploadIcon(id, req.user.id, file);
+  }
+
+  @Post(':id/save')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Save a favorite list' })
+  @ApiParam({ name: 'id', description: 'List ID to save' })
+  @ApiResponse({
+    status: 201,
+    description: 'List saved successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Cannot save own list' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'List not found' })
+  save(@Param('id', ParseIntPipe) id: number, @Request() req): Promise<void> {
+    return this.favoriteListService.saveList(id, req.user.id);
+  }
+
+  @Delete(':id/save')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Unsave a favorite list' })
+  @ApiParam({ name: 'id', description: 'List ID to unsave' })
+  @ApiResponse({
+    status: 200,
+    description: 'List unsaved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'List not found in saved lists' })
+  unsave(@Param('id', ParseIntPipe) id: number, @Request() req): Promise<void> {
+    return this.favoriteListService.unsaveList(id, req.user.id);
+  }
+
+  @Get('saved/me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get lists saved by current user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Saved lists retrieved successfully',
+    type: [FavoriteList],
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  getSavedLists(@Request() req): Promise<FavoriteList[]> {
+    return this.favoriteListService.getSavedLists(req.user.id);
   }
 
   @Delete(':id')

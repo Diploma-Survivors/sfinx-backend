@@ -13,6 +13,8 @@ import { FavoriteList } from '../entities/favorite-list.entity';
 import { ProgressStatus } from '../../submissions/enums/progress-status.enum';
 import { StorageService } from '../../storage/storage.service';
 
+import { SavedFavoriteList } from '../entities/saved-favorite-list.entity';
+
 @Injectable()
 export class FavoriteListService {
   constructor(
@@ -20,6 +22,8 @@ export class FavoriteListService {
     private readonly favoriteListRepository: Repository<FavoriteList>,
     @InjectRepository(Problem)
     private readonly problemRepository: Repository<Problem>,
+    @InjectRepository(SavedFavoriteList)
+    private readonly savedFavoriteListRepository: Repository<SavedFavoriteList>,
     private readonly storageService: StorageService,
   ) {}
 
@@ -213,11 +217,67 @@ export class FavoriteListService {
     return problems as (Problem & { status?: ProgressStatus | null })[];
   }
 
-  async findPublicLists(): Promise<FavoriteList[]> {
+  async saveList(listId: number, userId: number): Promise<void> {
+    const list = await this.favoriteListRepository.findOne({
+      where: { id: listId },
+    });
+
+    if (!list) {
+      throw new NotFoundException(`List with ID ${listId} not found`);
+    }
+
+    if (!list.isPublic && list.userId !== userId) {
+      throw new ForbiddenException('You do not have access to this list');
+    }
+
+    if (list.userId === userId) {
+      throw new BadRequestException('You cannot save your own list');
+    }
+
+    const existing = await this.savedFavoriteListRepository.findOne({
+      where: { userId, favoriteListId: listId },
+    });
+
+    if (existing) {
+      return; // Already saved
+    }
+
+    const savedList = this.savedFavoriteListRepository.create({
+      userId,
+      favoriteListId: listId,
+    });
+
+    await this.savedFavoriteListRepository.save(savedList);
+  }
+
+  async unsaveList(listId: number, userId: number): Promise<void> {
+    const savedList = await this.savedFavoriteListRepository.findOne({
+      where: { userId, favoriteListId: listId },
+    });
+
+    if (!savedList) {
+      throw new NotFoundException('List not found in your saved lists');
+    }
+
+    await this.savedFavoriteListRepository.remove(savedList);
+  }
+
+  async getSavedLists(userId: number): Promise<FavoriteList[]> {
+    const savedLists = await this.savedFavoriteListRepository.find({
+      where: { userId },
+      relations: ['favoriteList', 'favoriteList.user', 'favoriteList.problems'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return savedLists.map((saved) => saved.favoriteList);
+  }
+
+  async findPublicLists(limit = 10): Promise<FavoriteList[]> {
     return await this.favoriteListRepository.find({
       where: { isPublic: true },
       relations: ['user', 'problems'],
       order: { createdAt: 'DESC' },
+      take: limit,
     });
   }
 

@@ -5,9 +5,13 @@ import { FavoriteListController } from './controllers/favorite-list.controller';
 import { FavoriteList } from './entities/favorite-list.entity';
 import { FavoriteListService } from './services/favorite-list.service';
 import { StorageModule } from '../storage/storage.module';
+import { SavedFavoriteList } from './entities/saved-favorite-list.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([FavoriteList, Problem]), StorageModule],
+  imports: [
+    TypeOrmModule.forFeature([FavoriteList, Problem, SavedFavoriteList]),
+    StorageModule,
+  ],
   controllers: [FavoriteListController],
   providers: [FavoriteListService],
   exports: [FavoriteListService],
