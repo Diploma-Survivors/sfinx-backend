@@ -38,6 +38,7 @@ import { RefreshToken } from './entities/refresh-token.entity';
 import { User } from './entities/user.entity';
 import { EmailVerificationTokenService } from './services/email-verification-token.service';
 import { PasswordResetTokenService } from './services/password-reset-token.service';
+import { FavoriteListService } from '../favorite-list/services/favorite-list.service';
 import { JwtPayload } from './strategies/jwt.strategy';
 
 @Injectable()
@@ -59,6 +60,7 @@ export class AuthService {
     private readonly passwordResetTokenService: PasswordResetTokenService,
     private readonly emailVerificationTokenService: EmailVerificationTokenService,
     private readonly storageService: StorageService,
+    private readonly favoriteListService: FavoriteListService,
   ) {
     this.appConfig = this.configService.getOrThrow<AppConfig>('app');
     this.jwtConfig = this.configService.getOrThrow<JwtConfig>('jwt');
@@ -109,6 +111,13 @@ export class AuthService {
     });
 
     const savedUser = await this.userRepository.save(user);
+
+    // Create default favorite list
+    await this.favoriteListService.create(savedUser.id, {
+      name: 'Favorite',
+      icon: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Star_icon_stylized.svg/960px-Star_icon_stylized.svg.png',
+      isPublic: false,
+    });
 
     // Send verification email
     await this.sendVerificationEmail(savedUser);

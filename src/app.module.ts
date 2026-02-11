@@ -59,6 +59,7 @@ import { AiInterviewsModule } from './modules/ai-interviews/ai-interviews.module
 import { LiveKitModule } from './modules/livekit/livekit.module';
 import { livekitConfig } from './config';
 import { DiscussModule } from './modules/discuss/discuss.module';
+import { FavoriteListModule } from './modules/favorite-list/favorite-list.module';
 
 @Module({
   imports: [
@@ -145,6 +146,7 @@ import { DiscussModule } from './modules/discuss/discuss.module';
     AiInterviewsModule,
     LiveKitModule,
     DiscussModule,
+    FavoriteListModule,
     // UsersModule,
     // PaymentsModule,
     // AiModule,
