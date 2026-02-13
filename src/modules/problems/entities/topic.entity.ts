@@ -4,6 +4,7 @@ import {
   CreateDateColumn,
   Entity,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 
 @Entity('topics')
@@ -39,4 +40,8 @@ export class Topic {
   @ApiProperty({ description: 'Creation timestamp' })
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
+
+  @ApiProperty({ description: 'Last update timestamp' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
+  updatedAt: Date;
 }

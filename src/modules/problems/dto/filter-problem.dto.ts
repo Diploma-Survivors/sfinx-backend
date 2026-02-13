@@ -97,4 +97,14 @@ export class FilterProblemDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by specific problem IDs.',
+    type: [Number],
+    example: [1, 3, 7],
+  })
+  @IsOptional()
+  @IsArray()
+  @Type(() => Number)
+  ids?: number[];
 }
