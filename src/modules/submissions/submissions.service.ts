@@ -12,6 +12,7 @@ import { Repository } from 'typeorm';
 import { v4 as uuidV4 } from 'uuid';
 
 import { PaginatedResultDto } from '../../common';
+import { ContestSubmissionService } from '../contest/services';
 import { Judge0BatchResponse } from '../judge0/interfaces';
 import { Judge0Service } from '../judge0/judge0.service';
 import { Problem } from '../problems/entities/problem.entity';
@@ -20,17 +21,17 @@ import { ProgrammingLanguageService } from '../programming-language';
 import { SUBMISSION_EVENTS } from './constants/submission-events.constants';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { FilterSubmissionDto } from './dto/filter-submission.dto';
+import { GetPracticeHistoryDto } from './dto/get-practice-history.dto';
 import { ResultDescription } from './dto/result-description.dto';
 import {
   SubmissionListResponseDto,
   SubmissionResponseDto,
 } from './dto/submission-response.dto';
 import { UserPracticeHistoryDto } from './dto/user-practice-history.dto';
-import { GetPracticeHistoryDto } from './dto/get-practice-history.dto';
-import { UserStatisticsDto } from './dto/user-statistics.dto';
 import { UserProblemProgressDetailResponseDto } from './dto/user-problem-progress-detail-response.dto';
+import { UserStatisticsDto } from './dto/user-statistics.dto';
 import { Submission } from './entities/submission.entity';
-import { ProgressStatus, SubmissionStatus } from './enums';
+import { SubmissionStatus } from './enums';
 import {
   ProblemSolvedEvent,
   SubmissionAcceptedEvent,
@@ -43,7 +44,6 @@ import { SubmissionRetrievalService } from './services/submission-retrieval.serv
 import { SubmissionTrackerService } from './services/submission-tracker.service';
 import { UserProgressService } from './services/user-progress.service';
 import { UserStatisticsService } from './services/user-statistics.service';
-import { ContestSubmissionService } from '../contest/services';
 
 /**
  * Main service for managing code submissions
@@ -327,7 +327,18 @@ export class SubmissionsService {
 
     await this.submissionRepository.save(submission);
 
-    // Emit judged event (will trigger stats update via event handler)
+    // Update user problem progress atomically here (not in the event handler)
+    // so isNewlySolved is accurate with no concurrent race condition.
+    const { isNewlySolved } = await this.userProgress.updateProgressAfterJudge(
+      submission.user.id,
+      submission.problem.id,
+      submissionId,
+      status,
+      runtimeMs,
+      memoryKb,
+    );
+
+    // Emit JUDGED for problem statistics, total attempts, contest leaderboard
     this.eventEmitter.emit(
       SUBMISSION_EVENTS.JUDGED,
       new SubmissionJudgedEvent(
@@ -342,15 +353,21 @@ export class SubmissionsService {
       ),
     );
 
-    // Check if this is first AC
-    const wasFirstSolve = await this.handleAcceptedSubmission(
-      submission,
-      status,
-      runtimeMs,
-      memoryKb,
-    );
+    if (status === SubmissionStatus.ACCEPTED) {
+      this.eventEmitter.emit(
+        SUBMISSION_EVENTS.ACCEPTED,
+        new SubmissionAcceptedEvent(
+          submissionId,
+          submission.user.id,
+          submission.problem.id,
+          runtimeMs,
+          memoryKb,
+        ),
+      );
+    }
 
-    if (wasFirstSolve) {
+    // Only emit PROBLEM_SOLVED on the very first AC for this (user, problem)
+    if (isNewlySolved) {
       this.eventEmitter.emit(
         SUBMISSION_EVENTS.PROBLEM_SOLVED,
         new ProblemSolvedEvent(
@@ -363,40 +380,6 @@ export class SubmissionsService {
 
     // Invalidate cache
     await this.userStatistics.invalidateUserStatisticsCache(submission.user.id);
-  }
-
-  /**
-   * Handle accepted submission logic
-   * Returns true if this is first AC
-   */
-  private async handleAcceptedSubmission(
-    submission: Submission,
-    status: SubmissionStatus,
-    runtimeMs?: number,
-    memoryKb?: number,
-  ): Promise<boolean> {
-    if (status !== SubmissionStatus.ACCEPTED) {
-      return false;
-    }
-
-    // Emit accepted event
-    this.eventEmitter.emit(
-      SUBMISSION_EVENTS.ACCEPTED,
-      new SubmissionAcceptedEvent(
-        submission.id,
-        submission.user.id,
-        submission.problem.id,
-        runtimeMs,
-        memoryKb,
-      ),
-    );
-
-    // Check if first solve
-    const progressBefore = await this.userProgress.getUserProgress(
-      submission.user.id,
-      submission.problem.id,
-    );
-    return progressBefore?.status !== ProgressStatus.SOLVED;
   }
 
   // ==================== Delegation Methods ====================

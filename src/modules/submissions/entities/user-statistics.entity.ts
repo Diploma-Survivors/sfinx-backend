@@ -60,6 +60,20 @@ export class UserStatistics {
   @Column({ name: 'last_solve_at', type: 'timestamptz', nullable: true })
   lastSolveAt: Date | null;
 
+  @ApiProperty({
+    description: 'Contest ELO rating (Codeforces-style)',
+    default: 1500,
+  })
+  @Column({ name: 'contest_rating', type: 'int', default: 1500 })
+  contestRating: number;
+
+  @ApiProperty({
+    description: 'Number of rated contests participated',
+    default: 0,
+  })
+  @Column({ name: 'contests_participated', type: 'int', default: 0 })
+  contestsParticipated: number;
+
   @ApiProperty({ description: 'Creation timestamp' })
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

@@ -3,17 +3,17 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 
+import { User } from '../../auth/entities/user.entity';
+import { Problem } from '../../problems/entities/problem.entity';
 import { ProblemDifficulty } from '../../problems/enums/problem-difficulty.enum';
 import { CacheKeys, CacheService, RedisService } from '../../redis';
-import { UserProblemProgress } from '../entities/user-problem-progress.entity';
-import { Problem } from '../../problems/entities/problem.entity';
-import { Submission } from '../entities/submission.entity';
-import { ProgressStatus, SubmissionStatus } from '../enums';
+import { SystemConfigService } from '../../system-config/system-config.service';
 import { SUBMISSION_CACHE } from '../constants/submission.constants';
 import { UserStatisticsDto } from '../dto/user-statistics.dto';
-import { User } from '../../auth/entities/user.entity';
-import { SystemConfigService } from '../../system-config/system-config.service';
+import { Submission } from '../entities/submission.entity';
+import { UserProblemProgress } from '../entities/user-problem-progress.entity';
 import { UserStatistics } from '../entities/user-statistics.entity';
+import { ProgressStatus, SubmissionStatus } from '../enums';
 
 @Injectable()
 export class UserStatisticsService {
@@ -122,6 +122,20 @@ export class UserStatisticsService {
       0,
     );
 
+    // Get contest rating rank from Redis (0-based zrevrank → 1-based rank)
+    let contestRank: number | null = null;
+    try {
+      const redisRank = await this.redisService.zrevrank(
+        CacheKeys.globalRanking.contestBased(),
+        userId.toString(),
+      );
+      if (redisRank !== null) {
+        contestRank = redisRank + 1;
+      }
+    } catch {
+      // Non-critical: rank stays null
+    }
+
     return {
       problemStats: {
         easy: getStatsForDiff(ProblemDifficulty.EASY),
@@ -133,8 +147,11 @@ export class UserStatisticsService {
         },
       },
       submissionStats: {
-        ...submissionStats, // Contains total and accepted from Submission table
+        ...submissionStats,
       },
+      contestRating: userStats?.contestRating ?? 1500,
+      contestsParticipated: userStats?.contestsParticipated ?? 0,
+      contestRank,
     };
   }
 
@@ -265,7 +282,7 @@ export class UserStatisticsService {
   async updateUserStatistic(userId: number, problemId: number): Promise<void> {
     const problem = await this.problemRepository.findOne({
       where: { id: problemId },
-      select: ['difficulty'],
+      select: ['id', 'difficulty'],
     });
 
     if (!problem) {
@@ -300,7 +317,16 @@ export class UserStatisticsService {
     }
 
     if (weight > 0) {
-      // Atomic update of score AND stats using query builder for custom SQL increment
+      // Ensure the row exists (INSERT ... ON CONFLICT DO NOTHING)
+      await this.userStatisticsRepository
+        .createQueryBuilder()
+        .insert()
+        .into(UserStatistics)
+        .values({ userId, user: { id: userId } })
+        .orIgnore()
+        .execute();
+
+      // Atomic increment of score AND stats using query builder
       const updateData: QueryDeepPartialEntity<UserStatistics> = {
         globalScore: () => `global_score + ${weight}`,
         totalSolved: () => `total_solved + 1`,
@@ -444,10 +470,9 @@ export class UserStatisticsService {
     const MAX_TIMESTAMP = 9999999999;
 
     const encodedScore = (score || 0) * 1e10 + (MAX_TIMESTAMP - lastSolveTime);
-    const GLOBAL_RANKING_KEY = 'global:ranking';
 
     await this.redisService.zadd(
-      GLOBAL_RANKING_KEY,
+      CacheKeys.globalRanking.problemBased(),
       encodedScore,
       userId.toString(),
     );

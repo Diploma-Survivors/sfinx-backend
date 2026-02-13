@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { AuthorDto } from '../../users/dtos/author.dto';
+import { AuthorDto } from '../../users/dto/author.dto';
 import { ProblemDifficulty } from '../../problems/enums/problem-difficulty.enum';
 import { SubmissionStatus } from '../enums';
 import { ResultDescription } from './result-description.dto';

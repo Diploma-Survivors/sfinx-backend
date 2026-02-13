@@ -197,10 +197,10 @@ export class UserProgressService {
         .andWhere('progress.status = :status', {
           status: ProgressStatus.SOLVED,
         })
-        .orderBy('progress.lastAttemptedAt', 'DESC') // Or firstSolvedAt? User asked for recent AC. Usually last solve time if re-solving, or first solve.
-        // If we track firstSolvedAt, we should sort by that to show "Recent First Solves".
-        // But LeetCode "Recent AC" usually shows most recent submission.
-        // Let's stick to lastAttemptedAt as it's updated on every submission.
+        // Sort by firstSolvedAt: lastAttemptedAt is updated on every submit
+        // (including WA), so a failed re-submission would incorrectly push an
+        // already-solved problem to the top of the "recent AC" list.
+        .orderBy('progress.firstSolvedAt', 'DESC')
         .take(limit)
         .getMany()
     );
@@ -313,7 +313,9 @@ export class UserProgressService {
   }
 
   /**
-   * Update user progress after judging is complete
+   * Update user progress after judging is complete.
+   * Returns isNewlySolved=true only when this AC transitions the problem
+   * from non-SOLVED → SOLVED for the first time (safe for stat increment).
    */
   async updateProgressAfterJudge(
     userId: number,
@@ -322,23 +324,26 @@ export class UserProgressService {
     status: SubmissionStatus,
     runtimeMs?: number,
     memoryKb?: number,
-  ): Promise<ProgressStatus | null> {
+  ): Promise<{ status: ProgressStatus | null; isNewlySolved: boolean }> {
     const progress = await this.progressRepository.findOne({
       where: { userId, problemId },
     });
 
     if (!progress) {
-      return null; // Should not happen, but handle gracefully
+      return { status: null, isNewlySolved: false };
     }
+
+    let isNewlySolved = false;
 
     // Update if submission was accepted
     if (status === SubmissionStatus.ACCEPTED) {
       progress.totalAccepted += 1;
 
-      // Update status to solved if first solve
+      // Transition to SOLVED only on the first AC
       if (progress.status !== ProgressStatus.SOLVED) {
         progress.status = ProgressStatus.SOLVED;
         progress.firstSolvedAt = new Date();
+        isNewlySolved = true;
       }
 
       // Update best runtime if this submission is faster
@@ -365,6 +370,6 @@ export class UserProgressService {
     }
 
     await this.progressRepository.save(progress);
-    return progress.status;
+    return { status: progress.status, isNewlySolved };
   }
 }
