@@ -43,10 +43,10 @@ export class Interview {
   })
   status: InterviewStatus;
 
-  @CreateDateColumn({ name: 'started_at' })
+  @CreateDateColumn({ name: 'started_at', type: 'timestamptz' })
   startedAt: Date;
 
-  @Column({ name: 'ended_at', nullable: true })
+  @Column({ name: 'ended_at', type: 'timestamptz', nullable: true })
   endedAt: Date;
 
   @OneToMany(() => InterviewMessage, (message) => message.interview, {
