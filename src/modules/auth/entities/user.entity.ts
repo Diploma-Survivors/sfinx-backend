@@ -6,13 +6,13 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Role } from '../../rbac/entities/role.entity';
-import { Language } from '../enums';
 import { UserStatistics } from '../../submissions/entities/user-statistics.entity';
-import { OneToOne } from 'typeorm';
+import { Language } from '../enums';
 
 @Entity('users')
 export class User {
@@ -81,13 +81,6 @@ export class User {
   })
   @Column({ nullable: true, length: 20 })
   phone: string;
-
-  @ApiProperty({
-    description: 'User rank',
-    example: 0,
-  })
-  @Column({ name: 'user_rank', default: 0 })
-  rank: number;
 
   @ApiProperty({
     description: 'User statistics',

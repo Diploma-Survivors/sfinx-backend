@@ -18,6 +18,10 @@ import { v4 as uuidV4 } from 'uuid';
 import { plainToInstance } from 'class-transformer';
 import { AppConfig, JwtConfig } from 'src/config';
 import { Transactional } from 'typeorm-transactional';
+import { FavoriteListService } from '../favorite-list/services/favorite-list.service';
+import { MailService } from '../mail/mail.service';
+import { Role } from '../rbac/entities/role.entity';
+import { StorageService } from '../storage/storage.service';
 import {
   ALLOWED_AVATAR_EXTENSIONS,
   ALLOWED_AVATAR_MIME_TYPES,
@@ -25,11 +29,8 @@ import {
   AVATAR_UPLOAD_URL_EXPIRES_IN,
   DEFAULT_AVATAR_URL,
 } from './constants/avatar.constants';
-import { MailService } from '../mail/mail.service';
-import { Role } from '../rbac/entities/role.entity';
-import { StorageService } from '../storage/storage.service';
-import { AvatarUploadUrlResponseDto } from './dto/avatar-upload-url-response.dto';
 import { AuthResponseDto, UserResponseDto } from './dto/auth-response.dto';
+import { AvatarUploadUrlResponseDto } from './dto/avatar-upload-url-response.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
@@ -38,7 +39,6 @@ import { RefreshToken } from './entities/refresh-token.entity';
 import { User } from './entities/user.entity';
 import { EmailVerificationTokenService } from './services/email-verification-token.service';
 import { PasswordResetTokenService } from './services/password-reset-token.service';
-import { FavoriteListService } from '../favorite-list/services/favorite-list.service';
 import { JwtPayload } from './strategies/jwt.strategy';
 
 @Injectable()
@@ -604,7 +604,6 @@ export class AuthService {
       key,
       AVATAR_UPLOAD_URL_EXPIRES_IN,
       contentType,
-      AVATAR_MAX_SIZE_BYTES,
     );
 
     this.logger.log(`Generated avatar upload URL for user ${userId}: ${key}`);

@@ -2,9 +2,10 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEnum,
   IsOptional,
+  IsPhoneNumber,
   IsString,
-  MaxLength,
   IsUrl,
+  MaxLength,
 } from 'class-validator';
 import { Language } from '../enums';
 
@@ -30,7 +31,7 @@ export class UpdateUserProfileDto {
   @ApiPropertyOptional({ description: 'Phone number', maxLength: 20 })
   @IsOptional()
   @IsString()
-  @MaxLength(20)
+  @IsPhoneNumber('VN')
   phone?: string;
 
   @ApiPropertyOptional({ description: 'GitHub username', maxLength: 39 })
