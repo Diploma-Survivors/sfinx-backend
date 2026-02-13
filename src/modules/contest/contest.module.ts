@@ -19,10 +19,12 @@ import {
   ContestSubmissionService,
 } from './services';
 import { ContestStatisticsService } from './services/contest-statistics.service';
+import { ContestRatingService } from './services/contest-rating.service';
 import { ContestSubmissionListener } from './listeners/contest-submission.listener';
 import { ContestEventHandlers } from './events/contest.event-handlers';
 import { ContestSchedulerProcessor } from './processors/contest-scheduler.processor';
 import { CONTEST_QUEUE } from './constants/scheduler.constants';
+import { UserStatistics } from '../submissions/entities/user-statistics.entity';
 
 @Module({
   imports: [
@@ -32,6 +34,7 @@ import { CONTEST_QUEUE } from './constants/scheduler.constants';
       ContestParticipant,
       Problem,
       Submission,
+      UserStatistics,
     ]),
     StorageModule,
     forwardRef(() => SubmissionsModule),
@@ -60,6 +63,7 @@ import { CONTEST_QUEUE } from './constants/scheduler.constants';
     ContestLeaderboardService,
     ContestSubmissionService,
     ContestSseService,
+    ContestRatingService,
     ContestSubmissionListener,
     ContestEventHandlers,
     ContestSchedulerProcessor,

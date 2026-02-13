@@ -2,6 +2,7 @@ import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { Logger } from '@nestjs/common';
 import { ContestService } from '../services';
+import { ContestRatingService } from '../services/contest-rating.service';
 import {
   BULL_EVENTS,
   CONTEST_JOBS,
@@ -12,7 +13,10 @@ import {
 export class ContestSchedulerProcessor extends WorkerHost {
   private readonly logger = new Logger(ContestSchedulerProcessor.name);
 
-  constructor(private readonly contestService: ContestService) {
+  constructor(
+    private readonly contestService: ContestService,
+    private readonly contestRatingService: ContestRatingService,
+  ) {
     super();
   }
 
@@ -29,6 +33,10 @@ export class ContestSchedulerProcessor extends WorkerHost {
         case CONTEST_JOBS.END:
           await this.contestService.endContest(contestId);
           this.logger.log(`Ended contest ${contestId}`);
+          break;
+        case CONTEST_JOBS.RATE:
+          await this.contestRatingService.calculateAndApplyRatings(contestId);
+          this.logger.log(`Rated contest ${contestId}`);
           break;
         default:
           this.logger.warn(`Unknown job name: ${job.name}`);

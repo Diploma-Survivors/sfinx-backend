@@ -288,28 +288,6 @@ export class ContestController {
     );
   }
 
-  @Post(':id/start')
-  @UseGuards(CaslGuard)
-  @CheckPolicies(new ManageContestsPolicy())
-  @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Manually start a contest (Admin only)' })
-  @ApiParam({ name: 'id', description: 'Contest ID', type: Number })
-  @ApiResponse({ status: 200, description: 'Contest started', type: Contest })
-  async startContest(@Param('id') id: string): Promise<Contest> {
-    return this.contestService.startContest(+id);
-  }
-
-  @Post(':id/end')
-  @UseGuards(CaslGuard)
-  @CheckPolicies(new ManageContestsPolicy())
-  @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Manually end a contest (Admin only)' })
-  @ApiParam({ name: 'id', description: 'Contest ID', type: Number })
-  @ApiResponse({ status: 200, description: 'Contest ended', type: Contest })
-  async endContest(@Param('id') id: string): Promise<Contest> {
-    return this.contestService.endContest(+id);
-  }
-
   @Post(':id/cancel')
   @UseGuards(CaslGuard)
   @CheckPolicies(new ManageContestsPolicy())

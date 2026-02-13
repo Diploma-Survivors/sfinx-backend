@@ -6,6 +6,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import slugify from 'slugify';
 import { In, Repository } from 'typeorm';
 import { PaginatedResultDto, SortOrder } from '../../../common';
@@ -28,6 +30,7 @@ import {
   ContestDeletedEvent,
   ContestUpdatedEvent,
 } from '../events/contest-scheduled.events';
+import { CONTEST_JOBS, CONTEST_QUEUE } from '../constants/scheduler.constants';
 
 @Injectable()
 export class ContestService {
@@ -44,6 +47,7 @@ export class ContestService {
     private readonly problemRepository: Repository<Problem>,
     private readonly cacheService: CacheService,
     private readonly eventEmitter: EventEmitter2,
+    @InjectQueue(CONTEST_QUEUE) private readonly contestQueue: Queue,
   ) {}
 
   /**
@@ -658,7 +662,7 @@ export class ContestService {
     const updated = await this.contestRepository.save(contest);
     await this.invalidateContestCache(id, contest.slug);
 
-    this.logger.log(`Contest ${id} manually started`);
+    this.logger.log(`Contest ${id} started`);
     return updated;
   }
 
@@ -691,7 +695,14 @@ export class ContestService {
     const updated = await this.contestRepository.save(contest);
     await this.invalidateContestCache(id, contest.slug);
 
-    this.logger.log(`Contest ${id} manually ended`);
+    // Queue rating calculation as a background job
+    await this.contestQueue.add(
+      CONTEST_JOBS.RATE,
+      { contestId: id },
+      { removeOnComplete: true, removeOnFail: false },
+    );
+
+    this.logger.log(`Contest ${id} ended, rating calculation job queued`);
     return updated;
   }
 
@@ -708,6 +719,12 @@ export class ContestService {
     contest.status = ContestStatus.CANCELLED;
     const updated = await this.contestRepository.save(contest);
     await this.invalidateContestCache(id, contest.slug);
+
+    // Remove any pending BullMQ start/end jobs
+    this.eventEmitter.emit(
+      ContestUpdatedEvent.name,
+      new ContestUpdatedEvent(id),
+    );
 
     this.logger.log(`Contest ${id} cancelled`);
     return updated;
