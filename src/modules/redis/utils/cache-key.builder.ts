@@ -354,4 +354,12 @@ export class CacheKeys {
       return builder.build();
     },
   };
+
+  /**
+   * Global ranking keys
+   */
+  static globalRanking = {
+    problemBased: () => 'global:ranking',
+    contestBased: () => 'global:contest-rating',
+  };
 }
