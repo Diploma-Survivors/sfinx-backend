@@ -4,7 +4,7 @@ import { Repository, DataSource } from 'typeorm';
 import { Transactional } from 'typeorm-transactional';
 import { BaseCommentsService } from '../../comments-base/base-comments.service';
 import { Solution } from '../entities/solution.entity';
-import { AuthorDto } from '../../users/dtos/author.dto';
+import { AuthorDto } from '../../users/dto/author.dto';
 import { SolutionCommentResponseDto } from '../dto';
 import { SolutionComment } from '../entities/solution-comment.entity';
 import { SolutionCommentVote } from '../entities/solution-comment-vote.entity';

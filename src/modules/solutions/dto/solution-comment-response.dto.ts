@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { AuthorDto } from '../../users/dtos/author.dto';
 import { BaseCommentResponseDto } from '../../comments-base/dto';
+import { AuthorDto } from '../../users/dto/author.dto';
 
 export class SolutionCommentResponseDto extends BaseCommentResponseDto {
   @ApiProperty({ description: 'Unique identifier', example: 1 })
