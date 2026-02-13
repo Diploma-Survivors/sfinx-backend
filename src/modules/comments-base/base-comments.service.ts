@@ -9,18 +9,18 @@ import {
   Repository,
 } from 'typeorm';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
-import { BaseComment } from './entities/base-comment.entity';
-import { BaseCommentVote } from './entities/base-comment-vote.entity';
 import { StorageService } from '../storage/storage.service';
+import { BaseCommentVote } from './entities/base-comment-vote.entity';
+import { BaseComment } from './entities/base-comment.entity';
 
+import { getAvatarUrl } from '../../common';
+import { AuthorDto } from '../users/dto/author.dto';
 import {
   BaseCommentResponseDto,
   BaseCreateCommentDto,
   BaseUpdateCommentDto,
 } from './dto';
-import { AuthorDto } from '../users/dtos/author.dto';
 import { VoteType } from './enums';
-import { getAvatarUrl } from '../../common';
 
 export abstract class BaseCommentsService<
   CommentEntity extends BaseComment,
