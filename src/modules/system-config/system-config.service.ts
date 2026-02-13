@@ -1,6 +1,12 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleInit,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { UpsertSystemParameterDto } from './dto/upsert-system-parameter.dto';
 import { SystemParameter } from './entities/system-parameter.entity';
 
 @Injectable()
@@ -36,6 +42,39 @@ export class SystemConfigService implements OnModuleInit {
   getFloat(key: string, defaultValue: number): number {
     const val = this.cache.get(key);
     return val ? parseFloat(val) : defaultValue;
+  }
+
+  // ── CRUD ──────────────────────────────────────────────────────────────────
+
+  async findAll(): Promise<SystemParameter[]> {
+    return this.paramRepo.find({ order: { key: 'ASC' } });
+  }
+
+  async findOne(key: string): Promise<SystemParameter> {
+    const param = await this.paramRepo.findOne({ where: { key } });
+    if (!param) {
+      throw new NotFoundException(`System parameter '${key}' not found`);
+    }
+    return param;
+  }
+
+  async upsert(
+    key: string,
+    dto: UpsertSystemParameterDto,
+  ): Promise<SystemParameter> {
+    await this.paramRepo.save({
+      key,
+      value: dto.value,
+      description: dto.description,
+    });
+    await this.refreshCache();
+    return this.findOne(key);
+  }
+
+  async remove(key: string): Promise<void> {
+    const param = await this.findOne(key); // throws if not found
+    await this.paramRepo.remove(param);
+    await this.refreshCache();
   }
 
   private async seedDefaults() {
