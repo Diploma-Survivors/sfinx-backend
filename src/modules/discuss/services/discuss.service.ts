@@ -4,13 +4,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { StorageService } from 'src/modules/storage/storage.service';
 import { In, Repository } from 'typeorm';
 import { PaginatedResultDto } from '../../../common';
+import { VoteType } from '../../comments-base/enums';
 import { CreatePostDto, FilterPostDto, UpdatePostDto } from '../dto';
 import { DiscussTag } from '../entities/discuss-tag.entity';
-import { Post } from '../entities/post.entity';
 import { PostVote } from '../entities/post-vote.entity';
-import { VoteType } from '../../comments-base/enums';
+import { Post } from '../entities/post.entity';
 import { DiscussTagService } from './discuss-tag.service';
 
 @Injectable()
@@ -23,6 +24,7 @@ export class DiscussService {
     @InjectRepository(PostVote)
     private readonly postVoteRepository: Repository<PostVote>,
     private readonly discussTagService: DiscussTagService,
+    private readonly storageService: StorageService,
   ) {}
 
   async createPost(userId: number, dto: CreatePostDto): Promise<Post> {
@@ -94,6 +96,15 @@ export class DiscussService {
       .take(limit)
       .getManyAndCount();
 
+    // Transform author avatarUrl
+    items.forEach((item) => {
+      if (item.author?.avatarKey && this.isS3Key(item.author.avatarKey)) {
+        (item.author as any).avatarUrl = this.storageService.getCloudFrontUrl(
+          item.author.avatarKey,
+        );
+      }
+    });
+
     return new PaginatedResultDto(items, {
       page,
       limit,
@@ -109,6 +120,13 @@ export class DiscussService {
 
     if (!post) {
       throw new NotFoundException(`Post with ID ${id} not found`);
+    }
+
+    // Transform author avatarUrl
+    if (post.author?.avatarKey && this.isS3Key(post.author.avatarKey)) {
+      (post.author as any).avatarUrl = this.storageService.getCloudFrontUrl(
+        post.author.avatarKey,
+      );
     }
 
     return post;
@@ -162,6 +180,84 @@ export class DiscussService {
 
     post.isDeleted = true;
     await this.postRepository.save(post);
+  }
+
+  async adminDeletePost(id: string): Promise<void> {
+    const post = await this.postRepository.findOne({ where: { id } });
+    if (!post) {
+      throw new NotFoundException(`Post with ID ${id} not found`);
+    }
+    post.isDeleted = true;
+    await this.postRepository.save(post);
+  }
+
+  async findAllAdmin(
+    query: FilterPostDto,
+    showDeleted = false,
+  ): Promise<PaginatedResultDto<Post>> {
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      tagIds,
+      sortBy,
+      sortOrder,
+      userId,
+    } = query;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.postRepository
+      .createQueryBuilder('post')
+      .leftJoinAndSelect('post.author', 'author')
+      .leftJoinAndSelect('post.tags', 'tags')
+      .loadRelationCountAndMap('post.replyCount', 'post.comments');
+
+    if (!showDeleted) {
+      queryBuilder.where('post.isDeleted = :isDeleted', { isDeleted: false });
+    }
+
+    if (search) {
+      queryBuilder.andWhere('post.title ILIKE :search', {
+        search: `%${search}%`,
+      });
+    }
+
+    if (tagIds && tagIds.length > 0) {
+      queryBuilder.andWhere('tags.id IN (:...tagIds)', { tagIds });
+    }
+
+    if (userId) {
+      queryBuilder.andWhere('author.id = :userId', { userId });
+    }
+
+    if (sortBy === 'trending') {
+      queryBuilder
+        .addSelect(
+          '(COALESCE(post.upvoteCount, 0) - COALESCE(post.downvoteCount, 0))',
+          'vote_score',
+        )
+        .orderBy('vote_score', sortOrder || 'DESC')
+        .addOrderBy('post.createdAt', 'DESC');
+    } else if (sortBy === 'newest' || !sortBy) {
+      queryBuilder.orderBy('post.createdAt', sortOrder || 'DESC');
+    } else {
+      queryBuilder.orderBy(`post.${sortBy}`, sortOrder || 'DESC');
+    }
+
+    const [items, total] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    items.forEach((item) => {
+      if (item.author?.avatarKey && this.isS3Key(item.author.avatarKey)) {
+        (item.author as any).avatarUrl = this.storageService.getCloudFrontUrl(
+          item.author.avatarKey,
+        );
+      }
+    });
+
+    return new PaginatedResultDto(items, { page, limit, total });
   }
 
   async votePost(
@@ -296,5 +392,10 @@ export class DiscussService {
       '-' +
       Math.random().toString(36).substring(2, 7)
     );
+  }
+
+  private isS3Key(value: string): boolean {
+    if (!value) return false;
+    return !value.startsWith('http://') && !value.startsWith('https://');
   }
 }

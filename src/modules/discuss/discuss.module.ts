@@ -13,6 +13,7 @@ import { DiscussTagService } from './services/discuss-tag.service';
 import { StorageModule } from '../storage/storage.module';
 
 import { DiscussTagsController } from './controllers/discuss-tags.controller';
+import { DiscussAdminController } from './controllers/discuss-admin.controller';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { DiscussTagsController } from './controllers/discuss-tags.controller';
     StorageModule,
   ],
   controllers: [
+    DiscussAdminController,
     DiscussTagsController,
     DiscussController,
     DiscussCommentController,
