@@ -20,11 +20,11 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prepare": "npx husky",
     "seed:run": "npx ts-node -r tsconfig-paths/register src/database/seeds/index.ts",
-    "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js -d src/database/data-source.ts",
-    "migration:generate": "npm run typeorm -- migration:generate",
+    "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js",
+    "migration:generate": "npm run typeorm -- migration:generate -d src/database/data-source.ts",
     "migration:create": "npm run typeorm -- migration:create",
-    "migration:run": "npm run typeorm -- migration:run",
-    "migration:revert": "npm run typeorm -- migration:revert",
+    "migration:run": "npm run typeorm -- migration:run -d src/database/data-source.ts",
+    "migration:revert": "npm run typeorm -- migration:revert -d src/database/data-source.ts",
     "generate:keypair": "node scripts/generate-jwt-keys.ts"
   },
   "dependencies": {
