@@ -39,6 +39,7 @@ import {
 } from './services';
 import { SubmissionsController } from './submissions.controller';
 import { SubmissionsService } from './submissions.service';
+import { RankingAdminController } from './controllers/ranking-admin.controller';
 
 @Module({
   imports: [
@@ -88,7 +89,11 @@ import { SubmissionsService } from './submissions.service';
     MailModule,
     forwardRef(() => ContestModule),
   ],
-  controllers: [SubmissionsController, Judge0CallbackController],
+  controllers: [
+    SubmissionsController,
+    Judge0CallbackController,
+    RankingAdminController,
+  ],
   providers: [
     // Main service
     SubmissionsService,

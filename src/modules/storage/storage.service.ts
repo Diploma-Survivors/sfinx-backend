@@ -280,14 +280,12 @@ export class StorageService {
     key: string,
     expiresIn: number = 900,
     contentType: string,
-    maxSizeBytes?: number,
   ): Promise<string> {
     try {
       const command = new PutObjectCommand({
         Bucket: this.awsConfig.s3.bucketName,
         Key: key,
         ContentType: contentType,
-        ContentLength: maxSizeBytes,
       });
 
       // Generate presigned URL with specific expiration

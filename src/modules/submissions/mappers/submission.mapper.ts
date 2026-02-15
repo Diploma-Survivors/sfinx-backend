@@ -5,7 +5,7 @@ import {
   SubmissionListResponseDto,
   SubmissionResponseDto,
 } from '../dto/submission-response.dto';
-import { AuthorDto } from '../../users/dtos/author.dto';
+import { AuthorDto } from '../../users/dto/author.dto';
 import { StorageService } from '../../storage/storage.service';
 import { getAvatarUrl } from '../../../common';
 import { Submission } from '../entities/submission.entity';

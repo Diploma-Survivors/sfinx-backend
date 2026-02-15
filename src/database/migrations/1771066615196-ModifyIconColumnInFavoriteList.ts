@@ -1,6 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class ModifyIconColumnInFavoriteList1770456578000 implements MigrationInterface {
+export class ModifyIconColumnInFavoriteList1771066615196 implements MigrationInterface {
+  name = 'ModifyIconColumnInFavoriteList1771066615196';
+
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
       `ALTER TABLE "favorite_lists" ALTER COLUMN "icon" TYPE varchar(500)`,

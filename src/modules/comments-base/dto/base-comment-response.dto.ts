@@ -1,4 +1,4 @@
-import { AuthorDto } from '../../users/dtos/author.dto';
+import { AuthorDto } from '../../users/dto/author.dto';
 
 export class BaseCommentResponseDto {
   id: number;

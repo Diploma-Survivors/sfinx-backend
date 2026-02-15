@@ -3,6 +3,7 @@ export const CONTEST_QUEUE = 'contest-scheduler';
 export const CONTEST_JOBS = {
   START: 'start-contest',
   END: 'end-contest',
+  RATE: 'rate-contest',
 };
 
 export const BULL_EVENTS = {

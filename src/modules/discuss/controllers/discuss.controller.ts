@@ -28,8 +28,8 @@ import {
   VotePostDto,
 } from '../dto';
 import { Post as DiscussPost } from '../entities/post.entity';
-import { DiscussService } from '../services/discuss.service';
 import { DiscussTagService } from '../services/discuss-tag.service';
+import { DiscussService } from '../services/discuss.service';
 
 @ApiTags('Discuss')
 @Controller('discuss')
@@ -66,7 +66,7 @@ export class DiscussController {
     return await this.discussTagService.getTrendingTopics();
   }
 
-  @Get('getAll')
+  @Get('get-all')
   @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get paginated discuss posts' })
   @ApiResponse({
@@ -80,18 +80,18 @@ export class DiscussController {
     return this.discussService.findAll(query);
   }
 
-  @Get(':idOrSlug')
+  @Get(':id')
   @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get discuss post by ID or Slug' })
-  @ApiParam({ name: 'idOrSlug', description: 'Post ID or Slug' })
+  @ApiParam({ name: 'id', description: 'Post ID or Slug' })
   @ApiResponse({
     status: 200,
     description: 'Post retrieved successfully',
     type: DiscussPost,
   })
   @ApiResponse({ status: 404, description: 'Post not found' })
-  async getPost(@Param('idOrSlug') idOrSlug: string): Promise<DiscussPost> {
-    return this.discussService.findOne(idOrSlug);
+  async getPost(@Param('id') id: string): Promise<DiscussPost> {
+    return this.discussService.findOne(id);
   }
 
   @Post(':id/view')

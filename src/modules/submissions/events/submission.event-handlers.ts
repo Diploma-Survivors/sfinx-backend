@@ -4,19 +4,19 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { User } from '../../auth/entities/user.entity';
+import { ContestSubmissionService } from '../../contest/services';
 import { MailService } from '../../mail';
+import { Problem } from '../../problems/entities/problem.entity';
 import { ProblemsService } from '../../problems/problems.service';
-import { SubmissionStatus } from '../enums';
 import { SUBMISSION_EVENTS } from '../constants/submission-events.constants';
+import { SubmissionStatus } from '../enums';
+import { UserProgressService, UserStatisticsService } from '../services';
 import {
   ProblemSolvedEvent,
   SubmissionAcceptedEvent,
   SubmissionCreatedEvent,
   SubmissionJudgedEvent,
 } from './submission.events';
-import { Problem } from '../../problems/entities/problem.entity';
-import { ContestSubmissionService } from '../../contest/services';
-import { UserProgressService, UserStatisticsService } from '../services';
 
 /**
  * Event handlers for submission lifecycle events
@@ -68,24 +68,15 @@ export class SubmissionEventHandlers {
         event.userId,
       );
 
-      // 2. Update User Problem Progress (Best time/memory, status)
-      await this.userProgressService.updateProgressAfterJudge(
-        event.userId,
-        event.problemId,
-        event.submissionId,
-        event.status,
-        event.runtimeMs,
-        event.memoryKb,
-      );
-
-      // 3. Update User Statistics (Total Attempts)
-      // UserStatistics like solved counts are updated in ProblemSolved event
+      // 2. Update User Statistics (Total Attempts)
+      // User problem progress is updated in updateSubmissionAfterJudge before
+      // events fire, so it is NOT repeated here.
       await this.userStatisticsService.incrementTotalAttempts(event.userId);
 
-      // 4. Update Contest Leaderboard (Attempts & Score)
+      // 3. Update Contest Leaderboard (Attempts & Score)
       await this.contestSubmissionService.handleContestSubmissionResult(event);
 
-      // 5. Notifications (Optional)
+      // 4. Notifications (Optional)
       // await this.sendSubmissionResultEmail(event);
     } catch (error) {
       this.logger.error(
@@ -145,13 +136,13 @@ export class SubmissionEventHandlers {
       }
 
       // 3. Send congratulations email
-      await this.mailService.sendSubmissionResultEmail(user.email, {
-        userName: user.fullName || user.username,
-        problemTitle: problem.title,
-        status: 'Accepted',
-        score: 100,
-        submittedAt: event.timestamp,
-      });
+      // await this.mailService.sendSubmissionResultEmail(user.email, {
+      //   userName: user.fullName || user.username,
+      //   problemTitle: problem.title,
+      //   status: 'Accepted',
+      //   score: 100,
+      //   submittedAt: event.timestamp,
+      // });
 
       // 4. Update Problem Statistics (Total Solved)
       problem.totalSolved += 1;
@@ -206,68 +197,5 @@ export class SubmissionEventHandlers {
       );
     }
     await this.problemRepository.save(problem);
-  }
-
-  /**
-   * Send submission result email
-   * Helper method for sending email notifications
-   */
-  private async sendSubmissionResultEmail(
-    event: SubmissionJudgedEvent,
-  ): Promise<void> {
-    try {
-      const [user, problem] = await Promise.all([
-        this.userRepository.findOne({ where: { id: event.userId } }),
-        this.problemsService.findProblemEntityById(event.problemId),
-      ]);
-
-      if (!user || !problem) {
-        this.logger.warn(
-          `Cannot send email: User ${event.userId} or Problem ${event.problemId} not found`,
-        );
-        return;
-      }
-
-      const score =
-        event.totalTestcases > 0
-          ? Math.round((event.passedTestcases / event.totalTestcases) * 100)
-          : 0;
-
-      await this.mailService.sendSubmissionResultEmail(user.email, {
-        userName: user.fullName || user.username,
-        problemTitle: problem.title,
-        status: this.getStatusDisplayName(event.status),
-        score,
-        submittedAt: event.timestamp,
-      });
-
-      this.logger.debug(
-        `Submission result email sent to ${user.email} for submission ${event.submissionId}`,
-      );
-    } catch (error) {
-      this.logger.error(
-        `Failed to send submission result email for submission ${event.submissionId}`,
-        error instanceof Error ? error.stack : error,
-      );
-    }
-  }
-
-  /**
-   * Get human-readable status name
-   */
-  private getStatusDisplayName(status: SubmissionStatus): string {
-    const statusMap: Record<SubmissionStatus, string> = {
-      [SubmissionStatus.ACCEPTED]: 'Accepted',
-      [SubmissionStatus.WRONG_ANSWER]: 'Wrong Answer',
-      [SubmissionStatus.TIME_LIMIT_EXCEEDED]: 'Time Limit Exceeded',
-      [SubmissionStatus.MEMORY_LIMIT_EXCEEDED]: 'Memory Limit Exceeded',
-      [SubmissionStatus.RUNTIME_ERROR]: 'Runtime Error',
-      [SubmissionStatus.COMPILATION_ERROR]: 'Compilation Error',
-      [SubmissionStatus.PENDING]: 'Pending',
-      [SubmissionStatus.RUNNING]: 'Running',
-      [SubmissionStatus.UNKNOWN_ERROR]: 'Unknown Error',
-    };
-
-    return statusMap[status] || status;
   }
 }

@@ -5,21 +5,20 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, DeepPartial, Repository } from 'typeorm';
-import { PaginatedResultDto } from '../../common';
-import { Solution } from './entities/solution.entity';
+import { getAvatarUrl, PaginatedResultDto } from '../../common';
+import { VoteType } from '../comments-base/enums';
+import { Problem } from '../problems/entities/problem.entity';
+import { Tag } from '../problems/entities/tag.entity';
+import { ProgrammingLanguage } from '../programming-language';
+import { StorageService } from '../storage/storage.service';
 import {
   CreateSolutionDto,
   FilterSolutionDto,
+  SolutionResponseDto,
   SolutionSortBy,
   UpdateSolutionDto,
 } from './dto';
-import { VoteType } from '../comments-base/enums';
-import { ProgrammingLanguage } from '../programming-language';
-import { Tag } from '../problems/entities/tag.entity';
-import { Problem } from '../problems/entities/problem.entity';
-import { StorageService } from '../storage/storage.service';
-import { SolutionResponseDto } from './dto';
-import { getAvatarUrl } from '../../common';
+import { Solution } from './entities/solution.entity';
 import { SolutionVotesService } from './services/solution-votes.service';
 
 @Injectable()
@@ -57,6 +56,7 @@ export class SolutionsService {
     dto.tags = solution.tags || [];
     dto.languageIds = solution.languages?.map((l) => l.id) || [];
     dto.userVote = userVote;
+    dto.problem = solution.problem;
 
     if (solution.author) {
       dto.author = {
@@ -101,7 +101,8 @@ export class SolutionsService {
 
     qb.leftJoinAndSelect('solution.author', 'author')
       .leftJoinAndSelect('solution.tags', 'tags')
-      .leftJoinAndSelect('solution.languages', 'languages');
+      .leftJoinAndSelect('solution.languages', 'languages')
+      .leftJoinAndSelect('solution.problem', 'problem');
 
     // Filter by Problem ID
     if (query.problemId) {
@@ -263,6 +264,12 @@ export class SolutionsService {
       );
     }
 
+    await this.solutionRepo.remove(solution);
+  }
+
+  async adminRemove(id: number): Promise<void> {
+    const solution = await this.solutionRepo.findOneBy({ id });
+    if (!solution) throw new NotFoundException('Solution not found');
     await this.solutionRepo.remove(solution);
   }
 

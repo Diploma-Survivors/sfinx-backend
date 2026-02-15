@@ -19,17 +19,17 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { GetUser, PaginatedResultDto } from '../../common';
-import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { User } from '../auth/entities/user.entity';
-import { SolutionsService } from './solutions.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
+import { VoteCommentDto } from '../comments-base/dto';
 import {
   CreateSolutionDto,
   FilterSolutionDto,
   SolutionResponseDto,
   UpdateSolutionDto,
 } from './dto';
-import { VoteCommentDto } from '../comments-base/dto';
+import { SolutionsService } from './solutions.service';
 
 @ApiTags('Solutions')
 @Controller('solutions')

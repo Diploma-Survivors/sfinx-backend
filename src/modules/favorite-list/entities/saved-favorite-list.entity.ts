@@ -37,6 +37,6 @@ export class SavedFavoriteList {
   favoriteListId: number;
 
   @ApiProperty({ description: 'When the list was saved' })
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 }

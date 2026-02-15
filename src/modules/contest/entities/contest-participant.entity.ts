@@ -99,6 +99,24 @@ export class ContestParticipant {
   @Column({ name: 'last_submission_at', type: 'timestamptz', nullable: true })
   lastSubmissionAt: Date | null;
 
+  @ApiPropertyOptional({ description: 'ELO rating before this contest' })
+  @Column({ name: 'rating_before', type: 'int', nullable: true })
+  ratingBefore: number | null;
+
+  @ApiPropertyOptional({ description: 'ELO rating after this contest' })
+  @Column({ name: 'rating_after', type: 'int', nullable: true })
+  ratingAfter: number | null;
+
+  @ApiPropertyOptional({ description: 'ELO rating change from this contest' })
+  @Column({ name: 'rating_delta', type: 'int', nullable: true })
+  ratingDelta: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Final rank in this contest (for rating)',
+  })
+  @Column({ name: 'contest_rank', type: 'int', nullable: true })
+  contestRank: number | null;
+
   @ApiProperty({ description: 'Start timestamp (when user joined)' })
   @CreateDateColumn({ name: 'started_at', type: 'timestamptz' })
   startedAt: Date;

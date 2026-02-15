@@ -3,17 +3,19 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../../auth/entities/user.entity';
-import { RedisService } from '../../redis';
+import { UserStatistics } from '../entities/user-statistics.entity';
+import { CacheKeys, RedisService } from '../../redis';
 
 @Injectable()
 export class CronRebuildRankingJob {
   private readonly logger = new Logger(CronRebuildRankingJob.name);
-  private readonly GLOBAL_RANKING_KEY = 'global:ranking';
   private readonly BATCH_SIZE = 1000;
 
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(UserStatistics)
+    private readonly userStatisticsRepository: Repository<UserStatistics>,
     private readonly redisService: RedisService,
   ) {}
 
@@ -23,53 +25,87 @@ export class CronRebuildRankingJob {
     const startTime = Date.now();
 
     try {
-      // 1. Clear existing key
-      await this.redisService.del(this.GLOBAL_RANKING_KEY);
-
-      // 2. Stream/Batch fetch users
-      let skip = 0;
-      let processed = 0;
-      const MAX_TIMESTAMP = 9999999999;
-
-      while (true) {
-        const users = await this.userRepository.find({
-          relations: ['statistics'],
-          where: { isActive: true },
-          order: { id: 'ASC' },
-          take: this.BATCH_SIZE,
-          skip: skip,
-        });
-
-        if (users.length === 0) break;
-
-        for (const user of users) {
-          const globalScore = user.statistics?.globalScore ?? 0;
-          // Only rank users with score > 0
-          if (Number(globalScore) > 0) {
-            const lastSolveTime = user.statistics?.lastSolveAt
-              ? Math.floor(user.statistics.lastSolveAt.getTime() / 1000)
-              : 0;
-            const encodedScore =
-              Number(globalScore) * 1e10 + (MAX_TIMESTAMP - lastSolveTime);
-            await this.redisService.zadd(
-              this.GLOBAL_RANKING_KEY,
-              encodedScore,
-              user.id.toString(),
-            );
-          }
-        }
-
-        processed += users.length;
-        skip += this.BATCH_SIZE;
-        this.logger.debug(`Processed ${processed} users...`);
-      }
+      await Promise.all([
+        this.rebuildProblemRanking(),
+        this.rebuildContestRating(),
+      ]);
 
       const duration = Date.now() - startTime;
-      this.logger.log(
-        `Global ranking rebuild completed in ${duration}ms. Total users: ${processed}`,
-      );
+      this.logger.log(`Global ranking rebuild completed in ${duration}ms`);
     } catch (error) {
       this.logger.error('Failed to rebuild global ranking', error);
+    }
+  }
+
+  async rebuildProblemRanking(): Promise<void> {
+    await this.redisService.del(CacheKeys.globalRanking.problemBased());
+
+    let skip = 0;
+    let processed = 0;
+    const MAX_TIMESTAMP = 9999999999;
+
+    while (true) {
+      const users = await this.userRepository.find({
+        relations: ['statistics'],
+        where: { isActive: true },
+        order: { id: 'ASC' },
+        take: this.BATCH_SIZE,
+        skip,
+      });
+
+      if (users.length === 0) break;
+
+      for (const user of users) {
+        const globalScore = user.statistics?.globalScore ?? 0;
+        if (Number(globalScore) > 0) {
+          const lastSolveTime = user.statistics?.lastSolveAt
+            ? Math.floor(user.statistics.lastSolveAt.getTime() / 1000)
+            : 0;
+          const encodedScore =
+            Number(globalScore) * 1e10 + (MAX_TIMESTAMP - lastSolveTime);
+          await this.redisService.zadd(
+            CacheKeys.globalRanking.problemBased(),
+            encodedScore,
+            user.id.toString(),
+          );
+        }
+      }
+
+      processed += users.length;
+      skip += this.BATCH_SIZE;
+      this.logger.debug(`Problem ranking: processed ${processed} users...`);
+    }
+  }
+
+  async rebuildContestRating(): Promise<void> {
+    await this.redisService.del(CacheKeys.globalRanking.contestBased());
+
+    let skip = 0;
+    let processed = 0;
+
+    while (true) {
+      const stats = await this.userStatisticsRepository.find({
+        order: { userId: 'ASC' },
+        take: this.BATCH_SIZE,
+        skip,
+      });
+
+      if (stats.length === 0) break;
+
+      for (const stat of stats) {
+        // Only include users who have participated in at least one contest
+        if (stat.contestsParticipated > 0) {
+          await this.redisService.zadd(
+            CacheKeys.globalRanking.contestBased(),
+            stat.contestRating,
+            stat.userId.toString(),
+          );
+        }
+      }
+
+      processed += stats.length;
+      skip += this.BATCH_SIZE;
+      this.logger.debug(`Contest rating: processed ${processed} users...`);
     }
   }
 }

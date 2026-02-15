@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ProblemDifficultyStatsDto {
   @ApiProperty()
@@ -51,4 +51,21 @@ export class UserStatisticsDto {
 
   @ApiProperty({ type: SubmissionStatsDto })
   submissionStats: SubmissionStatsDto;
+
+  @ApiProperty({
+    description: 'Contest ELO rating (Codeforces-style)',
+    default: 1500,
+  })
+  contestRating: number;
+
+  @ApiProperty({
+    description: 'Number of rated contests participated',
+    default: 0,
+  })
+  contestsParticipated: number;
+
+  @ApiPropertyOptional({
+    description: 'Global contest rating rank (1-based), null if unranked',
+  })
+  contestRank: number | null;
 }

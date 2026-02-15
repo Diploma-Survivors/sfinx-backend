@@ -16,6 +16,7 @@ import { AuthModule } from '../auth/auth.module';
 import { SolutionCommentsService } from './services/solution-comments.service';
 import { SolutionVotesService } from './services/solution-votes.service';
 import { CommentsModule } from '../problems/comments/comments.module';
+import { SolutionsAdminController } from './solutions-admin.controller';
 
 @Module({
   imports: [
@@ -33,7 +34,11 @@ import { CommentsModule } from '../problems/comments/comments.module';
     AuthModule,
     CommentsModule,
   ],
-  controllers: [SolutionsController, SolutionCommentsController],
+  controllers: [
+    SolutionsAdminController,
+    SolutionsController,
+    SolutionCommentsController,
+  ],
   providers: [SolutionsService, SolutionCommentsService, SolutionVotesService],
   exports: [SolutionsService, SolutionCommentsService, SolutionVotesService],
 })

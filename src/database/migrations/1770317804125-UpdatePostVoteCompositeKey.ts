@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class UpdatePostVoteCompositeKey1738783200000 implements MigrationInterface {
+export class UpdatePostVoteCompositeKey1770317804125 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Drop existing primary key constraint
     await queryRunner.query(

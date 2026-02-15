@@ -11,6 +11,8 @@ import slugify from 'slugify';
 import { Repository } from 'typeorm';
 import { Transactional } from 'typeorm-transactional';
 
+import { SampleTestcase } from './entities/sample-testcase.entity';
+
 import { PaginatedResultDto } from '../../common';
 import { User } from '../auth/entities/user.entity';
 import { Action, CaslAbilityFactory } from '../rbac/casl';
@@ -22,9 +24,7 @@ import { ProblemDetailDto } from './dto/problem-detail.dto';
 import { ProblemListItemDto } from './dto/problem-list-item.dto';
 import { UpdateProblemDto } from './dto/update-problem.dto';
 import { Problem } from './entities/problem.entity';
-import { TagService } from './services';
-import { TestcaseFileService } from './services';
-import { TopicService } from './services';
+import { TagService, TestcaseFileService, TopicService } from './services';
 
 @Injectable()
 export class ProblemsService {
@@ -33,6 +33,8 @@ export class ProblemsService {
   constructor(
     @InjectRepository(Problem)
     private readonly problemRepository: Repository<Problem>,
+    @InjectRepository(SampleTestcase)
+    private readonly sampleTestcaseRepository: Repository<SampleTestcase>,
     private readonly testcaseService: TestcaseFileService,
     private readonly caslAbilityFactory: CaslAbilityFactory,
     private readonly topicService: TopicService,
@@ -130,7 +132,7 @@ export class ProblemsService {
     filterDto: FilterProblemDto,
     user?: User,
   ): Promise<PaginatedResultDto<ProblemListItemDto>> {
-    const { difficulty, isPremium, topicIds, tagIds, search, status } =
+    const { difficulty, isPremium, topicIds, tagIds, search, status, ids } =
       filterDto;
 
     const queryBuilder = this.problemRepository
@@ -197,6 +199,10 @@ export class ProblemsService {
           queryBuilder.andWhere('user_progress.status = :status', { status });
         }
       }
+    }
+
+    if (ids && ids.length > 0) {
+      queryBuilder.andWhere('problem.id IN (:...ids)', { ids });
     }
 
     if (tagIds && tagIds.length > 0) {
@@ -470,7 +476,8 @@ export class ProblemsService {
   ): Promise<Problem> {
     const problem = await this.findProblemEntityById(id);
 
-    const { topicIds, tagIds, title, ...updateData } = updateProblemDto;
+    const { topicIds, tagIds, title, sampleTestcases, ...updateData } =
+      updateProblemDto;
 
     // Update slug if title changed
     if (title && title !== problem.title) {
@@ -511,6 +518,21 @@ export class ProblemsService {
       } else {
         problem.tags = [];
       }
+    }
+
+    // Handle sampleTestcases explicitly to avoid TypeORM orphan-nullify bug
+    // (orphanedRowAction:'delete' requires nullable FK which problem_id is not)
+    if (sampleTestcases !== undefined) {
+      await this.sampleTestcaseRepository.delete({ problem: { id } });
+      problem.sampleTestcases = sampleTestcases.map((tc, index) =>
+        this.sampleTestcaseRepository.create({
+          problem: { id: problem.id },
+          input: tc.input,
+          expectedOutput: tc.expectedOutput,
+          explanation: tc.explanation,
+          orderIndex: index,
+        }),
+      );
     }
 
     const savedProblem = await this.problemRepository.save(problem);
@@ -563,7 +585,7 @@ export class ProblemsService {
       .update(Problem)
       .set({
         searchVector: () =>
-          `setweight(to_tsvector('english', coalesce(title, '')), 'A') || 
+          `setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
            setweight(to_tsvector('english', coalesce(slug, '')), 'B') ||
            setweight(to_tsvector('english', coalesce(description, '')), 'C')`,
       })

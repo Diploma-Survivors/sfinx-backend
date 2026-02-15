@@ -13,6 +13,8 @@ import {
 import { UserStatisticsDto } from '../submissions/dto/user-statistics.dto';
 import { ProgressStatus } from '../submissions/enums';
 import { UsersService } from './users.service';
+import { ContestRatingLeaderboardEntryDto } from './dto/contest-rating-leaderboard.dto';
+import { ContestHistoryEntryDto } from './dto/contest-history.dto';
 import { UserProfileResponseDto } from '../auth/dto/user-profile-response.dto';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { GetPracticeHistoryDto } from '../submissions/dto/get-practice-history.dto';
@@ -118,6 +120,21 @@ export class UsersController {
     return this.usersService.unbanUser(userId);
   }
 
+  @Get('ranking/contest')
+  @ApiOperation({ summary: 'Global contest ELO rating leaderboard' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'Contest rating leaderboard retrieved',
+  })
+  async getContestRatingLeaderboard(
+    @Query('page') page = 1,
+    @Query('limit') limit = 50,
+  ): Promise<PaginatedResultDto<ContestRatingLeaderboardEntryDto>> {
+    return this.usersService.getContestRatingLeaderboard(+page, +limit);
+  }
+
   @Get(':userId/stats')
   @ApiOperation({ summary: 'Get user problem & submission stats' })
   @ApiResponse({
@@ -129,6 +146,18 @@ export class UsersController {
     @Param('userId') userId: string,
   ): Promise<UserStatisticsDto> {
     return this.userStatisticsService.getUserStatistics(+userId);
+  }
+
+  @Get(':userId/contest-history')
+  @ApiOperation({ summary: 'Get user contest rating history' })
+  @ApiResponse({
+    status: 200,
+    description: 'Contest history retrieved',
+  })
+  async getContestHistory(
+    @Param('userId') userId: string,
+  ): Promise<ContestHistoryEntryDto[]> {
+    return this.usersService.getContestHistory(+userId);
   }
 
   @Get(':userId/activity-years')

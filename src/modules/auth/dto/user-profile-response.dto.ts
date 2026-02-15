@@ -31,4 +31,12 @@ export class UserProfileResponseDto extends OmitType(User, [
 
   @Expose()
   avatarUrl: string | null;
+
+  /** 1-based global problem ranking (null if not ranked) */
+  @Expose()
+  problemRank: number | null;
+
+  /** 1-based global contest rating ranking (null if not ranked) */
+  @Expose()
+  contestRank: number | null;
 }

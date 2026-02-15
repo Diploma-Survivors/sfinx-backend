@@ -18,8 +18,9 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { PaginatedResultDto } from '../../../common';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { CheckPolicies, PaginatedResultDto } from '../../../common';
+import { CaslGuard } from '../../auth/guards/casl.guard';
+import { Action } from '../../rbac/casl';
 import { CreateTagDto, FilterTagDto, UpdateTagDto } from '../dto';
 import { DiscussTag } from '../entities/discuss-tag.entity';
 import { DiscussTagService } from '../services/discuss-tag.service';
@@ -30,9 +31,10 @@ export class DiscussTagsController {
   constructor(private readonly discussTagService: DiscussTagService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(CaslGuard)
+  @CheckPolicies((ability) => ability.can(Action.Access, 'Admin'))
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Create a new discuss tag' })
+  @ApiOperation({ summary: 'Create a new discuss tag (Admin only)' })
   @ApiResponse({
     status: 201,
     description: 'Tag created successfully',
@@ -55,9 +57,10 @@ export class DiscussTagsController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(CaslGuard)
+  @CheckPolicies((ability) => ability.can(Action.Access, 'Admin'))
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Update a discuss tag' })
+  @ApiOperation({ summary: 'Update a discuss tag (Admin only)' })
   @ApiParam({ name: 'id', description: 'Tag ID' })
   @ApiResponse({
     status: 200,
@@ -74,10 +77,11 @@ export class DiscussTagsController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(CaslGuard)
+  @CheckPolicies((ability) => ability.can(Action.Access, 'Admin'))
   @ApiBearerAuth('JWT-auth')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete a discuss tag' })
+  @ApiOperation({ summary: 'Delete a discuss tag (Admin only)' })
   @ApiParam({ name: 'id', description: 'Tag ID' })
   @ApiResponse({ status: 204, description: 'Tag deleted successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
