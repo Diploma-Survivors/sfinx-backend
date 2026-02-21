@@ -11,6 +11,7 @@ import { DiscussService } from './services/discuss.service';
 import { DiscussCommentService } from './services/discuss-comment.service';
 import { DiscussTagService } from './services/discuss-tag.service';
 import { StorageModule } from '../storage/storage.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 import { DiscussTagsController } from './controllers/discuss-tags.controller';
 import { DiscussAdminController } from './controllers/discuss-admin.controller';
@@ -25,6 +26,7 @@ import { DiscussAdminController } from './controllers/discuss-admin.controller';
       PostCommentVote,
     ]),
     StorageModule,
+    NotificationsModule,
   ],
   controllers: [
     DiscussAdminController,

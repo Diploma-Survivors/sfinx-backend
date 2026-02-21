@@ -14,6 +14,7 @@ import { ProgrammingLanguageModule } from '../programming-language';
 import { RedisModule } from '../redis';
 import { StorageModule } from '../storage/storage.module';
 import { ContestModule } from '../contest/contest.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { SUBMISSION_QUEUES } from './constants/submission.constants';
 import { Judge0CallbackController } from './controllers/judge0-callback.controller';
 import { Submission } from './entities/submission.entity';
@@ -88,6 +89,7 @@ import { RankingAdminController } from './controllers/ranking-admin.controller';
     StorageModule,
     MailModule,
     forwardRef(() => ContestModule),
+    NotificationsModule,
   ],
   controllers: [
     SubmissionsController,

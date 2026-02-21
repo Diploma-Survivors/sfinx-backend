@@ -44,6 +44,8 @@ import { SubmissionRetrievalService } from './services/submission-retrieval.serv
 import { SubmissionTrackerService } from './services/submission-tracker.service';
 import { UserProgressService } from './services/user-progress.service';
 import { UserStatisticsService } from './services/user-statistics.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/enums/notification-type.enum';
 
 /**
  * Main service for managing code submissions
@@ -67,6 +69,7 @@ export class SubmissionsService {
     private readonly eventEmitter: EventEmitter2,
     @Inject(forwardRef(() => ContestSubmissionService))
     private readonly contestSubmissionService: ContestSubmissionService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -368,6 +371,14 @@ export class SubmissionsService {
 
     // Only emit PROBLEM_SOLVED on the very first AC for this (user, problem)
     if (isNewlySolved) {
+      await this.notificationsService.create({
+        recipientId: submission.user.id,
+        type: NotificationType.SYSTEM,
+        title: 'Problem Solved!',
+        content: `Congratulations! You have successfully solved "${submission.problem.title}".`,
+        link: `/problems/${submission.problem.id}`,
+      });
+
       this.eventEmitter.emit(
         SUBMISSION_EVENTS.PROBLEM_SOLVED,
         new ProblemSolvedEvent(

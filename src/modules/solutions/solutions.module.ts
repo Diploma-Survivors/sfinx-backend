@@ -17,6 +17,7 @@ import { SolutionCommentsService } from './services/solution-comments.service';
 import { SolutionVotesService } from './services/solution-votes.service';
 import { CommentsModule } from '../problems/comments/comments.module';
 import { SolutionsAdminController } from './solutions-admin.controller';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { SolutionsAdminController } from './solutions-admin.controller';
     ]),
     AuthModule,
     CommentsModule,
+    NotificationsModule,
   ],
   controllers: [
     SolutionsAdminController,
