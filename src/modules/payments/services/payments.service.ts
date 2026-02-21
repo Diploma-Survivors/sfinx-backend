@@ -23,6 +23,8 @@ import {
   SubscriptionPlanStatsDto,
   RevenueChartItemDto,
 } from '../dto/revenue-stats-response.dto';
+import { NotificationsService } from '../../notifications/notifications.service';
+import { NotificationType } from '../../notifications/enums/notification-type.enum';
 
 export interface TotalRevenueResult {
   totalRevenue: string;
@@ -62,6 +64,7 @@ export class PaymentsService {
     @Inject(VnPayProvider)
     private readonly paymentProvider: PaymentProvider,
     private readonly mailService: MailService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -175,6 +178,15 @@ export class PaymentsService {
       this.logger.log(
         `Payment success for user ${transaction.userId}, plan ${transaction.planId}`,
       );
+
+      await this.notificationsService.create({
+        recipientId: transaction.user.id,
+        type: NotificationType.SYSTEM,
+        title: 'Payment Successful',
+        content: `Your payment was successful. Enjoy your premium features!`,
+        link: '/settings?tab=billing',
+      });
+
       return { success: true };
     } else {
       transaction.status = PaymentStatus.FAILED;

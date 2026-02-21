@@ -8,6 +8,7 @@ import {
 } from './controllers';
 import { ProblemComment, ProblemCommentVote, CommentReport } from './entities';
 import { ProblemCommentsService, CommentReportsService } from './services';
+import { NotificationsModule } from '../../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { ProblemCommentsService, CommentReportsService } from './services';
       CommentReport,
     ]),
     StorageModule,
+    NotificationsModule,
   ],
   controllers: [ProblemCommentsController, CommentReportsController],
   providers: [MarkdownService, ProblemCommentsService, CommentReportsService],

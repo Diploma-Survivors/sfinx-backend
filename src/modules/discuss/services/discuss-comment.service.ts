@@ -14,6 +14,8 @@ import { VoteType } from '../../comments-base/enums';
 import { CreatePostCommentDto } from '../dto/create-post-comment.dto';
 import { UpdatePostCommentDto } from '../dto/update-post-comment.dto';
 import { BaseCommentResponseDto } from '../../comments-base/dto';
+import { NotificationsService } from '../../notifications/notifications.service';
+import { NotificationType } from '../../notifications/enums/notification-type.enum';
 
 type CommentResponse = BaseCommentResponseDto & { replies: CommentResponse[] };
 
@@ -38,6 +40,8 @@ export class DiscussCommentService extends BaseCommentsService<
 
     @InjectDataSource()
     protected readonly dataSource: DataSource,
+
+    private readonly notificationsService: NotificationsService,
   ) {
     super(commentRepo, voteRepo, storageService, dataSource);
   }
@@ -146,6 +150,37 @@ export class DiscussCommentService extends BaseCommentsService<
 
     if (!createdComment) {
       throw new Error('Comment not found after creation');
+    }
+
+    if (saved.parentId) {
+      const parentComment = await this.commentRepo.findOne({
+        where: { id: saved.parentId },
+      });
+      if (parentComment && parentComment.authorId !== userId) {
+        await this.notificationsService.create({
+          recipientId: parentComment.authorId,
+          senderId: userId,
+          type: NotificationType.REPLY,
+          title: 'New Reply to Your Comment',
+          content: `${createdComment.author?.username || 'Someone'} replied to your comment.`,
+          link: `/discuss/${postId}`,
+        });
+      }
+    } else {
+      const post = await this.postRepo.findOne({
+        where: { id: postId },
+        relations: ['author'],
+      });
+      if (post && post.author?.id !== userId) {
+        await this.notificationsService.create({
+          recipientId: post.author.id,
+          senderId: userId,
+          type: NotificationType.COMMENT,
+          title: 'New Comment on Your Post',
+          content: `${createdComment.author?.username || 'Someone'} commented on your post "${post.title}".`,
+          link: `/discuss/${postId}`,
+        });
+      }
     }
 
     return this.mapToResponseDto(createdComment);

@@ -13,6 +13,8 @@ import { DiscussTag } from '../entities/discuss-tag.entity';
 import { PostVote } from '../entities/post-vote.entity';
 import { Post } from '../entities/post.entity';
 import { DiscussTagService } from './discuss-tag.service';
+import { NotificationsService } from '../../notifications/notifications.service';
+import { NotificationType } from '../../notifications/enums/notification-type.enum';
 
 @Injectable()
 export class DiscussService {
@@ -25,6 +27,7 @@ export class DiscussService {
     private readonly postVoteRepository: Repository<PostVote>,
     private readonly discussTagService: DiscussTagService,
     private readonly storageService: StorageService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async createPost(userId: number, dto: CreatePostDto): Promise<Post> {
@@ -39,7 +42,17 @@ export class DiscussService {
       post.tags = tags;
     }
 
-    return this.postRepository.save(post);
+    const savedPost = await this.postRepository.save(post);
+
+    await this.notificationsService.create({
+      recipientId: userId,
+      type: NotificationType.SYSTEM,
+      title: 'Discuss Post Published',
+      content: `Your discussion post "${dto.title}" has been successfully published.`,
+      link: `/discuss/${savedPost.id}`,
+    });
+
+    return savedPost;
   }
 
   async findAll(query: FilterPostDto): Promise<PaginatedResultDto<Post>> {
@@ -99,9 +112,11 @@ export class DiscussService {
     // Transform author avatarUrl
     items.forEach((item) => {
       if (item.author?.avatarKey && this.isS3Key(item.author.avatarKey)) {
-        (item.author as any).avatarUrl = this.storageService.getCloudFrontUrl(
-          item.author.avatarKey,
-        );
+        Object.assign(item.author, {
+          avatarUrl: this.storageService.getCloudFrontUrl(
+            item.author.avatarKey,
+          ),
+        });
       }
     });
 
@@ -124,9 +139,9 @@ export class DiscussService {
 
     // Transform author avatarUrl
     if (post.author?.avatarKey && this.isS3Key(post.author.avatarKey)) {
-      (post.author as any).avatarUrl = this.storageService.getCloudFrontUrl(
-        post.author.avatarKey,
-      );
+      Object.assign(post.author, {
+        avatarUrl: this.storageService.getCloudFrontUrl(post.author.avatarKey),
+      });
     }
 
     return post;
@@ -251,9 +266,11 @@ export class DiscussService {
 
     items.forEach((item) => {
       if (item.author?.avatarKey && this.isS3Key(item.author.avatarKey)) {
-        (item.author as any).avatarUrl = this.storageService.getCloudFrontUrl(
-          item.author.avatarKey,
-        );
+        Object.assign(item.author, {
+          avatarUrl: this.storageService.getCloudFrontUrl(
+            item.author.avatarKey,
+          ),
+        });
       }
     });
 

@@ -13,6 +13,8 @@ import { VoteType } from '../../comments-base/enums';
 import { BaseCreateCommentDto } from '../../comments-base/dto';
 import { getAvatarUrl } from '../../../common';
 import { VoteResponseDto } from '../../comments-base/dto';
+import { NotificationsService } from '../../notifications/notifications.service';
+import { NotificationType } from '../../notifications/enums/notification-type.enum';
 
 @Injectable()
 export class SolutionCommentsService extends BaseCommentsService<
@@ -26,6 +28,7 @@ export class SolutionCommentsService extends BaseCommentsService<
     voteRepo: Repository<SolutionCommentVote>,
     storageService: StorageService,
     dataSource: DataSource,
+    private readonly notificationsService: NotificationsService,
   ) {
     super(commentRepo, voteRepo, storageService, dataSource);
   }
@@ -112,6 +115,43 @@ export class SolutionCommentsService extends BaseCommentsService<
     await this.dataSource
       .getRepository(Solution)
       .increment({ id: solutionId }, 'commentCount', 1);
+
+    const createdComment = await this.commentRepo.findOne({
+      where: { id: result.id },
+      relations: ['author'],
+    });
+
+    if (createdComment) {
+      if (dto.parentId) {
+        const parentComment = await this.commentRepo.findOne({
+          where: { id: dto.parentId },
+        });
+        if (parentComment && parentComment.authorId !== userId) {
+          await this.notificationsService.create({
+            recipientId: parentComment.authorId,
+            senderId: userId,
+            type: NotificationType.REPLY,
+            title: 'New Reply',
+            content: `${createdComment.author?.username || 'Someone'} replied to your comment on a solution.`,
+            link: `/problems/solutions/${solutionId}`,
+          });
+        }
+      } else {
+        const solution = await this.dataSource
+          .getRepository(Solution)
+          .findOne({ where: { id: solutionId }, relations: ['author'] });
+        if (solution && solution.author?.id !== userId) {
+          await this.notificationsService.create({
+            recipientId: solution.author.id,
+            senderId: userId,
+            type: NotificationType.COMMENT,
+            title: 'New Comment',
+            content: `${createdComment.author?.username || 'Someone'} commented on your solution.`,
+            link: `/problems/solutions/${solutionId}`,
+          });
+        }
+      }
+    }
 
     return result as SolutionCommentResponseDto;
   }

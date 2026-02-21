@@ -27,6 +27,8 @@ import { VoteType } from '../enums';
 import { BaseCommentsService } from '../../../comments-base/base-comments.service';
 
 import { VoteResponseDto } from '../dto';
+import { NotificationsService } from '../../../notifications/notifications.service';
+import { NotificationType } from '../../../notifications/enums/notification-type.enum';
 
 @Injectable()
 export class ProblemCommentsService extends BaseCommentsService<
@@ -43,6 +45,7 @@ export class ProblemCommentsService extends BaseCommentsService<
     private readonly markdownService: MarkdownService,
     storageService: StorageService,
     dataSource: DataSource,
+    private readonly notificationsService: NotificationsService,
   ) {
     super(commentRepo, voteRepo, storageService, dataSource);
   }
@@ -168,13 +171,33 @@ export class ProblemCommentsService extends BaseCommentsService<
       type: dto.type,
     };
 
-    // Call super
     const result = await super.createComment(
       userId,
       problemId,
       dto,
       extraFields,
     );
+
+    const createdComment = await this.commentRepo.findOne({
+      where: { id: result.id },
+      relations: ['author'],
+    });
+
+    if (createdComment && dto.parentId) {
+      const parentComment = await this.commentRepo.findOne({
+        where: { id: dto.parentId },
+      });
+      if (parentComment && parentComment.authorId !== userId) {
+        await this.notificationsService.create({
+          recipientId: parentComment.authorId,
+          senderId: userId,
+          type: NotificationType.REPLY,
+          title: 'New Reply',
+          content: `${createdComment.author?.username || 'Someone'} replied to your comment on a problem.`,
+          link: `/problems/${problemId}`,
+        });
+      }
+    }
 
     return result as ProblemCommentResponseDto;
   }
