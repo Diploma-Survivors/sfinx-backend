@@ -123,10 +123,11 @@ export class UsersService {
       'https://cdn.pixabay.com/photo/2018/11/13/21/43/avatar-3814049_1280.png';
 
     const usersWithAvatar = users.map((user) => {
-      const userWithAvatar = user as User & { avatarUrl?: string };
-      if (!user.avatarKey && !userWithAvatar.avatarUrl) {
-        userWithAvatar.avatarUrl = DEFAULT_AVATAR;
+      let avatarUrl = DEFAULT_AVATAR;
+      if (user.avatarKey) {
+        avatarUrl = this.storageService.getCloudFrontUrl(user.avatarKey);
       }
+      Object.assign(user, { avatarUrl });
       return user;
     });
 
@@ -236,10 +237,8 @@ export class UsersService {
       (entry, idx) => {
         const user = userMap.get(entry.userId);
         let avatarUrl: string | null = null;
-        if (user?.avatarKey && this.isS3Key(user.avatarKey)) {
+        if (user?.avatarKey) {
           avatarUrl = this.storageService.getCloudFrontUrl(user.avatarKey);
-        } else if (user?.avatarKey) {
-          avatarUrl = user.avatarKey;
         }
 
         return {
@@ -296,16 +295,12 @@ export class UsersService {
   transformUserResponse(user: User): UserProfileResponseDto {
     const dto = plainToInstance(UserProfileResponseDto, user);
 
-    if (dto.avatarKey && this.isS3Key(dto.avatarKey)) {
-      (dto as UserProfileResponseDto & { avatarUrl?: string }).avatarUrl =
-        this.storageService.getCloudFrontUrl(dto.avatarKey);
+    if (dto.avatarKey) {
+      Object.assign(dto, {
+        avatarUrl: this.storageService.getCloudFrontUrl(dto.avatarKey),
+      });
     }
 
     return dto;
-  }
-
-  private isS3Key(value: string): boolean {
-    if (!value) return false;
-    return !value.startsWith('http://') && !value.startsWith('https://');
   }
 }
