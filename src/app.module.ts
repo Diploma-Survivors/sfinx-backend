@@ -61,6 +61,7 @@ import { livekitConfig } from './config';
 import { DiscussModule } from './modules/discuss/discuss.module';
 import { FavoriteListModule } from './modules/favorite-list/favorite-list.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { ProblemReportsModule } from './modules/problem-reports/problem-reports.module';
 
 @Module({
   imports: [
@@ -149,6 +150,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     DiscussModule,
     FavoriteListModule,
     NotificationsModule,
+    ProblemReportsModule,
     // PaymentsModule,
     // AiModule,
     // CommunityModule,
