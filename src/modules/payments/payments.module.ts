@@ -12,7 +12,7 @@ import { ExchangeRateService } from './services/exchange-rate.service';
 import { PaymentSubscriptionService } from './services/payment-subscription.service';
 import { PaymentsService } from './services/payments.service';
 import { SubscriptionPlansService } from './services/subscription-plans.service';
-import { MailService, TemplateService } from '../mail';
+import { MailModule } from '../mail';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { SubscriptionFeature } from './entities/subscription-feature.entity';
 import { SubscriptionFeatureTranslation } from './entities/subscription-feature-translation.entity';
@@ -31,6 +31,7 @@ import { SubscriptionFeaturesController } from './controllers/subscription-featu
     ]),
     ConfigModule,
     NotificationsModule,
+    MailModule,
   ],
   controllers: [
     PaymentsController,
@@ -44,8 +45,6 @@ import { SubscriptionFeaturesController } from './controllers/subscription-featu
     PaymentSubscriptionService,
     SubscriptionPlansService,
     SubscriptionFeatureService,
-    MailService,
-    TemplateService,
   ],
 
   exports: [PaymentsService],

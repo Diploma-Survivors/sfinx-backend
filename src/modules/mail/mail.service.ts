@@ -1,59 +1,28 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
-import { Transporter } from 'nodemailer';
-import SMTPTransport from 'nodemailer/lib/smtp-transport';
 import { EmailConfig } from '../../config/email.config';
-import { MailOptions } from './interfaces/mail.interface';
+import { MailOptions, MAIL_TRANSPORT } from './interfaces/mail.interface';
+import type { MailTransport } from './interfaces/mail.interface';
 import { TemplateService } from './services/template.service';
 
 @Injectable()
 export class MailService implements OnModuleInit {
   private readonly logger = new Logger(MailService.name);
-  private readonly transporter: Transporter;
   private readonly emailConfig: EmailConfig;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly templateService: TemplateService,
+    @Inject(MAIL_TRANSPORT)
+    private readonly transport: MailTransport,
   ) {
     this.emailConfig = this.configService.get<EmailConfig>('email')!;
-    this.transporter = this.createTransporter();
   }
 
   async onModuleInit() {
-    await this.verifyConnection();
-  }
-  /**
-   * Create nodemailer transporter
-   */
-  private createTransporter(): Transporter {
-    return nodemailer.createTransport({
-      host: this.emailConfig.host,
-      port: this.emailConfig.port,
-      secure: this.emailConfig.secure,
-      auth: {
-        user: this.emailConfig.auth.user,
-        pass: this.emailConfig.auth.pass,
-      },
-    });
+    await this.transport.verify();
   }
 
-  /**
-   * Verify SMTP connection
-   */
-  private async verifyConnection(): Promise<void> {
-    try {
-      await this.transporter.verify();
-      this.logger.log('SMTP connection verified successfully');
-    } catch (error) {
-      this.logger.error('SMTP connection verification failed:', error);
-    }
-  }
-
-  /**
-   * Send email with template
-   */
   async sendTemplatedEmail(
     template: string,
     context: Record<string, any>,
@@ -80,23 +49,8 @@ export class MailService implements OnModuleInit {
    */
   async sendMail(options: MailOptions): Promise<void> {
     try {
-      const { to, subject, html, text, attachments, replyTo } = options;
-
-      const mailOptions: nodemailer.SendMailOptions = {
-        from: `"${this.emailConfig.from.name}" <${this.emailConfig.from.address}>`,
-        to: Array.isArray(to) ? to.join(', ') : to,
-        subject,
-        html,
-        text,
-        attachments,
-        replyTo,
-      };
-
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const info: SMTPTransport.SentMessageInfo =
-        await this.transporter.sendMail(mailOptions);
-
-      this.logger.log(`Email sent successfully: ${info.messageId}`);
+      const messageId = await this.transport.send(options);
+      this.logger.log(`Email sent successfully: ${messageId}`);
     } catch (error) {
       this.logger.error('Failed to send email:', error);
       throw new Error('Email sending failed');

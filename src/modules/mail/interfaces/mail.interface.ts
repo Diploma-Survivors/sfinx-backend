@@ -24,3 +24,10 @@ export enum EmailTemplate {
   PASSWORD_CHANGED = 'password-changed',
   SUBMISSION_RESULT = 'submission-result',
 }
+
+export const MAIL_TRANSPORT = Symbol('MAIL_TRANSPORT');
+
+export interface MailTransport {
+  verify(): Promise<void>;
+  send(options: MailOptions): Promise<string | undefined>;
+}
