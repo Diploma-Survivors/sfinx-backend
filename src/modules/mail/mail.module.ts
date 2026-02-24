@@ -1,10 +1,15 @@
 import { BullModule } from '@nestjs/bullmq';
-import { Module } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EmailConfig } from '../../config/email.config';
+import { MAIL_TRANSPORT } from './interfaces/mail.interface';
 import { MailService } from './mail.service';
 import { MailProcessor } from './processors/mail.processor';
 import { TemplateService } from './services/template.service';
+import { BrevoTransport } from './transports/brevo.transport';
+import { SmtpTransport } from './transports/smtp.transport';
+
+const logger = new Logger('MailModule');
 
 @Module({
   imports: [
@@ -35,7 +40,26 @@ import { TemplateService } from './services/template.service';
       },
     }),
   ],
-  providers: [MailService, TemplateService, MailProcessor],
+  providers: [
+    {
+      provide: MAIL_TRANSPORT,
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const emailConfig = configService.get<EmailConfig>('email')!;
+        const provider = emailConfig.provider;
+        logger.log(`Using mail transport: ${provider}`);
+
+        if (provider === 'smtp') {
+          return new SmtpTransport(configService);
+        }
+
+        return new BrevoTransport(configService);
+      },
+    },
+    MailService,
+    TemplateService,
+    MailProcessor,
+  ],
   exports: [MailService],
 })
 export class MailModule {}

@@ -80,13 +80,28 @@ export const environmentValidation = Joi.object({
   PAYMENT_RENEW_URL_PATH: Joi.string().default('/pricing'),
 
   // Email Configuration
-  SMTP_HOST: Joi.string().hostname().required(),
+  MAIL_PROVIDER: Joi.string().valid('smtp', 'brevo').default('brevo'),
+  SMTP_HOST: Joi.string().hostname().optional().allow(''),
   SMTP_PORT: Joi.number().default(587),
   SMTP_SECURE: Joi.boolean().default(false),
-  SMTP_USER: Joi.string().required(),
-  SMTP_PASSWORD: Joi.string().required(),
-  SMTP_FROM: Joi.string().email().required(),
-  SMTP_FROM_NAME: Joi.string().required(),
+  SMTP_USER: Joi.string().optional().allow(''),
+  SMTP_PASSWORD: Joi.string().optional().allow(''),
+  SMTP_FROM: Joi.string().email().optional().allow(''),
+  SMTP_FROM_NAME: Joi.string().default('sFinx Platform'),
+  BREVO_API_KEY: Joi.string().when('MAIL_PROVIDER', {
+    is: 'brevo',
+    then: Joi.required(),
+    otherwise: Joi.optional().allow(''),
+  }),
+  BREVO_API_URL: Joi.string().uri().default('https://api.brevo.com/v3'),
+  BREVO_FROM_EMAIL: Joi.string()
+    .email()
+    .when('MAIL_PROVIDER', {
+      is: 'brevo',
+      then: Joi.required(),
+      otherwise: Joi.optional().allow(''),
+    }),
+  BREVO_FROM_NAME: Joi.string().default('sFinx Platform'),
   MAIL_QUEUE_ENABLED: Joi.boolean().default(false),
   MAIL_DEFAULT_LAYOUT: Joi.string().default('layouts/base'),
 

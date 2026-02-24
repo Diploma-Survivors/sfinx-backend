@@ -1,7 +1,10 @@
 import { registerAs } from '@nestjs/config';
 import * as path from 'path';
 
+export type MailProvider = 'smtp' | 'brevo';
+
 export interface EmailConfig {
+  provider: MailProvider;
   host: string;
   port: number;
   secure: boolean;
@@ -12,6 +15,12 @@ export interface EmailConfig {
   from: {
     name: string;
     address: string;
+  };
+  brevo: {
+    apiKey: string;
+    apiUrl: string;
+    fromEmail: string;
+    fromName: string;
   };
   templatesDir: string;
   defaultLayout: string;
@@ -41,19 +50,30 @@ function resolveTemplatesDir(): string {
   return path.join(process.cwd(), envPath, TEMPLATE_BASE_PATH);
 }
 
+const DEFAULT_BREVO_API_URL = 'https://api.brevo.com/v3';
+const DEFAULT_MAIL_PROVIDER: MailProvider = 'brevo';
+
 export const emailConfig = registerAs(
   'email',
   (): EmailConfig => ({
-    host: process.env.SMTP_HOST!,
-    port: Number.parseInt(process.env.SMTP_PORT!, 10),
+    provider:
+      (process.env.MAIL_PROVIDER as MailProvider) || DEFAULT_MAIL_PROVIDER,
+    host: process.env.SMTP_HOST || '',
+    port: Number.parseInt(process.env.SMTP_PORT || '587', 10),
     secure: process.env.SMTP_SECURE === 'true',
     auth: {
-      user: process.env.SMTP_USER!,
-      pass: process.env.SMTP_PASSWORD!,
+      user: process.env.SMTP_USER || '',
+      pass: process.env.SMTP_PASSWORD || '',
     },
     from: {
       name: process.env.SMTP_FROM_NAME || 'sFinx Platform',
-      address: process.env.SMTP_FROM!,
+      address: process.env.SMTP_FROM || '',
+    },
+    brevo: {
+      apiKey: process.env.BREVO_API_KEY || '',
+      apiUrl: process.env.BREVO_API_URL || DEFAULT_BREVO_API_URL,
+      fromEmail: process.env.BREVO_FROM_EMAIL || '',
+      fromName: process.env.BREVO_FROM_NAME || 'sFinx Platform',
     },
     templatesDir: resolveTemplatesDir(),
     defaultLayout: process.env.MAIL_DEFAULT_LAYOUT || DEFAULT_TEMPLATE_LAYOUT,
