@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Interview, InterviewStatus } from '../entities/interview.entity';
@@ -9,6 +9,7 @@ import {
 import { InterviewEvaluation } from '../entities/interview-evaluation.entity';
 import { GeminiService } from './gemini.service';
 import { StartInterviewDto } from '../dto/start-interview.dto';
+import { CodeSnapshotDto } from '../dto/code-snapshot.dto';
 import { User } from '../../auth/entities/user.entity';
 import {
   SystemPromptInterviewer,
@@ -101,6 +102,16 @@ export class AiInterviewService {
     };
   }
 
+  async getInterviewHistory(userId: number): Promise<Interview[]> {
+    return this.interviewRepo.find({
+      where: { userId },
+      relations: ['evaluation'],
+      order: {
+        startedAt: 'DESC',
+      },
+    });
+  }
+
   async getInterview(id: string, userId: number) {
     const interview = await this.interviewRepo.findOne({
       where: { id, userId },
@@ -117,6 +128,38 @@ export class AiInterviewService {
     }
 
     return interview;
+  }
+
+  /**
+   * Store code snapshot for AI context
+   * This allows the AI agent to see the user's current code
+   */
+  async storeCodeSnapshot(id: string, userId: number, dto: CodeSnapshotDto) {
+    const interview = await this.interviewRepo.findOne({
+      where: { id, userId },
+    });
+
+    if (!interview) {
+      throw new NotFoundException('Interview not found');
+    }
+
+    if (interview.status !== InterviewStatus.ACTIVE) {
+      throw new ForbiddenException('Interview is not active');
+    }
+
+    // Store the code snapshot in the interview record
+    // We can store the latest code in the problemSnapshot or create a separate field
+    const updatedSnapshot = {
+      ...interview.problemSnapshot,
+      latestCode: dto.code,
+      codeLanguage: dto.language,
+      codeUpdatedAt: dto.timestamp || Date.now(),
+    };
+
+    interview.problemSnapshot = updatedSnapshot;
+    await this.interviewRepo.save(interview);
+
+    return { success: true };
   }
 
   async endInterview(id: string, userId: number) {

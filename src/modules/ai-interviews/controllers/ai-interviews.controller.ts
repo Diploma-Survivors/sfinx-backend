@@ -1,8 +1,9 @@
-import { Controller, Post, Body, Get, Param, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { AiInterviewService } from '../services/ai-interview.service';
 import { AiChatService } from '../services/ai-chat.service';
 import { StartInterviewDto } from '../dto/start-interview.dto';
 import { SendMessageDto } from '../dto/send-message.dto';
+import { CodeSnapshotDto } from '../dto/code-snapshot.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
@@ -17,6 +18,12 @@ export class AiInterviewController {
     private readonly interviewService: AiInterviewService,
     private readonly chatService: AiChatService,
   ) {}
+
+  @Get()
+  @ApiOperation({ summary: 'Get interview history for current user' })
+  getInterviewHistory(@GetUser('id') userId: number) {
+    return this.interviewService.getInterviewHistory(userId);
+  }
 
   @Post()
   @ApiOperation({ summary: 'Start a new AI interview' })
@@ -44,6 +51,17 @@ export class AiInterviewController {
   @ApiOperation({ summary: 'Get chat history' })
   getHistory(@GetUser('id') userId: number, @Param('id') id: string) {
     return this.chatService.getHistory(id, userId);
+  }
+
+  @Post(':id/code-snapshot')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Store code snapshot for AI context' })
+  storeCodeSnapshot(
+    @GetUser('id') userId: number,
+    @Param('id') id: string,
+    @Body() dto: CodeSnapshotDto,
+  ) {
+    return this.interviewService.storeCodeSnapshot(id, userId, dto);
   }
 
   @Post(':id/end')
