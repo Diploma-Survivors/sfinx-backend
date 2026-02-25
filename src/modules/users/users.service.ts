@@ -124,8 +124,10 @@ export class UsersService {
 
     const usersWithAvatar = users.map((user) => {
       let avatarUrl = DEFAULT_AVATAR;
-      if (user.avatarKey) {
+      if (user.avatarKey && this.isS3Key(user.avatarKey)) {
         avatarUrl = this.storageService.getCloudFrontUrl(user.avatarKey);
+      } else if (user.avatarKey && !this.isS3Key(user.avatarKey)) {
+        avatarUrl = user.avatarKey; // Oauth2 providers might store full URL in avatarKey, so use it directly if it's not an S3 key
       }
       Object.assign(user, { avatarUrl });
       return user;
@@ -237,8 +239,10 @@ export class UsersService {
       (entry, idx) => {
         const user = userMap.get(entry.userId);
         let avatarUrl: string | null = null;
-        if (user?.avatarKey) {
+        if (user?.avatarKey && this.isS3Key(user.avatarKey)) {
           avatarUrl = this.storageService.getCloudFrontUrl(user.avatarKey);
+        } else if (user?.avatarKey && !this.isS3Key(user.avatarKey)) {
+          avatarUrl = user.avatarKey; // Oauth2 providers might store full URL in avatarKey, so use it directly if it's not an S3 key
         }
 
         return {
@@ -295,12 +299,26 @@ export class UsersService {
   transformUserResponse(user: User): UserProfileResponseDto {
     const dto = plainToInstance(UserProfileResponseDto, user);
 
+    let avatarUrl =
+      'https://cdn.pixabay.com/photo/2018/11/13/21/43/avatar-3814049_1280.png'; // default avatar
+
     if (dto.avatarKey) {
-      Object.assign(dto, {
-        avatarUrl: this.storageService.getCloudFrontUrl(dto.avatarKey),
-      });
+      if (this.isS3Key(dto.avatarKey)) {
+        avatarUrl = this.storageService.getCloudFrontUrl(dto.avatarKey);
+      } else {
+        avatarUrl = dto.avatarKey; // Oauth2 providers might store full URL in avatarKey, so use it directly if it's not an S3 key
+      }
     }
 
+    Object.assign(dto, {
+      avatarUrl,
+    });
+
     return dto;
+  }
+
+  private isS3Key(value: string): boolean {
+    if (!value) return false;
+    return !value.startsWith('http://') && !value.startsWith('https://');
   }
 }

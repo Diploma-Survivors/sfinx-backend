@@ -1,3 +1,4 @@
+import { InjectQueue } from '@nestjs/bullmq';
 import {
   BadRequestException,
   ConflictException,
@@ -6,7 +7,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import slugify from 'slugify';
 import { In, Repository } from 'typeorm';
@@ -16,21 +16,21 @@ import { Problem } from '../../problems/entities/problem.entity';
 import { CacheKeys, CacheService } from '../../redis';
 import {
   AddContestProblemDto,
+  ContestDetailResponseDto,
   CreateContestDto,
   FilterContestDto,
   UpdateContestDto,
-  ContestDetailResponseDto,
 } from '../dto';
 import { Contest, ContestParticipant, ContestProblem } from '../entities';
 import { ContestStatus, UserContestStatus } from '../enums';
 
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { CONTEST_JOBS, CONTEST_QUEUE } from '../constants/scheduler.constants';
 import {
   ContestCreatedEvent,
   ContestDeletedEvent,
   ContestUpdatedEvent,
 } from '../events/contest-scheduled.events';
-import { CONTEST_JOBS, CONTEST_QUEUE } from '../constants/scheduler.constants';
 
 @Injectable()
 export class ContestService {
