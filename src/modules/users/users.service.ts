@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { plainToInstance } from 'class-transformer';
 import { Repository } from 'typeorm';
 import { PaginatedResultDto } from '../../common/dto/paginated-result.dto';
+import { DEFAULT_AVATAR_URL } from '../auth/constants/avatar.constants';
 import { UserProfileResponseDto } from '../auth/dto/user-profile-response.dto';
 import { User } from '../auth/entities/user.entity';
 import { ContestParticipant } from '../contest/entities/contest-participant.entity';
@@ -119,11 +120,8 @@ export class UsersService {
       .orderBy('user.id', 'DESC')
       .getManyAndCount();
 
-    const DEFAULT_AVATAR =
-      'https://cdn.pixabay.com/photo/2018/11/13/21/43/avatar-3814049_1280.png';
-
     const usersWithAvatar = users.map((user) => {
-      let avatarUrl = DEFAULT_AVATAR;
+      let avatarUrl = DEFAULT_AVATAR_URL;
       if (user.avatarKey && this.isS3Key(user.avatarKey)) {
         avatarUrl = this.storageService.getCloudFrontUrl(user.avatarKey);
       } else if (user.avatarKey && !this.isS3Key(user.avatarKey)) {
@@ -299,8 +297,7 @@ export class UsersService {
   transformUserResponse(user: User): UserProfileResponseDto {
     const dto = plainToInstance(UserProfileResponseDto, user);
 
-    let avatarUrl =
-      'https://cdn.pixabay.com/photo/2018/11/13/21/43/avatar-3814049_1280.png'; // default avatar
+    let avatarUrl = DEFAULT_AVATAR_URL; // default avatar
 
     if (dto.avatarKey) {
       if (this.isS3Key(dto.avatarKey)) {
