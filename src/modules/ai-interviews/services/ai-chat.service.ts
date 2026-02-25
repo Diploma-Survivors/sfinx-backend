@@ -40,28 +40,46 @@ export class AiChatService {
       throw new BadRequestException('Interview is not active');
     }
 
-    // 2. Prepare User Content
+    // 2. Prepare User Content with CODE CONTEXT
+    // ALWAYS include code if available - critical for AI to see user's code
     let userContent = dto.content;
-    if (dto.code) {
-      const lang = dto.language || 'unknown';
-      userContent += `\n\n[USER ATTACHED CODE (${lang})]:\n\`\`\`${lang}\n${dto.code}\n\`\`\`\n(Please review this code as part of the interview context)`;
+    
+    // Get the latest code from the interview snapshot if not provided
+    const codeToSend = dto.code || interview.problemSnapshot?.latestCode || '';
+    const languageToSend = dto.language || interview.problemSnapshot?.codeLanguage || 'unknown';
+    
+    if (codeToSend && codeToSend.trim().length > 0) {
+      userContent += `\n\n[USER CURRENT CODE (${languageToSend})]:\n\`\`\`${languageToSend}\n${codeToSend}\n\`\`\`\n(Please review and reference this code in your response if relevant)`;
+    } else {
+      userContent += `\n\n[Note: User has not written any code yet]`;
     }
 
-    // 3. Save User Message
+    // 3. Save User Message (original content without code for cleaner history)
     const userMsg = this.messageRepo.create({
       interviewId,
       role: MessageRole.USER,
-      content: userContent,
+      content: dto.content, // Store original message
     });
     await this.messageRepo.save(userMsg);
 
-    // 4. Build History for Gemini
+    // 4. Update interview with latest code snapshot
+    if (dto.code) {
+      interview.problemSnapshot = {
+        ...interview.problemSnapshot,
+        latestCode: dto.code,
+        codeLanguage: dto.language,
+        codeUpdatedAt: Date.now(),
+      };
+      await this.interviewRepo.save(interview);
+    }
+
+    // 5. Build History for Gemini
     const history = await this.messageRepo.find({
       where: { interviewId },
       order: { createdAt: 'ASC' },
     });
 
-    // System Instruction as Fake Turn
+    // Build system prompt with problem context
     const problemContext = JSON.stringify(interview.problemSnapshot);
     const systemPrompt = format(SystemPromptInterviewer, problemContext);
 
@@ -76,19 +94,26 @@ export class AiChatService {
       },
     ];
 
-    // Add Real History
+    // Add conversation history
     for (const msg of history) {
-      if (msg.id === userMsg.id) continue; // Skip current message
-
-      geminiHistory.push({
-        role: msg.role === MessageRole.ASSISTANT ? 'model' : 'user',
-        parts: [{ text: msg.content }],
-      });
+      if (msg.id === userMsg.id) {
+        // For current message, use the version WITH code context
+        geminiHistory.push({
+          role: 'user',
+          parts: [{ text: userContent }],
+        });
+      } else {
+        geminiHistory.push({
+          role: msg.role === MessageRole.ASSISTANT ? 'model' : 'user',
+          parts: [{ text: msg.content }],
+        });
+      }
     }
 
-    // 5. Send to Gemini
+    // 6. Send to Gemini with streaming
     const chatSession = this.geminiService.startChat(geminiHistory);
     let aiText = "I'm sorry, I couldn't generate a response.";
+    
     try {
       const result = await chatSession.sendMessage(userContent);
       aiText = result.response.text();
@@ -96,7 +121,7 @@ export class AiChatService {
       console.error('Gemini Chat Error:', error);
     }
 
-    // 6. Save AI Message
+    // 7. Save AI Message
     const aiMsg = this.messageRepo.create({
       interviewId,
       role: MessageRole.ASSISTANT,
@@ -104,7 +129,6 @@ export class AiChatService {
     });
     await this.messageRepo.save(aiMsg);
 
-    // Return the AI message object for frontend compatibility
     return aiMsg;
   }
 
