@@ -45,8 +45,8 @@ export class PromptAdminController {
       'Returns every prompt config from the DB enriched with current Redis cache state and a direct Langfuse URL.',
   })
   @ApiResponse({ status: 200 })
-  async list(): Promise<{ data: PromptStatus[] }> {
-    return { data: await this.promptService.getStatus() };
+  async list(): Promise<PromptStatus[]> {
+    return this.promptService.getStatus();
   }
 
   @Get(':id')
