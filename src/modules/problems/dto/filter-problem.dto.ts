@@ -70,6 +70,15 @@ export class FilterProblemDto extends PaginationQueryDto {
 
   @ApiPropertyOptional({
     description:
+      '[Admin Only] Filter by draft status. true = drafts only, false = published only.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  @ToBoolean()
+  isDraft?: boolean;
+
+  @ApiPropertyOptional({
+    description:
       'Filter by one or more topic IDs. Returns problems matching ANY of the provided topic IDs.',
     type: [Number],
     example: [1, 2],

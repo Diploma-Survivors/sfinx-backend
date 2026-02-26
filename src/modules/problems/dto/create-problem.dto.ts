@@ -21,8 +21,8 @@ import {
   TESTCASE_FILE_FIELD_NAME,
 } from 'src/common';
 
-import { ProblemDifficulty } from '../enums/problem-difficulty.enum';
 import { ToBoolean } from '../../../common/decorators/transform.decorators';
+import { ProblemDifficulty } from '../enums/problem-difficulty.enum';
 
 export class SampleTestcaseDto {
   @ApiProperty({ description: 'Input', example: '1 2 3' })
@@ -98,6 +98,15 @@ export class CreateProblemDto {
   @ToBoolean()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Whether the problem is a draft. Can only be set to false (publish); once published cannot revert to draft.',
+  })
+  @IsOptional()
+  @ToBoolean()
+  @IsBoolean()
+  isDraft?: boolean;
 
   @ApiProperty({
     description: 'Testcase file',

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { ContestProblem } from '../contest/entities/contest-problem.entity';
 import { StorageModule } from '../storage/storage.module';
 import { Submission } from '../submissions/entities/submission.entity';
 import { UserProblemProgress } from '../submissions/entities/user-problem-progress.entity';
@@ -30,6 +31,7 @@ import { TopicsController } from './topics.controller';
       Tag,
       UserProblemProgress,
       Submission,
+      ContestProblem,
     ]),
     StorageModule,
     CommentsModule,

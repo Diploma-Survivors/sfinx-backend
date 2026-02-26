@@ -81,6 +81,10 @@ export class Problem {
   @Column({ name: 'is_active', default: false })
   isActive: boolean;
 
+  @ApiProperty({ description: 'Whether the problem is a draft (unpublished)' })
+  @Column({ name: 'is_draft', default: true })
+  isDraft: boolean;
+
   // Statistics
   @ApiProperty({ description: 'Total number of submissions' })
   @Column({ name: 'total_submissions', default: 0 })
