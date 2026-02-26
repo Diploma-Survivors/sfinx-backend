@@ -12,14 +12,10 @@ import {
 } from '../entities/interview-message.entity';
 import { InterviewEvaluation } from '../entities/interview-evaluation.entity';
 import { LangChainService } from '../../ai/langchain.service';
+import { PromptService, PromptFeature } from '../../ai/prompt.service';
 import { StartInterviewDto } from '../dto/start-interview.dto';
 import { CodeSnapshotDto } from '../dto/code-snapshot.dto';
 import { User } from '../../auth/entities/user.entity';
-import {
-  SystemPromptInterviewer,
-  SystemPromptEvaluator,
-} from '../constants/prompts';
-import { format } from 'node:util';
 
 import { Problem } from '../../problems/entities/problem.entity';
 
@@ -46,6 +42,7 @@ export class AiInterviewService {
     @InjectRepository(Problem)
     private readonly problemRepo: Repository<Problem>,
     private readonly langChainService: LangChainService,
+    private readonly promptService: PromptService,
   ) {}
 
   async startInterview(user: User, dto: StartInterviewDto) {
@@ -76,7 +73,10 @@ export class AiInterviewService {
 
     // 4. Generate Greeting
     const problemContext = JSON.stringify(problemSnapshot);
-    const systemPrompt = format(SystemPromptInterviewer, problemContext);
+    const systemPrompt = await this.promptService.getCompiledPrompt(
+      PromptFeature.INTERVIEWER,
+      { problemContext },
+    );
     const prompt =
       systemPrompt +
       '\n\nPlease start the interview by greeting the candidate and asking them to explain their initial thought process.';
@@ -196,7 +196,10 @@ export class AiInterviewService {
     const problemContext = JSON.stringify(interview.problemSnapshot);
 
     // 3. Evaluate
-    const prompt = format(SystemPromptEvaluator, problemContext, transcript);
+    const prompt = await this.promptService.getCompiledPrompt(
+      PromptFeature.EVALUATOR,
+      { problemContext, transcript },
+    );
 
     const defaultEvaluation: EvaluationResponse = {
       overall_score: 0,
