@@ -14,7 +14,9 @@ import { UserStatisticsDto } from '../submissions/dto/user-statistics.dto';
 import { ProgressStatus } from '../submissions/enums';
 import { UsersService } from './users.service';
 import { ContestRatingLeaderboardEntryDto } from './dto/contest-rating-leaderboard.dto';
+import { ContestHistoryQueryDto } from './dto/contest-history-query.dto';
 import { ContestHistoryEntryDto } from './dto/contest-history.dto';
+import { ContestRatingChartDto } from './dto/contest-rating-chart.dto';
 import { UserProfileResponseDto } from '../auth/dto/user-profile-response.dto';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { GetPracticeHistoryDto } from '../submissions/dto/get-practice-history.dto';
@@ -148,16 +150,37 @@ export class UsersController {
     return this.userStatisticsService.getUserStatistics(+userId);
   }
 
+  @Get(':userId/contest-rating-chart')
+  @ApiOperation({
+    summary: 'Get contest rating chart data for user profile',
+    description:
+      'Returns all data needed to render the contest rating chart: full rating history (ordered chronologically for x-axis), current rating, global rank, total ranked users, contests attended, top percentage, peak and lowest ratings.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Contest rating chart data retrieved',
+    type: ContestRatingChartDto,
+  })
+  async getContestRatingChart(
+    @Param('userId') userId: string,
+  ): Promise<ContestRatingChartDto> {
+    return this.usersService.getContestRatingChart(+userId);
+  }
+
   @Get(':userId/contest-history')
-  @ApiOperation({ summary: 'Get user contest rating history' })
+  @ApiOperation({
+    summary: 'Get user contest rating history with filtering and pagination',
+  })
   @ApiResponse({
     status: 200,
     description: 'Contest history retrieved',
+    type: PaginatedResultDto,
   })
   async getContestHistory(
     @Param('userId') userId: string,
-  ): Promise<ContestHistoryEntryDto[]> {
-    return this.usersService.getContestHistory(+userId);
+    @Query() query: ContestHistoryQueryDto,
+  ): Promise<PaginatedResultDto<ContestHistoryEntryDto>> {
+    return this.usersService.getContestHistory(+userId, query);
   }
 
   @Get(':userId/activity-years')
