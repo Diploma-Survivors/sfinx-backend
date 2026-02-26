@@ -11,6 +11,7 @@ import {
   MessageRole,
 } from '../entities/interview-message.entity';
 import { LangChainService } from '../../ai/langchain.service';
+import { PromptService, PromptFeature } from '../../ai/prompt.service';
 import {
   HumanMessage,
   AIMessage,
@@ -18,8 +19,6 @@ import {
   BaseMessage,
 } from '@langchain/core/messages';
 import { SendMessageDto } from '../dto/send-message.dto';
-import { SystemPromptInterviewer } from '../constants/prompts';
-import { format } from 'node:util';
 
 @Injectable()
 export class AiChatService {
@@ -29,6 +28,7 @@ export class AiChatService {
     @InjectRepository(InterviewMessage)
     private readonly messageRepo: Repository<InterviewMessage>,
     private readonly langChainService: LangChainService,
+    private readonly promptService: PromptService,
   ) {}
 
   async sendMessage(interviewId: string, userId: number, dto: SendMessageDto) {
@@ -87,7 +87,10 @@ export class AiChatService {
 
     // Build system prompt with problem context
     const problemContext = JSON.stringify(interview.problemSnapshot);
-    const systemPrompt = format(SystemPromptInterviewer, problemContext);
+    const systemPrompt = await this.promptService.getCompiledPrompt(
+      PromptFeature.INTERVIEWER,
+      { problemContext },
+    );
 
     const langChainHistory: BaseMessage[] = [new SystemMessage(systemPrompt)];
 

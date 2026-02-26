@@ -132,6 +132,16 @@ export const environmentValidation = Joi.object({
   LIVEKIT_API_SECRET: Joi.string().required(),
   INTERNAL_API_KEY: Joi.string().required(),
 
+  // Langfuse Configuration (optional — required for prompt management)
+  LANGFUSE_PUBLIC_KEY: Joi.string().optional().allow(''),
+  LANGFUSE_SECRET_KEY: Joi.string().optional().allow(''),
+  LANGFUSE_BASE_URL: Joi.string()
+    .uri()
+    .optional()
+    .default('https://cloud.langfuse.com'),
+  LANGFUSE_PROJECT_ID: Joi.string().optional().allow(''),
+  PROMPT_CACHE_TTL: Joi.number().optional().default(300), // seconds
+
   // LangSmith Configuration (optional)
   LANGSMITH_API_KEY: Joi.string().optional().allow(''),
   LANGSMITH_PROJECT: Joi.string().optional().default('sfinx-ai-interviews'),

@@ -74,6 +74,7 @@
     "joi": "^18.0.0",
     "jsonwebtoken": "^9.0.2",
     "keyv": "^5.5.3",
+    "langfuse": "^3.38.6",
     "langsmith": "^0.5.7",
     "livekit-server-sdk": "^2.15.0",
     "marked": "^17.0.1",

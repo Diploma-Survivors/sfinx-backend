@@ -16,8 +16,7 @@ import {
   InterviewMessage,
   MessageRole,
 } from '../entities/interview-message.entity';
-import { SystemPromptInterviewer } from '../constants/prompts';
-import { format } from 'node:util';
+import { PromptService, PromptFeature } from '../../ai/prompt.service';
 
 interface StoreTranscriptDto {
   role: 'user' | 'assistant';
@@ -34,6 +33,7 @@ export class AiInterviewsInternalController {
     @InjectRepository(InterviewMessage)
     private readonly messageRepo: Repository<InterviewMessage>,
     private readonly configService: ConfigService,
+    private readonly promptService: PromptService,
   ) {}
 
   private validateApiKey(apiKey: string | undefined): void {
@@ -69,7 +69,10 @@ export class AiInterviewsInternalController {
     }
 
     const problemContext = JSON.stringify(interview.problemSnapshot, null, 2);
-    const systemPrompt = format(SystemPromptInterviewer, problemContext);
+    const systemPrompt = await this.promptService.getCompiledPrompt(
+      PromptFeature.INTERVIEWER,
+      { problemContext },
+    );
 
     const existingMessages = await this.messageRepo.find({
       where: { interviewId: id },
