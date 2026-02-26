@@ -10,11 +10,16 @@ import {
   InterviewMessage,
   MessageRole,
 } from '../entities/interview-message.entity';
-import { GeminiService } from './gemini.service';
+import { LangChainService } from '../../ai/langchain.service';
+import {
+  HumanMessage,
+  AIMessage,
+  SystemMessage,
+  BaseMessage,
+} from '@langchain/core/messages';
 import { SendMessageDto } from '../dto/send-message.dto';
 import { SystemPromptInterviewer } from '../constants/prompts';
 import { format } from 'node:util';
-import { Content } from '@google/generative-ai';
 
 @Injectable()
 export class AiChatService {
@@ -23,7 +28,7 @@ export class AiChatService {
     private readonly interviewRepo: Repository<Interview>,
     @InjectRepository(InterviewMessage)
     private readonly messageRepo: Repository<InterviewMessage>,
-    private readonly geminiService: GeminiService,
+    private readonly langChainService: LangChainService,
   ) {}
 
   async sendMessage(interviewId: string, userId: number, dto: SendMessageDto) {
@@ -43,11 +48,12 @@ export class AiChatService {
     // 2. Prepare User Content with CODE CONTEXT
     // ALWAYS include code if available - critical for AI to see user's code
     let userContent = dto.content;
-    
+
     // Get the latest code from the interview snapshot if not provided
     const codeToSend = dto.code || interview.problemSnapshot?.latestCode || '';
-    const languageToSend = dto.language || interview.problemSnapshot?.codeLanguage || 'unknown';
-    
+    const languageToSend =
+      dto.language || interview.problemSnapshot?.codeLanguage || 'unknown';
+
     if (codeToSend && codeToSend.trim().length > 0) {
       userContent += `\n\n[USER CURRENT CODE (${languageToSend})]:\n\`\`\`${languageToSend}\n${codeToSend}\n\`\`\`\n(Please review and reference this code in your response if relevant)`;
     } else {
@@ -83,42 +89,29 @@ export class AiChatService {
     const problemContext = JSON.stringify(interview.problemSnapshot);
     const systemPrompt = format(SystemPromptInterviewer, problemContext);
 
-    const geminiHistory: Content[] = [
-      {
-        role: 'user',
-        parts: [{ text: systemPrompt }],
-      },
-      {
-        role: 'model',
-        parts: [{ text: 'Understood. I am ready to conduct the interview.' }],
-      },
-    ];
+    const langChainHistory: BaseMessage[] = [new SystemMessage(systemPrompt)];
 
-    // Add conversation history
+    // Add conversation history (exclude current message — it's passed separately to chat())
     for (const msg of history) {
-      if (msg.id === userMsg.id) {
-        // For current message, use the version WITH code context
-        geminiHistory.push({
-          role: 'user',
-          parts: [{ text: userContent }],
-        });
+      if (msg.id === userMsg.id) continue;
+      if (msg.role === MessageRole.ASSISTANT) {
+        langChainHistory.push(new AIMessage(msg.content));
       } else {
-        geminiHistory.push({
-          role: msg.role === MessageRole.ASSISTANT ? 'model' : 'user',
-          parts: [{ text: msg.content }],
-        });
+        langChainHistory.push(new HumanMessage(msg.content));
       }
     }
 
-    // 6. Send to Gemini with streaming
-    const chatSession = this.geminiService.startChat(geminiHistory);
+    // 6. Send to LangChain (with LangSmith tracing)
     let aiText = "I'm sorry, I couldn't generate a response.";
-    
+
     try {
-      const result = await chatSession.sendMessage(userContent);
-      aiText = result.response.text();
+      aiText = await this.langChainService.chat(langChainHistory, userContent, {
+        threadId: interviewId,
+        runName: 'interview-chat',
+        metadata: { userId, problemId: interview.problemId },
+      });
     } catch (error) {
-      console.error('Gemini Chat Error:', error);
+      console.error('LangChain Chat Error:', error);
     }
 
     // 7. Save AI Message
