@@ -120,6 +120,11 @@ export class ProblemDetailDto {
   isActive?: boolean;
 
   @ApiPropertyOptional({
+    description: '[Admin Only] Whether the problem is a draft (unpublished)',
+  })
+  isDraft?: boolean;
+
+  @ApiPropertyOptional({
     description: '[Admin Only] Total number of hidden testcases',
   })
   testcaseCount?: number;

@@ -107,7 +107,6 @@ export class AuthService {
       emailVerified: false,
       isActive: true,
       role: userRole,
-      avatarKey: DEFAULT_AVATAR_URL,
     });
 
     const savedUser = await this.userRepository.save(user);

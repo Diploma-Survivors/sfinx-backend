@@ -53,6 +53,11 @@ export class ProblemListItemDto {
   isActive?: boolean;
 
   @ApiPropertyOptional({
+    description: '[Admin Only] Whether problem is a draft (unpublished)',
+  })
+  isDraft?: boolean;
+
+  @ApiPropertyOptional({
     description: '[Admin Only] Total number of submissions',
   })
   totalSubmissions?: number;

@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ContestParticipant } from '../entities/contest-participant.entity';
-import { UserStatistics } from '../../submissions/entities/user-statistics.entity';
 import { CacheKeys, RedisService } from '../../redis';
+import { UserStatistics } from '../../submissions/entities/user-statistics.entity';
+import { ContestParticipant } from '../entities/contest-participant.entity';
 import { IParticipantRatingData } from '../interfaces';
 
 const DEFAULT_RATING = 1500;
@@ -152,12 +152,12 @@ export class ContestRatingService {
 
   /**
    * Compute the expected rank (seed) for a given rating among all participants.
-   * seed = 1 + Σ P(q beats p) = 1 + Σ 1/(1 + 6^((r_p - r_q)/400))
+   * seed = 1 + Σ P(q beats p) = 1 + Σ 1/(1 + 10^((r_p - r_q)/400))
    */
   private computeSeed(rating: number, allRatings: number[]): number {
     let seed = 1;
     for (const rq of allRatings) {
-      seed += 1 / (1 + Math.pow(6, (rating - rq) / 400));
+      seed += 1 / (1 + Math.pow(10, (rating - rq) / 400));
     }
     return seed;
   }

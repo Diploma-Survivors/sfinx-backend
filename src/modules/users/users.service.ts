@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { plainToInstance } from 'class-transformer';
 import { Repository } from 'typeorm';
 import { PaginatedResultDto } from '../../common/dto/paginated-result.dto';
+import { DEFAULT_AVATAR_URL } from '../auth/constants/avatar.constants';
 import { UserProfileResponseDto } from '../auth/dto/user-profile-response.dto';
 import { User } from '../auth/entities/user.entity';
 import { ContestParticipant } from '../contest/entities/contest-participant.entity';
@@ -119,13 +120,12 @@ export class UsersService {
       .orderBy('user.id', 'DESC')
       .getManyAndCount();
 
-    const DEFAULT_AVATAR =
-      'https://cdn.pixabay.com/photo/2018/11/13/21/43/avatar-3814049_1280.png';
-
     const usersWithAvatar = users.map((user) => {
-      let avatarUrl = DEFAULT_AVATAR;
-      if (user.avatarKey) {
+      let avatarUrl = DEFAULT_AVATAR_URL;
+      if (user.avatarKey && this.isS3Key(user.avatarKey)) {
         avatarUrl = this.storageService.getCloudFrontUrl(user.avatarKey);
+      } else if (user.avatarKey && !this.isS3Key(user.avatarKey)) {
+        avatarUrl = user.avatarKey; // Oauth2 providers might store full URL in avatarKey, so use it directly if it's not an S3 key
       }
       Object.assign(user, { avatarUrl });
       return user;
@@ -237,8 +237,10 @@ export class UsersService {
       (entry, idx) => {
         const user = userMap.get(entry.userId);
         let avatarUrl: string | null = null;
-        if (user?.avatarKey) {
+        if (user?.avatarKey && this.isS3Key(user.avatarKey)) {
           avatarUrl = this.storageService.getCloudFrontUrl(user.avatarKey);
+        } else if (user?.avatarKey && !this.isS3Key(user.avatarKey)) {
+          avatarUrl = user.avatarKey; // Oauth2 providers might store full URL in avatarKey, so use it directly if it's not an S3 key
         }
 
         return {
@@ -295,12 +297,25 @@ export class UsersService {
   transformUserResponse(user: User): UserProfileResponseDto {
     const dto = plainToInstance(UserProfileResponseDto, user);
 
+    let avatarUrl = DEFAULT_AVATAR_URL; // default avatar
+
     if (dto.avatarKey) {
-      Object.assign(dto, {
-        avatarUrl: this.storageService.getCloudFrontUrl(dto.avatarKey),
-      });
+      if (this.isS3Key(dto.avatarKey)) {
+        avatarUrl = this.storageService.getCloudFrontUrl(dto.avatarKey);
+      } else {
+        avatarUrl = dto.avatarKey; // Oauth2 providers might store full URL in avatarKey, so use it directly if it's not an S3 key
+      }
     }
 
+    Object.assign(dto, {
+      avatarUrl,
+    });
+
     return dto;
+  }
+
+  private isS3Key(value: string): boolean {
+    if (!value) return false;
+    return !value.startsWith('http://') && !value.startsWith('https://');
   }
 }

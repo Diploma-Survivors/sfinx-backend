@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ContestStatus, UserContestStatus } from '../enums';
 import { ContestProblem } from '../entities';
+import { ContestStatus, UserContestStatus } from '../enums';
 
 export class ContestProblemResponseDto {
   @ApiProperty({ description: 'Problem ID' })

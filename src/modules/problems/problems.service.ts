@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -16,6 +17,7 @@ import { SampleTestcase } from './entities/sample-testcase.entity';
 import { PaginatedResultDto } from '../../common';
 import { User } from '../auth/entities/user.entity';
 import { Action, CaslAbilityFactory } from '../rbac/casl';
+import { ContestProblem } from '../contest/entities/contest-problem.entity';
 import { StorageService } from '../storage/storage.service';
 import { ProgressStatus } from '../submissions/enums';
 import { CreateProblemDto } from './dto/create-problem.dto';
@@ -35,6 +37,8 @@ export class ProblemsService {
     private readonly problemRepository: Repository<Problem>,
     @InjectRepository(SampleTestcase)
     private readonly sampleTestcaseRepository: Repository<SampleTestcase>,
+    @InjectRepository(ContestProblem)
+    private readonly contestProblemRepository: Repository<ContestProblem>,
     private readonly testcaseService: TestcaseFileService,
     private readonly caslAbilityFactory: CaslAbilityFactory,
     private readonly topicService: TopicService,
@@ -160,6 +164,7 @@ export class ProblemsService {
       queryBuilder.select([
         ...commonFields,
         'problem.isActive',
+        'problem.isDraft',
         'problem.totalSubmissions',
         'problem.totalAccepted',
         'problem.testcaseCount',
@@ -213,13 +218,22 @@ export class ProblemsService {
       queryBuilder.andWhere('topics.id IN (:...topicIds)', { topicIds });
     }
 
-    // Only apply active filters if user doesn't have read_all permission
+    // Only apply active/draft filters if user doesn't have read_all permission
     if (!canReadAll) {
-      queryBuilder.andWhere('problem.isActive = :isActive', { isActive: true });
-    } else if (filterDto.isActive !== undefined) {
-      queryBuilder.andWhere('problem.isActive = :isActive', {
-        isActive: filterDto.isActive,
-      });
+      queryBuilder
+        .andWhere('problem.isActive = :isActive', { isActive: true })
+        .andWhere('problem.isDraft = :isDraft', { isDraft: false });
+    } else {
+      if (filterDto.isActive !== undefined) {
+        queryBuilder.andWhere('problem.isActive = :isActive', {
+          isActive: filterDto.isActive,
+        });
+      }
+      if (filterDto.isDraft !== undefined) {
+        queryBuilder.andWhere('problem.isDraft = :isDraft', {
+          isDraft: filterDto.isDraft,
+        });
+      }
     }
 
     if (difficulty) {
@@ -419,6 +433,7 @@ export class ProblemsService {
         .select([
           ...commonFields,
           'problem.isActive',
+          'problem.isDraft',
           'problem.testcaseCount',
           'problem.testcaseFileKey',
           'problem.officialSolutionContent',
@@ -434,7 +449,8 @@ export class ProblemsService {
     } else {
       queryBuilder
         .select(commonFields)
-        .andWhere('problem.isActive = :isActive', { isActive: true });
+        .andWhere('problem.isActive = :isActive', { isActive: true })
+        .andWhere('problem.isDraft = :isDraft', { isDraft: false });
     }
 
     return queryBuilder;
@@ -475,6 +491,25 @@ export class ProblemsService {
     userId: number,
   ): Promise<Problem> {
     const problem = await this.findProblemEntityById(id);
+
+    // isDraft is a one-way gate: true → false (publish) only
+    if (updateProblemDto.isDraft === true && problem.isDraft === false) {
+      throw new BadRequestException(
+        'A published problem cannot be reverted to draft. Use isActive to control visibility.',
+      );
+    }
+
+    // Cannot mark a problem as premium if it is currently used in any contest
+    if (updateProblemDto.isPremium === true && !problem.isPremium) {
+      const contestUsage = await this.contestProblemRepository.count({
+        where: { problemId: problem.id },
+      });
+      if (contestUsage > 0) {
+        throw new BadRequestException(
+          'Cannot mark this problem as premium because it is used in one or more contests.',
+        );
+      }
+    }
 
     const { topicIds, tagIds, title, sampleTestcases, ...updateData } =
       updateProblemDto;
@@ -571,9 +606,11 @@ export class ProblemsService {
       ? this.caslAbilityFactory.createForUser(user).can(Action.ReadAll, Problem)
       : false;
 
-    // Only apply active filters if user doesn't have read_all permission
+    // Only apply active/draft filters if user doesn't have read_all permission
     if (!canReadAll) {
-      queryBuilder.where('problem.isActive = :isActive', { isActive: true });
+      queryBuilder
+        .where('problem.isActive = :isActive', { isActive: true })
+        .andWhere('problem.isDraft = :isDraft', { isDraft: false });
     }
 
     return queryBuilder.orderBy('RANDOM()').limit(count).getMany();

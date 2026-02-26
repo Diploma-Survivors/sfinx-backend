@@ -1,3 +1,4 @@
+import { InjectQueue } from '@nestjs/bullmq';
 import {
   BadRequestException,
   ConflictException,
@@ -6,7 +7,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import slugify from 'slugify';
 import { In, Repository } from 'typeorm';
@@ -16,21 +16,22 @@ import { Problem } from '../../problems/entities/problem.entity';
 import { CacheKeys, CacheService } from '../../redis';
 import {
   AddContestProblemDto,
+  ContestDetailResponseDto,
   CreateContestDto,
   FilterContestDto,
   UpdateContestDto,
-  ContestDetailResponseDto,
 } from '../dto';
 import { Contest, ContestParticipant, ContestProblem } from '../entities';
 import { ContestStatus, UserContestStatus } from '../enums';
 
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Transactional } from 'typeorm-transactional';
+import { CONTEST_JOBS, CONTEST_QUEUE } from '../constants/scheduler.constants';
 import {
   ContestCreatedEvent,
   ContestDeletedEvent,
   ContestUpdatedEvent,
 } from '../events/contest-scheduled.events';
-import { CONTEST_JOBS, CONTEST_QUEUE } from '../constants/scheduler.constants';
 
 @Injectable()
 export class ContestService {
@@ -53,6 +54,7 @@ export class ContestService {
   /**
    * Create a new contest
    */
+  @Transactional()
   async createContest(dto: CreateContestDto, userId: number): Promise<Contest> {
     // Validate timing
     this.validateContestTiming(dto.startTime, dto.endTime);
@@ -105,6 +107,7 @@ export class ContestService {
   /**
    * Update a contest
    */
+  @Transactional()
   async updateContest(id: number, dto: UpdateContestDto): Promise<Contest> {
     const contest = await this.getContestById(id);
     // Check if contest is not running or ended
@@ -194,6 +197,7 @@ export class ContestService {
   /**
    * Delete a contest
    */
+  @Transactional()
   async deleteContest(id: number): Promise<void> {
     const contest = await this.getContestById(id);
 
@@ -419,6 +423,20 @@ export class ContestService {
     });
     if (!problem) {
       throw new NotFoundException(`Problem with ID ${dto.problemId} not found`);
+    }
+
+    // Premium problems cannot be added to contests
+    if (problem.isPremium) {
+      throw new BadRequestException(
+        `Problem "${problem.title}" is a premium problem and cannot be added to a contest.`,
+      );
+    }
+
+    // Inactive problems cannot be added to contests
+    if (!problem.isActive) {
+      throw new BadRequestException(
+        `Problem "${problem.title}" is inactive and cannot be added to a contest.`,
+      );
     }
 
     // Check if already added
@@ -660,6 +678,7 @@ export class ContestService {
 
     contest.status = ContestStatus.RUNNING;
     const updated = await this.contestRepository.save(contest);
+    await this.publishContestProblems(id);
     await this.invalidateContestCache(id, contest.slug);
 
     this.logger.log(`Contest ${id} started`);
@@ -737,13 +756,21 @@ export class ContestService {
     const now = new Date();
 
     // Start scheduled contests whose start time has passed
-    await this.contestRepository
+    const startResult = await this.contestRepository
       .createQueryBuilder()
       .update(Contest)
       .set({ status: ContestStatus.RUNNING })
       .where('status = :scheduled', { scheduled: ContestStatus.SCHEDULED })
       .andWhere('startTime <= :now', { now })
+      .returning('id')
       .execute();
+
+    const startedIds: number[] = (startResult.raw as { id: number }[]).map(
+      (r) => r.id,
+    );
+    for (const contestId of startedIds) {
+      await this.publishContestProblems(contestId);
+    }
 
     // End running contests whose end time has passed
     await this.contestRepository
@@ -865,6 +892,22 @@ export class ContestService {
         : UserContestStatus.NOT_JOINED,
       createdAt: contest.createdAt,
     };
+  }
+
+  /**
+   * Publish all draft problems belonging to a contest when it starts
+   */
+  private async publishContestProblems(contestId: number): Promise<void> {
+    await this.problemRepository
+      .createQueryBuilder()
+      .update()
+      .set({ isDraft: false })
+      .where(
+        `id IN (SELECT problem_id FROM contest_problems WHERE contest_id = :contestId)`,
+        { contestId },
+      )
+      .andWhere('is_draft = true')
+      .execute();
   }
 
   /**
