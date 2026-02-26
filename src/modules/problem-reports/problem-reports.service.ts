@@ -1,13 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ProblemReport } from './entities/problem-report.entity';
+import { User } from '../auth/entities/user.entity';
+import { Language } from '../auth/enums';
+import { NotificationType } from '../notifications/enums/notification-type.enum';
+import { NotificationsService } from '../notifications/notifications.service';
+import { StorageService } from '../storage/storage.service';
 import { CreateProblemReportDto } from './dto/create-problem-report.dto';
 import { UpdateProblemReportDto } from './dto/update-problem-report.dto';
-import { StorageService } from '../storage/storage.service';
-import { User } from '../auth/entities/user.entity';
-import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationType } from '../notifications/enums/notification-type.enum';
+import { ProblemReport } from './entities/problem-report.entity';
 
 @Injectable()
 export class ProblemReportsService {
@@ -39,8 +40,20 @@ export class ProblemReportsService {
         await this.notificationsService.create({
           recipientId: admin.id,
           type: NotificationType.SYSTEM,
-          title: 'New Problem Report',
-          content: `A new problem report has been submitted regarding a problem.`,
+          translations: [
+            {
+              languageCode: Language.EN,
+              title: 'New Problem Report',
+              content:
+                'A new problem report has been submitted regarding a problem.',
+            },
+            {
+              languageCode: Language.VI,
+              title: 'Báo cáo sự cố mới',
+              content:
+                'Một báo cáo sự cố mới đã được gửi liên quan đến một bài toán.',
+            },
+          ],
           link: `/reports`,
         });
       }

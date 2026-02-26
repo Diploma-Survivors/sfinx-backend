@@ -2,6 +2,7 @@ export * from './api-paginated-response.decorator';
 export * from './cacheable.decorator';
 export * from './casl.decorator';
 export * from './get-user.decorator';
+export * from './language.decorator';
 export * from './json-transform-to-instance.decorator';
 export * from './json-transform-to-object.decorator';
 export * from './permissions.decorator';

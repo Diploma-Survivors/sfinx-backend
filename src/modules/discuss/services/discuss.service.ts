@@ -4,17 +4,18 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Language } from 'src/modules/auth/enums';
 import { StorageService } from 'src/modules/storage/storage.service';
 import { In, Repository } from 'typeorm';
 import { PaginatedResultDto } from '../../../common';
 import { VoteType } from '../../comments-base/enums';
+import { NotificationType } from '../../notifications/enums/notification-type.enum';
+import { NotificationsService } from '../../notifications/notifications.service';
 import { CreatePostDto, FilterPostDto, UpdatePostDto } from '../dto';
 import { DiscussTag } from '../entities/discuss-tag.entity';
 import { PostVote } from '../entities/post-vote.entity';
 import { Post } from '../entities/post.entity';
 import { DiscussTagService } from './discuss-tag.service';
-import { NotificationsService } from '../../notifications/notifications.service';
-import { NotificationType } from '../../notifications/enums/notification-type.enum';
 
 @Injectable()
 export class DiscussService {
@@ -47,8 +48,18 @@ export class DiscussService {
     await this.notificationsService.create({
       recipientId: userId,
       type: NotificationType.SYSTEM,
-      title: 'Discuss Post Published',
-      content: `Your discussion post "${dto.title}" has been successfully published.`,
+      translations: [
+        {
+          languageCode: Language.EN,
+          title: 'Discuss Post Published',
+          content: `Your discussion post "${dto.title}" has been successfully published.`,
+        },
+        {
+          languageCode: Language.VI,
+          title: 'Bài viết đã được đăng',
+          content: `Bài viết thảo luận "${dto.title}" của bạn đã được đăng thành công.`,
+        },
+      ],
       link: `/discuss/${savedPost.id}`,
     });
 

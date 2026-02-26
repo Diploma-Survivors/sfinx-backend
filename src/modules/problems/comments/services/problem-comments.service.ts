@@ -13,22 +13,23 @@ import {
   PaginatedResultDto,
   SortOrder,
 } from '../../../../common';
+import { BaseCommentsService } from '../../../comments-base/base-comments.service';
 import { StorageService } from '../../../storage/storage.service';
 import {
   AuthorDto,
-  ProblemCommentResponseDto,
   CommentSortBy,
   CreateCommentDto,
   FilterCommentDto,
+  ProblemCommentResponseDto,
   UpdateCommentDto,
 } from '../dto';
 import { ProblemComment, ProblemCommentVote } from '../entities';
 import { VoteType } from '../enums';
-import { BaseCommentsService } from '../../../comments-base/base-comments.service';
 
-import { VoteResponseDto } from '../dto';
-import { NotificationsService } from '../../../notifications/notifications.service';
+import { Language } from 'src/modules/auth/enums';
 import { NotificationType } from '../../../notifications/enums/notification-type.enum';
+import { NotificationsService } from '../../../notifications/notifications.service';
+import { VoteResponseDto } from '../dto';
 
 @Injectable()
 export class ProblemCommentsService extends BaseCommentsService<
@@ -192,8 +193,18 @@ export class ProblemCommentsService extends BaseCommentsService<
           recipientId: parentComment.authorId,
           senderId: userId,
           type: NotificationType.REPLY,
-          title: 'New Reply',
-          content: `${createdComment.author?.username || 'Someone'} replied to your comment on a problem.`,
+          translations: [
+            {
+              languageCode: Language.EN,
+              title: 'New Reply to Your Comment',
+              content: `${createdComment.author?.username || 'Someone'} replied to your comment on a problem.`,
+            },
+            {
+              languageCode: Language.VI,
+              title: 'Có người trả lời bình luận của bạn',
+              content: `${createdComment.author?.username || 'Ai đó'} đã trả lời bình luận của bạn trên một bài toán.`,
+            },
+          ],
           link: `/problems/${problemId}`,
         });
       }

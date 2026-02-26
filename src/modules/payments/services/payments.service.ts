@@ -2,6 +2,8 @@ import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../../auth/entities/user.entity';
+import { Language } from '../../auth/enums';
+import { MailService } from '../../mail/mail.service';
 import {
   PaymentStatus,
   PaymentTransaction,
@@ -9,22 +11,20 @@ import {
 import { SubscriptionPlan } from '../entities/subscription-plan.entity';
 import type { PaymentProvider } from '../interfaces/payment-provider.interface';
 import { VnPayProvider } from '../providers/vnpay.provider';
-import { MailService } from '../../mail/mail.service';
 import { ExchangeRateService } from './exchange-rate.service';
-import { Language } from '../../auth/enums';
 
-import { PaymentHistoryResponseDto } from '../dto/payment-history-response.dto';
+import { NotificationType } from '../../notifications/enums/notification-type.enum';
+import { NotificationsService } from '../../notifications/notifications.service';
 import { CurrentPlanResponseDto } from '../dto/current-plan-response.dto';
-import { SubscriptionStatus } from '../enums/subscription-status.enum';
-import { TransactionFilterDto } from '../dto/transaction-filter.dto';
+import { PaymentHistoryResponseDto } from '../dto/payment-history-response.dto';
 import { RevenueStatsQueryDto } from '../dto/revenue-stats-query.dto';
 import {
+  RevenueChartItemDto,
   RevenueStatsResponseDto,
   SubscriptionPlanStatsDto,
-  RevenueChartItemDto,
 } from '../dto/revenue-stats-response.dto';
-import { NotificationsService } from '../../notifications/notifications.service';
-import { NotificationType } from '../../notifications/enums/notification-type.enum';
+import { TransactionFilterDto } from '../dto/transaction-filter.dto';
+import { SubscriptionStatus } from '../enums/subscription-status.enum';
 
 export interface TotalRevenueResult {
   totalRevenue: string;
@@ -182,8 +182,20 @@ export class PaymentsService {
       await this.notificationsService.create({
         recipientId: transaction.user.id,
         type: NotificationType.SYSTEM,
-        title: 'Payment Successful',
-        content: `Your payment was successful. Enjoy your premium features!`,
+        translations: [
+          {
+            languageCode: Language.EN,
+            title: 'Payment Successful',
+            content:
+              'Your payment was successful. Enjoy your premium features!',
+          },
+          {
+            languageCode: Language.VI,
+            title: 'Thanh toán thành công',
+            content:
+              'Thanh toán của bạn đã thành công. Hãy tận hưởng các tính năng premium!',
+          },
+        ],
         link: '/settings?tab=billing',
       });
 

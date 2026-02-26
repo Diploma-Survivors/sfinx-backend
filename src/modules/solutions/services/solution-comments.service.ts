@@ -1,20 +1,20 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Language } from 'src/modules/auth/enums';
+import { DataSource, Repository } from 'typeorm';
 import { Transactional } from 'typeorm-transactional';
+import { getAvatarUrl } from '../../../common';
 import { BaseCommentsService } from '../../comments-base/base-comments.service';
-import { Solution } from '../entities/solution.entity';
+import { BaseCreateCommentDto, VoteResponseDto } from '../../comments-base/dto';
+import { VoteType } from '../../comments-base/enums';
+import { NotificationType } from '../../notifications/enums/notification-type.enum';
+import { NotificationsService } from '../../notifications/notifications.service';
+import { StorageService } from '../../storage/storage.service';
 import { AuthorDto } from '../../users/dto/author.dto';
 import { SolutionCommentResponseDto } from '../dto';
-import { SolutionComment } from '../entities/solution-comment.entity';
 import { SolutionCommentVote } from '../entities/solution-comment-vote.entity';
-import { StorageService } from '../../storage/storage.service';
-import { VoteType } from '../../comments-base/enums';
-import { BaseCreateCommentDto } from '../../comments-base/dto';
-import { getAvatarUrl } from '../../../common';
-import { VoteResponseDto } from '../../comments-base/dto';
-import { NotificationsService } from '../../notifications/notifications.service';
-import { NotificationType } from '../../notifications/enums/notification-type.enum';
+import { SolutionComment } from '../entities/solution-comment.entity';
+import { Solution } from '../entities/solution.entity';
 
 @Injectable()
 export class SolutionCommentsService extends BaseCommentsService<
@@ -131,8 +131,18 @@ export class SolutionCommentsService extends BaseCommentsService<
             recipientId: parentComment.authorId,
             senderId: userId,
             type: NotificationType.REPLY,
-            title: 'New Reply',
-            content: `${createdComment.author?.username || 'Someone'} replied to your comment on a solution.`,
+            translations: [
+              {
+                languageCode: Language.EN,
+                title: 'New Reply',
+                content: `${createdComment.author?.username || 'Someone'} replied to your comment on a solution.`,
+              },
+              {
+                languageCode: Language.VI,
+                title: 'Có người trả lời bình luận của bạn',
+                content: `${createdComment.author?.username || 'Ai đó'} đã trả lời bình luận của bạn trên một lời giải.`,
+              },
+            ],
             link: `/problems/solutions/${solutionId}`,
           });
         }
@@ -145,8 +155,18 @@ export class SolutionCommentsService extends BaseCommentsService<
             recipientId: solution.author.id,
             senderId: userId,
             type: NotificationType.COMMENT,
-            title: 'New Comment',
-            content: `${createdComment.author?.username || 'Someone'} commented on your solution.`,
+            translations: [
+              {
+                languageCode: Language.EN,
+                title: 'New Comment on Your Solution',
+                content: `${createdComment.author?.username || 'Someone'} commented on your solution.`,
+              },
+              {
+                languageCode: Language.VI,
+                title: 'Có bình luận mới trên lời giải của bạn',
+                content: `${createdComment.author?.username || 'Ai đó'} đã bình luận trên lời giải của bạn.`,
+              },
+            ],
             link: `/problems/solutions/${solutionId}`,
           });
         }
