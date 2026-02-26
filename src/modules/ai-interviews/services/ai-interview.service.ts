@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Interview, InterviewStatus } from '../entities/interview.entity';
@@ -7,7 +11,7 @@ import {
   MessageRole,
 } from '../entities/interview-message.entity';
 import { InterviewEvaluation } from '../entities/interview-evaluation.entity';
-import { GeminiService } from './gemini.service';
+import { LangChainService } from '../../ai/langchain.service';
 import { StartInterviewDto } from '../dto/start-interview.dto';
 import { CodeSnapshotDto } from '../dto/code-snapshot.dto';
 import { User } from '../../auth/entities/user.entity';
@@ -41,7 +45,7 @@ export class AiInterviewService {
     private readonly evaluationRepo: Repository<InterviewEvaluation>,
     @InjectRepository(Problem)
     private readonly problemRepo: Repository<Problem>,
-    private readonly geminiService: GeminiService,
+    private readonly langChainService: LangChainService,
   ) {}
 
   async startInterview(user: User, dto: StartInterviewDto) {
@@ -80,12 +84,16 @@ export class AiInterviewService {
     let greeting =
       "Hello! I'm ready to help you with this problem. How would you like to start?";
     try {
-      const aiResponse = await this.geminiService.generateContent(prompt);
+      const aiResponse = await this.langChainService.generateContent(prompt, {
+        threadId: interview.id,
+        runName: 'interview-greeting',
+        metadata: { userId: user.id, problemId: dto.problemId },
+      });
       if (aiResponse) {
         greeting = aiResponse;
       }
     } catch (error) {
-      console.error('Gemini Error:', error);
+      console.error('LangChain Error:', error);
     }
 
     // 3. Save Greeting
@@ -197,7 +205,11 @@ export class AiInterviewService {
     let evaluationData: EvaluationResponse = defaultEvaluation;
 
     try {
-      let aiResponse = await this.geminiService.generateContent(prompt);
+      let aiResponse = await this.langChainService.generateContent(prompt, {
+        threadId: interview.id,
+        runName: 'interview-evaluation',
+        metadata: { userId: interview.userId, problemId: interview.problemId },
+      });
       // Clean up markdown
       aiResponse = aiResponse.replace(/```json/g, '').replace(/```/g, '');
       evaluationData = JSON.parse(aiResponse) as EvaluationResponse;

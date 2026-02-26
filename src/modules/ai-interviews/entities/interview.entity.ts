@@ -18,6 +18,16 @@ export enum InterviewStatus {
   ABANDONED = 'abandoned',
 }
 
+export interface ProblemSnapshot {
+  title?: string;
+  description?: string;
+  difficulty?: string;
+  latestCode?: string;
+  codeLanguage?: string;
+  codeUpdatedAt?: number;
+  [key: string]: unknown;
+}
+
 @Entity('ai_interviews')
 export class Interview {
   @PrimaryGeneratedColumn('uuid')
@@ -34,7 +44,7 @@ export class Interview {
   problemId: number;
 
   @Column('jsonb', { name: 'problem_snapshot' })
-  problemSnapshot: any;
+  problemSnapshot: ProblemSnapshot;
 
   @Column({
     type: 'enum',

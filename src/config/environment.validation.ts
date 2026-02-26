@@ -121,4 +121,26 @@ export const environmentValidation = Joi.object({
   JOB_REMOVE_ON_COMPLETE: Joi.boolean().default(true),
   JOB_REMOVE_ON_FAIL: Joi.number().default(50), // 50 attempts before removal
   USE_AWS: Joi.boolean().default(false),
+
+  // Gemini AI Configuration
+  GEMINI_API_KEY: Joi.string().optional().allow(''),
+  GEMINI_MODEL: Joi.string().optional().default('gemini-1.5-pro'),
+
+  // LiveKit Configuration
+  LIVEKIT_URL: Joi.string().uri().required(),
+  LIVEKIT_API_KEY: Joi.string().required(),
+  LIVEKIT_API_SECRET: Joi.string().required(),
+  INTERNAL_API_KEY: Joi.string().required(),
+
+  // LangSmith Configuration (optional)
+  LANGSMITH_API_KEY: Joi.string().optional().allow(''),
+  LANGSMITH_PROJECT: Joi.string().optional().default('sfinx-ai-interviews'),
+  LANGSMITH_TRACING: Joi.string()
+    .valid('true', 'false')
+    .optional()
+    .default('false'),
+  LANGSMITH_ENDPOINT: Joi.string()
+    .uri()
+    .optional()
+    .default('https://api.smith.langchain.com'),
 });
