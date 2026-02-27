@@ -12,9 +12,12 @@ import { Repository } from 'typeorm';
 import { v4 as uuidV4 } from 'uuid';
 
 import { PaginatedResultDto } from '../../common';
+import { Language } from '../auth/enums';
 import { ContestSubmissionService } from '../contest/services';
 import { Judge0BatchResponse } from '../judge0/interfaces';
 import { Judge0Service } from '../judge0/judge0.service';
+import { NotificationType } from '../notifications/enums/notification-type.enum';
+import { NotificationsService } from '../notifications/notifications.service';
 import { Problem } from '../problems/entities/problem.entity';
 import { ProblemsService } from '../problems/problems.service';
 import { ProgrammingLanguageService } from '../programming-language';
@@ -44,8 +47,6 @@ import { SubmissionRetrievalService } from './services/submission-retrieval.serv
 import { SubmissionTrackerService } from './services/submission-tracker.service';
 import { UserProgressService } from './services/user-progress.service';
 import { UserStatisticsService } from './services/user-statistics.service';
-import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationType } from '../notifications/enums/notification-type.enum';
 
 /**
  * Main service for managing code submissions
@@ -374,8 +375,18 @@ export class SubmissionsService {
       await this.notificationsService.create({
         recipientId: submission.user.id,
         type: NotificationType.SYSTEM,
-        title: 'Problem Solved!',
-        content: `Congratulations! You have successfully solved "${submission.problem.title}".`,
+        translations: [
+          {
+            languageCode: Language.EN,
+            title: 'Problem Solved!',
+            content: `Congratulations! You have successfully solved "${submission.problem.title}".`,
+          },
+          {
+            languageCode: Language.VI,
+            title: 'Giải bài thành công!',
+            content: `Chúc mừng! Bạn đã giải thành công bài "${submission.problem.title}".`,
+          },
+        ],
         link: `/problems/${submission.problem.id}`,
       });
 

@@ -1,12 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
+  ArrayMinSize,
+  IsArray,
   IsEnum,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
+  ValidateNested,
 } from 'class-validator';
 import { NotificationType } from '../enums/notification-type.enum';
+import { NotificationTranslationDto } from './notification-translation.dto';
 
 export class CreateNotificationDto {
   @ApiProperty({ description: 'ID of the recipient', example: 1 })
@@ -27,15 +32,16 @@ export class CreateNotificationDto {
   @IsNotEmpty()
   type: NotificationType;
 
-  @ApiProperty({ example: 'New Comment' })
-  @IsString()
-  @IsNotEmpty()
-  title: string;
-
-  @ApiProperty({ example: 'Someone replied to your comment.' })
-  @IsString()
-  @IsNotEmpty()
-  content: string;
+  @ApiProperty({
+    description:
+      'Translations for this notification. Must include at least one entry. EN is used as the fallback language.',
+    type: () => [NotificationTranslationDto],
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => NotificationTranslationDto)
+  translations: NotificationTranslationDto[];
 
   @ApiPropertyOptional({ example: '/problems/1' })
   @IsOptional()
@@ -44,5 +50,5 @@ export class CreateNotificationDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }

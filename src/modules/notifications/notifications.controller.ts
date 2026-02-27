@@ -1,16 +1,21 @@
 import {
   Controller,
   Get,
-  Query,
-  Patch,
   Param,
+  Patch,
+  Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { NotificationsService } from './notifications.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { GetUser } from '../../common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
+import { GetUser, Language } from '../../common';
 import { User } from '../auth/entities/user.entity';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { NotificationsService } from './notifications.service';
 
 @ApiTags('Notifications')
 @ApiBearerAuth('JWT-auth')
@@ -20,9 +25,16 @@ export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
   @ApiOperation({ summary: 'Get all notifications for the current user' })
+  @ApiQuery({
+    name: 'lang',
+    required: false,
+    description:
+      'Language code (en, vi). Defaults to en or Accept-Language header.',
+  })
   @Get()
   async findAll(
     @GetUser() user: User,
+    @Language() lang: string,
     @Query('skip') skip?: number,
     @Query('take') take?: number,
   ) {
@@ -31,6 +43,7 @@ export class NotificationsController {
         user.id,
         skip ? Number(skip) : 0,
         take ? Number(take) : 20,
+        lang,
       );
 
     return {

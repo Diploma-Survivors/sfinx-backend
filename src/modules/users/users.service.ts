@@ -9,7 +9,12 @@ import { User } from '../auth/entities/user.entity';
 import { ContestParticipant } from '../contest/entities/contest-participant.entity';
 import { CacheKeys, RedisService } from '../redis';
 import { StorageService } from '../storage/storage.service';
+import { ContestHistoryQueryDto } from './dto/contest-history-query.dto';
 import { ContestHistoryEntryDto } from './dto/contest-history.dto';
+import {
+  ContestRatingChartDto,
+  ContestRatingDataPointDto,
+} from './dto/contest-rating-chart.dto';
 import { ContestRatingLeaderboardEntryDto } from './dto/contest-rating-leaderboard.dto';
 import { GetUsersQueryDto } from './dto/get-users-query.dto';
 import { SystemUserStatisticsDto } from './dto/system-user-statistics.dto';
@@ -272,18 +277,58 @@ export class UsersService {
   }
 
   /**
-   * Get a user's contest rating history (past rated contests).
+   * Get a user's contest rating history (past rated contests) with filtering and pagination.
    */
-  async getContestHistory(userId: number): Promise<ContestHistoryEntryDto[]> {
-    const rows = await this.contestParticipantRepository
+  async getContestHistory(
+    userId: number,
+    query: ContestHistoryQueryDto,
+  ): Promise<PaginatedResultDto<ContestHistoryEntryDto>> {
+    const {
+      search,
+      from,
+      to,
+      minDelta,
+      maxDelta,
+      minRank,
+      maxRank,
+      sortOrder,
+    } = query;
+
+    const qb = this.contestParticipantRepository
       .createQueryBuilder('cp')
       .innerJoinAndSelect('cp.contest', 'contest')
       .where('cp.userId = :userId', { userId })
-      .andWhere('cp.ratingAfter IS NOT NULL')
-      .orderBy('contest.endTime', 'ASC')
-      .getMany();
+      .andWhere('cp.ratingAfter IS NOT NULL');
 
-    return rows.map((row) => ({
+    if (search) {
+      qb.andWhere('contest.title ILIKE :search', { search: `%${search}%` });
+    }
+    if (from) {
+      qb.andWhere('contest.endTime >= :from', { from });
+    }
+    if (to) {
+      qb.andWhere('contest.endTime <= :to', { to });
+    }
+    if (minDelta !== undefined) {
+      qb.andWhere('cp.ratingDelta >= :minDelta', { minDelta });
+    }
+    if (maxDelta !== undefined) {
+      qb.andWhere('cp.ratingDelta <= :maxDelta', { maxDelta });
+    }
+    if (minRank !== undefined) {
+      qb.andWhere('cp.contestRank >= :minRank', { minRank });
+    }
+    if (maxRank !== undefined) {
+      qb.andWhere('cp.contestRank <= :maxRank', { maxRank });
+    }
+
+    qb.orderBy('contest.endTime', sortOrder ?? 'DESC')
+      .skip(query.skip)
+      .take(query.take);
+
+    const [rows, total] = await qb.getManyAndCount();
+
+    const data: ContestHistoryEntryDto[] = rows.map((row) => ({
       contestId: row.contestId,
       contestTitle: row.contest.title,
       contestEndTime: row.contest.endTime,
@@ -292,6 +337,75 @@ export class UsersService {
       ratingAfter: row.ratingAfter!,
       ratingDelta: row.ratingDelta!,
     }));
+
+    return new PaginatedResultDto(data, {
+      page: query.page ?? 1,
+      limit: query.limit ?? 20,
+      total,
+    });
+  }
+
+  /**
+   * Get all data needed to render the contest rating chart on a user profile page.
+   */
+  async getContestRatingChart(userId: number): Promise<ContestRatingChartDto> {
+    const member = userId.toString();
+    const rankingKey = CacheKeys.globalRanking.contestBased();
+
+    // Fetch rating history, global rank, total ranked, and user statistics in parallel
+    const [rows, rankRaw, totalRanked, userWithStats] = await Promise.all([
+      this.contestParticipantRepository
+        .createQueryBuilder('cp')
+        .innerJoinAndSelect('cp.contest', 'contest')
+        .where('cp.userId = :userId', { userId })
+        .andWhere('cp.ratingAfter IS NOT NULL')
+        .orderBy('contest.endTime', 'ASC')
+        .getMany(),
+      this.redisService.zrevrank(rankingKey, member),
+      this.redisService.zcard(rankingKey),
+      this.userRepository.findOne({
+        where: { id: userId },
+        relations: ['statistics'],
+      }),
+    ]);
+
+    if (!userWithStats) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const globalRank = rankRaw !== null ? rankRaw + 1 : null;
+    const currentRating = userWithStats.statistics?.contestRating ?? 1500;
+    const contestsAttended =
+      userWithStats.statistics?.contestsParticipated ?? 0;
+
+    const topPercentage =
+      globalRank !== null && totalRanked > 0
+        ? Math.round((globalRank / totalRanked) * 100 * 10) / 10
+        : null;
+
+    const history: ContestRatingDataPointDto[] = rows.map((row) => ({
+      contestId: row.contestId,
+      contestTitle: row.contest.title,
+      contestEndTime: row.contest.endTime,
+      rating: row.ratingAfter!,
+      ratingDelta: row.ratingDelta!,
+      contestRank: row.contestRank!,
+    }));
+
+    const ratings = history.map((h) => h.rating);
+    const peakRating = ratings.length > 0 ? Math.max(...ratings) : null;
+    const lowestRating = ratings.length > 0 ? Math.min(...ratings) : null;
+
+    return {
+      history,
+      currentRating,
+      globalRank,
+      totalRanked,
+      contestsAttended,
+      topPercentage,
+      peakRating,
+      lowestRating,
+    };
   }
 
   transformUserResponse(user: User): UserProfileResponseDto {

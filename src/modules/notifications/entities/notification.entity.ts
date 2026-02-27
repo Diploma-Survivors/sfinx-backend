@@ -5,11 +5,13 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../auth/entities/user.entity';
 import { NotificationType } from '../enums/notification-type.enum';
+import { NotificationTranslation } from './notification-translation.entity';
 
 @Entity('notifications')
 export class Notification {
@@ -48,14 +50,6 @@ export class Notification {
   })
   type: NotificationType;
 
-  @ApiProperty({ description: 'Title of the notification' })
-  @Column({ length: 255 })
-  title: string;
-
-  @ApiProperty({ description: 'Content/Body of the notification' })
-  @Column({ type: 'text' })
-  content: string;
-
   @ApiProperty({
     description: 'Target URL to redirect when clicked',
     required: false,
@@ -73,6 +67,15 @@ export class Notification {
   })
   @Column({ type: 'jsonb', nullable: true })
   metadata: Record<string, unknown> | null;
+
+  @ApiProperty({
+    description: 'Translations for this notification',
+    type: () => [NotificationTranslation],
+  })
+  @OneToMany(() => NotificationTranslation, (t) => t.notification, {
+    cascade: true,
+  })
+  translations: NotificationTranslation[];
 
   @ApiProperty({ description: 'Creation timestamp' })
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })

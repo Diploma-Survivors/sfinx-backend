@@ -1,8 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Notification } from './entities/notification.entity';
+import { User } from '../auth/entities/user.entity';
 import { CreateNotificationDto } from './dto/create-notification.dto';
+import { NotificationTranslation } from './entities/notification-translation.entity';
+import { Notification } from './entities/notification.entity';
 import { NotificationsGateway } from './notifications.gateway';
 
 @Injectable()
@@ -10,22 +12,39 @@ export class NotificationsService {
   constructor(
     @InjectRepository(Notification)
     private readonly notificationRepository: Repository<Notification>,
+    @InjectRepository(NotificationTranslation)
+    private readonly translationRepository: Repository<NotificationTranslation>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly notificationsGateway: NotificationsGateway,
   ) {}
 
   async create(
     createNotificationDto: CreateNotificationDto,
   ): Promise<Notification> {
-    const notification = this.notificationRepository.create(
-      createNotificationDto,
-    );
+    const { translations, ...notificationData } = createNotificationDto;
+
+    const notification = this.notificationRepository.create({
+      ...notificationData,
+      translations: translations.map((t) =>
+        this.translationRepository.create(t),
+      ),
+    });
+
     const savedNotification =
       await this.notificationRepository.save(notification);
 
-    // Emit via WebSocket
+    // Resolve the recipient's preferred language for WebSocket delivery
+    const recipient = await this.userRepository.findOne({
+      where: { id: createNotificationDto.recipientId },
+      select: ['id', 'preferredLanguage'],
+    });
+    const lang = recipient?.preferredLanguage ?? 'en';
+    const resolved = this.resolveTranslation(savedNotification, lang);
+
     this.notificationsGateway.sendNotification(
       createNotificationDto.recipientId,
-      savedNotification,
+      resolved,
     );
 
     return savedNotification;
@@ -35,13 +54,18 @@ export class NotificationsService {
     userId: number,
     skip: number = 0,
     take: number = 20,
+    lang: string = 'en',
   ): Promise<[Notification[], number]> {
-    return this.notificationRepository.findAndCount({
-      where: { recipientId: userId },
-      order: { createdAt: 'DESC' },
-      skip,
-      take,
-    });
+    const [notifications, total] =
+      await this.notificationRepository.findAndCount({
+        where: { recipientId: userId },
+        relations: ['translations'],
+        order: { createdAt: 'DESC' },
+        skip,
+        take,
+      });
+
+    return [notifications.map((n) => this.resolveTranslation(n, lang)), total];
   }
 
   async getUnreadCount(userId: number): Promise<number> {
@@ -53,6 +77,7 @@ export class NotificationsService {
   async markAsRead(id: string, userId: number): Promise<Notification> {
     const notification = await this.notificationRepository.findOne({
       where: { id, recipientId: userId },
+      relations: ['translations'],
     });
 
     if (!notification) {
@@ -68,5 +93,26 @@ export class NotificationsService {
       { recipientId: userId, isRead: false },
       { isRead: true },
     );
+  }
+
+  /**
+   * Resolve the correct title/content for a notification based on the
+   * requested language. Falls back to 'en' if the requested language is unavailable.
+   */
+  private resolveTranslation(
+    notification: Notification,
+    lang: string,
+  ): Notification & { title: string; content: string } {
+    const translations = notification.translations ?? [];
+
+    const match =
+      translations.find((t) => t.languageCode === lang) ??
+      translations.find((t) => t.languageCode === 'en');
+
+    return {
+      ...notification,
+      title: match?.title ?? '',
+      content: match?.content ?? '',
+    };
   }
 }

@@ -4,14 +4,16 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModuleOptions } from '@nestjs/jwt';
 import { JwtConfig } from '../../config/jwt.config';
-import { NotificationsService } from './notifications.service';
+import { User } from '../auth/entities/user.entity';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsGateway } from './notifications.gateway';
+import { NotificationsService } from './notifications.service';
+import { NotificationTranslation } from './entities/notification-translation.entity';
 import { Notification } from './entities/notification.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Notification]),
+    TypeOrmModule.forFeature([Notification, NotificationTranslation, User]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

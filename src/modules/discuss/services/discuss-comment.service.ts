@@ -4,18 +4,19 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { Language } from 'src/modules/auth/enums';
 import { DataSource, In, Repository } from 'typeorm';
-import { StorageService } from '../../storage/storage.service';
 import { BaseCommentsService } from '../../comments-base/base-comments.service';
+import { BaseCommentResponseDto } from '../../comments-base/dto';
+import { VoteType } from '../../comments-base/enums';
+import { NotificationType } from '../../notifications/enums/notification-type.enum';
+import { NotificationsService } from '../../notifications/notifications.service';
+import { StorageService } from '../../storage/storage.service';
+import { CreatePostCommentDto } from '../dto/create-post-comment.dto';
+import { UpdatePostCommentDto } from '../dto/update-post-comment.dto';
 import { PostCommentVote } from '../entities/post-comment-vote.entity';
 import { PostComment } from '../entities/post-comment.entity';
 import { Post } from '../entities/post.entity';
-import { VoteType } from '../../comments-base/enums';
-import { CreatePostCommentDto } from '../dto/create-post-comment.dto';
-import { UpdatePostCommentDto } from '../dto/update-post-comment.dto';
-import { BaseCommentResponseDto } from '../../comments-base/dto';
-import { NotificationsService } from '../../notifications/notifications.service';
-import { NotificationType } from '../../notifications/enums/notification-type.enum';
 
 type CommentResponse = BaseCommentResponseDto & { replies: CommentResponse[] };
 
@@ -161,8 +162,18 @@ export class DiscussCommentService extends BaseCommentsService<
           recipientId: parentComment.authorId,
           senderId: userId,
           type: NotificationType.REPLY,
-          title: 'New Reply to Your Comment',
-          content: `${createdComment.author?.username || 'Someone'} replied to your comment.`,
+          translations: [
+            {
+              languageCode: Language.EN,
+              title: 'New Reply to Your Comment',
+              content: `${createdComment.author?.username || 'Someone'} replied to your comment.`,
+            },
+            {
+              languageCode: Language.VI,
+              title: 'Có người trả lời bình luận của bạn',
+              content: `${createdComment.author?.username || 'Ai đó'} đã trả lời bình luận của bạn.`,
+            },
+          ],
           link: `/discuss/${postId}`,
         });
       }
@@ -176,8 +187,18 @@ export class DiscussCommentService extends BaseCommentsService<
           recipientId: post.author.id,
           senderId: userId,
           type: NotificationType.COMMENT,
-          title: 'New Comment on Your Post',
-          content: `${createdComment.author?.username || 'Someone'} commented on your post "${post.title}".`,
+          translations: [
+            {
+              languageCode: Language.EN,
+              title: 'New Comment on Your Post',
+              content: `${createdComment.author?.username || 'Someone'} commented on your post "${post.title}".`,
+            },
+            {
+              languageCode: Language.VI,
+              title: 'Có bình luận mới trên bài viết của bạn',
+              content: `${createdComment.author?.username || 'Ai đó'} đã bình luận trên bài viết "${post.title}" của bạn.`,
+            },
+          ],
           link: `/discuss/${postId}`,
         });
       }
