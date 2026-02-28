@@ -6,10 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Interview, InterviewStatus } from '../entities/interview.entity';
-import {
-  InterviewMessage,
-  MessageRole,
-} from '../entities/interview-message.entity';
+import { InterviewMessage } from '../entities/interview-message.entity';
 import { InterviewEvaluation } from '../entities/interview-evaluation.entity';
 import { LangChainService } from '../../ai/langchain.service';
 import { PromptService, PromptFeature } from '../../ai/prompt.service';
@@ -71,42 +68,11 @@ export class AiInterviewService {
     });
     await this.interviewRepo.save(interview);
 
-    // 4. Generate Greeting
-    const problemContext = JSON.stringify(problemSnapshot);
-    const systemPrompt = await this.promptService.getCompiledPrompt(
-      PromptFeature.INTERVIEWER,
-      { problemContext },
-    );
-    const prompt =
-      systemPrompt +
-      '\n\nPlease start the interview by greeting the candidate and asking them to explain their initial thought process.';
-
-    let greeting =
-      "Hello! I'm ready to help you with this problem. How would you like to start?";
-    try {
-      const aiResponse = await this.langChainService.generateContent(prompt, {
-        threadId: interview.id,
-        runName: 'interview-greeting',
-        metadata: { userId: user.id, problemId: dto.problemId },
-      });
-      if (aiResponse) {
-        greeting = aiResponse;
-      }
-    } catch (error) {
-      console.error('LangChain Error:', error);
-    }
-
-    // 3. Save Greeting
-    const message = this.messageRepo.create({
-      interviewId: interview.id,
-      role: MessageRole.ASSISTANT,
-      content: greeting,
-    });
-    await this.messageRepo.save(message);
-
+    // The voice agent (Iris) handles the initial greeting via on_enter.
+    // For text-mode fallback, the AI will greet on the user's first message.
     return {
       interviewId: interview.id,
-      greeting,
+      greeting: '',
     };
   }
 
