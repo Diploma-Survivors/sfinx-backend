@@ -7,7 +7,7 @@ export const environmentValidation = Joi.object({
     .valid(Environment.DEVELOPMENT, Environment.PRODUCTION, Environment.TEST)
     .default(Environment.DEVELOPMENT),
   API_VERSION: Joi.string().default('v1'),
-  APP_NAME: Joi.string().default('sFinx Backend'),
+  APP_NAME: Joi.string().default('SfinX Backend'),
   PORT: Joi.number().default(3000),
   APP_URL: Joi.string().uri().default('http://localhost:3000'),
   FRONTEND_URL: Joi.string().default('http://localhost:5173'),
@@ -87,7 +87,7 @@ export const environmentValidation = Joi.object({
   SMTP_USER: Joi.string().optional().allow(''),
   SMTP_PASSWORD: Joi.string().optional().allow(''),
   SMTP_FROM: Joi.string().email().optional().allow(''),
-  SMTP_FROM_NAME: Joi.string().default('sFinx Platform'),
+  SMTP_FROM_NAME: Joi.string().default('SfinX Platform'),
   BREVO_API_KEY: Joi.string().when('MAIL_PROVIDER', {
     is: 'brevo',
     then: Joi.required(),
@@ -101,7 +101,7 @@ export const environmentValidation = Joi.object({
       then: Joi.required(),
       otherwise: Joi.optional().allow(''),
     }),
-  BREVO_FROM_NAME: Joi.string().default('sFinx Platform'),
+  BREVO_FROM_NAME: Joi.string().default('SfinX Platform'),
   MAIL_QUEUE_ENABLED: Joi.boolean().default(false),
   MAIL_DEFAULT_LAYOUT: Joi.string().default('layouts/base'),
 

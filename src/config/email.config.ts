@@ -66,14 +66,14 @@ export const emailConfig = registerAs(
       pass: process.env.SMTP_PASSWORD || '',
     },
     from: {
-      name: process.env.SMTP_FROM_NAME || 'sFinx Platform',
+      name: process.env.SMTP_FROM_NAME || 'SfinX Platform',
       address: process.env.SMTP_FROM || '',
     },
     brevo: {
       apiKey: process.env.BREVO_API_KEY || '',
       apiUrl: process.env.BREVO_API_URL || DEFAULT_BREVO_API_URL,
       fromEmail: process.env.BREVO_FROM_EMAIL || '',
-      fromName: process.env.BREVO_FROM_NAME || 'sFinx Platform',
+      fromName: process.env.BREVO_FROM_NAME || 'SfinX Platform',
     },
     templatesDir: resolveTemplatesDir(),
     defaultLayout: process.env.MAIL_DEFAULT_LAYOUT || DEFAULT_TEMPLATE_LAYOUT,

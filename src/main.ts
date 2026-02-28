@@ -58,8 +58,8 @@ async function bootstrap() {
   if (enableSwagger) {
     const swaggerPath = appConfig.swaggerPath;
     const config = new DocumentBuilder()
-      .setTitle('sFinx API')
-      .setDescription('sFinx Backend API Documentation')
+      .setTitle('SfinX API')
+      .setDescription('SfinX Backend API Documentation')
       .setVersion('1.0')
       .addBearerAuth(
         {

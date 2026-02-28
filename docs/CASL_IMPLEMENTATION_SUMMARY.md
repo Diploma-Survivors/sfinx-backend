@@ -2,7 +2,7 @@
 
 ## Overview
 
-A comprehensive Role-Based Access Control (RBAC) system has been implemented using **CASL** (Code Access Security Library), providing flexible, fine-grained authorization for the sFinx backend.
+A comprehensive Role-Based Access Control (RBAC) system has been implemented using **CASL** (Code Access Security Library), providing flexible, fine-grained authorization for the SfinX backend.
 
 ---
 

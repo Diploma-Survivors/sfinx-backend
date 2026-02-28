@@ -1,6 +1,6 @@
 # Mail Module
 
-Production-ready email module for sFinx Platform with template support, queue processing, and comprehensive error handling.
+Production-ready email module for SfinX Platform with template support, queue processing, and comprehensive error handling.
 
 ## Features
 
@@ -36,7 +36,7 @@ await this.mailService.sendTemplatedEmail(
   'welcome',
   { name: 'John Doe', verificationUrl: 'https://...' },
   'user@example.com',
-  'Welcome to sFinx!',
+  'Welcome to SfinX!',
 );
 ```
 
@@ -89,7 +89,7 @@ SMTP_SECURE=false
 SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
 SMTP_FROM=noreply@sfinx.com
-SMTP_FROM_NAME=sFinx Platform
+SMTP_FROM_NAME=SfinX Platform
 
 # Mail Queue (optional)
 MAIL_QUEUE_ENABLED=true
