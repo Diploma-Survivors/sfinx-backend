@@ -78,7 +78,7 @@ export class MailService implements OnModuleInit {
       'welcome',
       { name, verificationUrl },
       to,
-      'Welcome to sFinx Platform!',
+      'Welcome to SfinX Platform!',
     );
   }
 
@@ -166,7 +166,7 @@ export class MailService implements OnModuleInit {
       'payment-success',
       { ...data, currentYear },
       to,
-      'Payment Successful - sFinx Subscription',
+      'Payment Successful - SfinX Subscription',
     );
   }
 

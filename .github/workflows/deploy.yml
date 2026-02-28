@@ -1,0 +1,49 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Copy docker-compose to VM
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          source: docker-compose.prod.yaml
+          target: /opt/sfinx/sfinx-backend
+
+      - name: Deploy on VM
+        uses: appleboy/ssh-action@v1
+        env:
+          ENV_PROD: ${{ secrets.ENV_PROD }}
+          JWT_PRIVATE_KEY: ${{ secrets.JWT_PRIVATE_KEY }}
+          JWT_PUBLIC_KEY: ${{ secrets.JWT_PUBLIC_KEY }}
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          envs: ENV_PROD,JWT_PRIVATE_KEY,JWT_PUBLIC_KEY
+        script: |
+          mkdir -p /opt/sfinx/sfinx-backend/secrets
+          printf '%s' "$JWT_PRIVATE_KEY" > /opt/sfinx/sfinx-backend/secrets/jwt.private.pem
+          printf '%s' "$JWT_PUBLIC_KEY"  > /opt/sfinx/sfinx-backend/secrets/jwt.public.pem
+          chmod 600 /opt/sfinx/sfinx-backend/secrets/jwt.private.pem
+          chmod 644 /opt/sfinx/sfinx-backend/secrets/jwt.public.pem
+          printf '%s' "$ENV_PROD" > /opt/sfinx/sfinx-backend/.env
+          cd /opt/sfinx/sfinx-backend
+          docker compose -f docker-compose.prod.yaml pull app
+          docker compose -f docker-compose.prod.yaml up -d app

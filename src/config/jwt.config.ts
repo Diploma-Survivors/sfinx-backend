@@ -35,7 +35,7 @@ export const jwtConfig = registerAs('jwt', (): JwtConfig => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     throw new Error(
-      `Failed to load JWT keys. Generate them using: npm run generat:keypair. Error: ${errorMessage}`,
+      `Failed to load JWT keys. Generate them using: npm run generate:keypair. Error: ${errorMessage}`,
     );
   }
 

@@ -21,7 +21,7 @@ export const appConfig = registerAs(
     nodeEnv: process.env.NODE_ENV || Environment.DEVELOPMENT,
     version: process.env.API_VERSION || 'v1',
     port: Number.parseInt(process.env.PORT!, 10) || 3000,
-    name: process.env.APP_NAME || 'sFinx Backend',
+    name: process.env.APP_NAME || 'SfinX Backend',
     url: process.env.APP_URL || 'http://localhost:3000',
     frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
 
