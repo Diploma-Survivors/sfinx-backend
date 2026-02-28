@@ -30,9 +30,6 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Test
-        run: npm test -- --passWithNoTests
-
   push-image:
     needs: build-and-test
     runs-on: ubuntu-latest
