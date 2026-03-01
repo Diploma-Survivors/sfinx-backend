@@ -6,7 +6,7 @@ services:
     volumes:
       - /opt/sfinx/sfinx-backend/secrets:/run/secrets:ro
     ports:
-      - '3000:3000'
+      - '127.0.0.1:3000:3000'
     depends_on:
       postgres:
         condition: service_healthy
