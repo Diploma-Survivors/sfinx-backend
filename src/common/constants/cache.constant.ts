@@ -3,6 +3,11 @@
  */
 export const CACHE_TTL = {
   /**
+   * One month in seconds - for data that changes extremely rarely
+   */
+  ONE_MONTH: 2592000,
+
+  /**
    * One day in seconds - for static data like languages, tags, topics
    */
   ONE_DAY: 86400,

@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import * as qs from 'qs';
 import { PaymentTransaction } from '../entities/payment-transaction.entity';
+import { PaymentMethodEnum } from '../enums/payment-method.enum';
 import {
   PaymentProvider,
   VerifyReturnUrlResult,
@@ -15,6 +16,10 @@ export class VnPayProvider implements PaymentProvider {
 
   constructor(private readonly configService: ConfigService) {}
 
+  getProviderName(): PaymentMethodEnum {
+    return PaymentMethodEnum.VNPAY;
+  }
+
   private getConfig(): VnpayConfig {
     return this.configService.getOrThrow<VnpayConfig>('vnpay');
   }
@@ -22,8 +27,7 @@ export class VnPayProvider implements PaymentProvider {
   /* eslint-disable @typescript-eslint/require-await */
   async createPaymentUrl(
     transaction: PaymentTransaction,
-    ipAddr: string, // Needed by VNPay
-    bankCode?: string,
+    ipAddr: string,
   ): Promise<string> {
     const config = this.getConfig();
     const date = new Date();
@@ -36,8 +40,7 @@ export class VnPayProvider implements PaymentProvider {
     const vnpParams = this.buildVnpParams(
       config,
       orderId,
-      transaction.amountVnd * 100, // Amount in cents
-      bankCode,
+      transaction.amountVnd * 100,
       clientIp,
       createDate,
       transaction.description,
@@ -96,8 +99,6 @@ export class VnPayProvider implements PaymentProvider {
     config: VnpayConfig,
     orderId: string,
     amount: number,
-
-    _bankCode: string | undefined, // Renamed to underscore to avoid unused var
     ipAddress: string,
     createDate: string,
     description?: string,
@@ -117,9 +118,6 @@ export class VnPayProvider implements PaymentProvider {
       vnp_CreateDate: createDate,
     };
 
-    // if (bankCode) {
-    //     vnpParams['vnp_BankCode'] = 'VNPAY';
-    // }
     vnpParams['vnp_BankCode'] = 'VNPAY';
 
     return this.sortObject(vnpParams);

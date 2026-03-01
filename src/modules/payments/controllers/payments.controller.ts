@@ -35,6 +35,8 @@ import { TransactionFilterDto } from '../dto/transaction-filter.dto';
 import { RevenueStatsQueryDto } from '../dto/revenue-stats-query.dto';
 import { RevenueStatsResponseDto } from '../dto/revenue-stats-response.dto';
 import { Language } from '../../auth/enums';
+import { PaymentMethodService } from '../services/payment-method.service';
+import { PaymentMethodEnum } from '../enums/payment-method.enum';
 
 @ApiTags('Payments')
 @Controller('payments')
@@ -42,7 +44,17 @@ export class PaymentsController {
   constructor(
     private readonly paymentsService: PaymentsService,
     private readonly configService: ConfigService,
+    private readonly paymentMethodService: PaymentMethodService,
   ) {}
+
+  @Get('methods')
+  @ApiOperation({ summary: 'Get active payment methods' })
+  @ApiOkResponse({
+    description: 'List of active payment methods',
+  })
+  async getPaymentMethods(@Query('lang') lang?: string) {
+    return this.paymentMethodService.getActivePaymentMethods(lang);
+  }
 
   @Post('create')
   @UseGuards(JwtAuthGuard)
@@ -72,7 +84,7 @@ export class PaymentsController {
       user,
       createPaymentDto.planId,
       clientIp,
-      createPaymentDto.bankCode,
+      createPaymentDto.paymentMethod,
     );
     return { url };
   }
@@ -84,7 +96,10 @@ export class PaymentsController {
     @Query() query: VnpayCallbackDto,
     @Res() res: Response,
   ): Promise<void> {
-    const result = await this.paymentsService.handlePaymentCallback(query);
+    const result = await this.paymentsService.handlePaymentCallback(
+      query,
+      PaymentMethodEnum.VNPAY,
+    );
 
     // Redirect to Frontend
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
@@ -114,7 +129,10 @@ export class PaymentsController {
     @Query() query: VnpayCallbackDto,
   ): Promise<{ RspCode: string; Message: string }> {
     try {
-      const result = await this.paymentsService.handlePaymentCallback(query);
+      const result = await this.paymentsService.handlePaymentCallback(
+        query,
+        PaymentMethodEnum.VNPAY,
+      );
       if (result.success) {
         return { RspCode: '00', Message: 'Success' };
       } else {

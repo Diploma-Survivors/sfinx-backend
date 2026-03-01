@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../../auth/entities/user.entity';
@@ -9,8 +9,8 @@ import {
   PaymentTransaction,
 } from '../entities/payment-transaction.entity';
 import { SubscriptionPlan } from '../entities/subscription-plan.entity';
-import type { PaymentProvider } from '../interfaces/payment-provider.interface';
-import { VnPayProvider } from '../providers/vnpay.provider';
+import { PaymentMethodEnum } from '../enums/payment-method.enum';
+import { PaymentProviderFactory } from '../providers/payment-provider.factory';
 import { ExchangeRateService } from './exchange-rate.service';
 
 import { NotificationType } from '../../notifications/enums/notification-type.enum';
@@ -60,9 +60,7 @@ export class PaymentsService {
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
     private readonly exchangeRateService: ExchangeRateService,
-    // Start with VNPAY as the default provider
-    @Inject(VnPayProvider)
-    private readonly paymentProvider: PaymentProvider,
+    private readonly paymentProviderFactory: PaymentProviderFactory,
     private readonly mailService: MailService,
     private readonly notificationsService: NotificationsService,
   ) {}
@@ -74,18 +72,18 @@ export class PaymentsService {
     user: User,
     planId: number,
     ipAddr: string,
-    bankCode?: string,
+    paymentMethod: PaymentMethodEnum = PaymentMethodEnum.VNPAY,
   ): Promise<string> {
     const plan = await this.planRepo.findOne({ where: { id: planId } });
     if (!plan || !plan.isActive) {
       throw new NotFoundException('Subscription plan not found or inactive');
     }
 
-    // Get Exchange Rate
+    const provider = this.paymentProviderFactory.getProvider(paymentMethod);
+
     const rate = await this.exchangeRateService.getExchangeRate();
     const amountVnd = Math.ceil(plan.priceUsd * rate);
 
-    // Create Transaction
     const transaction = this.transactionRepo.create({
       user,
       plan,
@@ -95,26 +93,29 @@ export class PaymentsService {
       amountVnd: amountVnd,
       exchangeRate: rate,
       currency: 'USD',
-      provider: 'VNPAY',
+      provider: PaymentMethodEnum[paymentMethod],
       status: PaymentStatus.PENDING,
       description: `Payment for ${plan.type} subscription`,
     });
 
     await this.transactionRepo.save(transaction);
 
-    // Generate URL
-    return this.paymentProvider.createPaymentUrl(transaction, ipAddr, bankCode);
+    return provider.createPaymentUrl(transaction, ipAddr);
   }
 
   /**
    * Handle payment callback/IPN
    */
-  async handlePaymentCallback(query: Record<string, any>): Promise<{
+  async handlePaymentCallback(
+    query: Record<string, any>,
+    paymentMethod: PaymentMethodEnum,
+  ): Promise<{
     success: boolean;
-    redirectUrl?: string; // For frontend redirect handling
+    redirectUrl?: string;
     message?: string;
   }> {
-    const validation = await this.paymentProvider.verifyReturnUrl(query);
+    const provider = this.paymentProviderFactory.getProvider(paymentMethod);
+    const validation = await provider.verifyReturnUrl(query);
 
     if (!validation.transactionId) {
       this.logger.error('Callback missing transaction ID');
@@ -148,20 +149,12 @@ export class PaymentsService {
 
       // Send Email
       try {
-        const userLang = transaction.user.preferredLanguage || Language.EN;
         const planTranslation = transaction.plan.translations.find(
-          (t) => t.languageCode === String(userLang),
+          (t) => t.languageCode === String(Language.EN),
         );
-        // Fallback to English or the first translation if specific language not found
-        const fallbackTranslation =
-          transaction.plan.translations.find(
-            (t) => t.languageCode === String(Language.EN),
-          ) || transaction.plan.translations[0];
 
         const planName =
-          planTranslation?.name ||
-          fallbackTranslation?.name ||
-          `Plan #${transaction.plan.id}`;
+          planTranslation?.name || `Plan #${transaction.plan.id}`;
 
         await this.mailService.sendPaymentSuccessEmail(transaction.user.email, {
           name: transaction.user.fullName || transaction.user.username,

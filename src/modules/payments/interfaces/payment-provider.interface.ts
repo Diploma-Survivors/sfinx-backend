@@ -1,4 +1,5 @@
 import { PaymentTransaction } from '../entities/payment-transaction.entity';
+import { PaymentMethodEnum } from '../enums/payment-method.enum';
 
 export interface VerifyReturnUrlResult {
   isSuccess: boolean;
@@ -10,7 +11,12 @@ export interface VerifyReturnUrlResult {
 
 export interface PaymentProvider {
   /**
-   * Generates the payment URL (e.g., redirect to VNPAY)
+   * Returns the payment method this provider handles
+   */
+  getProviderName(): PaymentMethodEnum;
+
+  /**
+   * Generates the payment URL (e.g., redirect to payment gateway)
    * @param transaction The payment transaction entity
    * @param ipAddr The IP address of the client initiating the request
    * @returns The URL string
@@ -18,7 +24,6 @@ export interface PaymentProvider {
   createPaymentUrl(
     transaction: PaymentTransaction,
     ipAddr: string,
-    bankCode?: string,
   ): Promise<string>;
 
   /**
