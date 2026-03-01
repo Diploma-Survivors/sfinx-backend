@@ -8,7 +8,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { PaymentMethod } from './payment.method';
+import { PaymentMethod } from './payment-method.entity';
 
 @Entity('payment_method_translations')
 export class PaymentMethodTranslation {

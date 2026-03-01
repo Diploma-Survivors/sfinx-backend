@@ -2,8 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CACHE_TTL, Cacheable } from '../../../common';
-import { PaymentMethod } from '../entities/payment.method';
 import { Language } from '../../auth/enums';
+import { PaymentMethod } from '../entities/payment-method.entity';
 
 export interface PaymentMethodResponseDto {
   id: number;

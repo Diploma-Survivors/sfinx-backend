@@ -4,7 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../auth/entities/user.entity';
 import { PaymentsController } from './controllers/payments.controller';
 import { SubscriptionPlansController } from './controllers/subscription-plans.controller';
-import { PaymentMethod } from './entities/payment.method';
+import { PaymentMethod } from './payment-method.entity';
 import { PaymentMethodTranslation } from './entities/payment-method-translation.entity';
 import { PaymentTransaction } from './entities/payment-transaction.entity';
 import { SubscriptionPlanTranslation } from './entities/subscription-plan-translation.entity';

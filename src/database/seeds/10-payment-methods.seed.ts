@@ -1,6 +1,6 @@
 import { DataSource } from 'typeorm';
-import { PaymentMethod } from '../../modules/payments/entities/payment.method';
 import { PaymentMethodTranslation } from '../../modules/payments/entities/payment-method-translation.entity';
+import { PaymentMethod } from '../../modules/payments/entities/payment-method.entity';
 import { PaymentMethodEnum } from '../../modules/payments/enums/payment-method.enum';
 
 export const seedPaymentMethods = async (dataSource: DataSource) => {
