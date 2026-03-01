@@ -42,9 +42,7 @@ jobs:
             mkdir -p /opt/sfinx/sfinx-backend/secrets
             printf '%s' "$JWT_PRIVATE_KEY" > /opt/sfinx/sfinx-backend/secrets/jwt.private.pem
             printf '%s' "$JWT_PUBLIC_KEY"  > /opt/sfinx/sfinx-backend/secrets/jwt.public.pem
-            chown 1000:1000 /opt/sfinx/sfinx-backend/secrets/jwt.private.pem
-            chown 1000:1000 /opt/sfinx/sfinx-backend/secrets/jwt.public.pem
-            chmod 400 /opt/sfinx/sfinx-backend/secrets/jwt.private.pem
+            chmod 444 /opt/sfinx/sfinx-backend/secrets/jwt.private.pem
             chmod 444 /opt/sfinx/sfinx-backend/secrets/jwt.public.pem
             printf '%s' "$ENV_PROD" > /opt/sfinx/sfinx-backend/.env
             cd /opt/sfinx/sfinx-backend
