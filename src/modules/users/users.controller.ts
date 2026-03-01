@@ -72,6 +72,24 @@ export class UsersController {
     return this.usersService.getUserPermisison(userId);
   }
 
+  @Get('public/search')
+  @ApiOperation({ summary: 'Search public users globally' })
+  @ApiQuery({ name: 'q', required: true, type: String })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'Public users retrieved successfully',
+    type: PaginatedResultDto,
+  })
+  async searchPublicUsers(
+    @Query('q') query: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+  ): Promise<PaginatedResultDto<User>> {
+    return this.usersService.searchPublicUsers(query, +page, +limit);
+  }
+
   @Get()
   @UseGuards(CaslGuard)
   @CheckPolicies((ability) => ability.can(Action.Read, User))

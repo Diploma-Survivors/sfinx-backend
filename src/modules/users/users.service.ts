@@ -70,6 +70,60 @@ export class UsersService {
     return user.role.permissions;
   }
 
+  async searchPublicUsers(
+    query: string,
+    page: number,
+    limit: number,
+  ): Promise<PaginatedResultDto<any>> {
+    const skip = (page - 1) * limit;
+
+    const qb = this.userRepository
+      .createQueryBuilder('user')
+      .where('user.isActive = :isActive', { isActive: true })
+      .andWhere('user.isBanned = :isBanned', { isBanned: false });
+
+    if (query) {
+      qb.andWhere(
+        '(user.username ILIKE :search OR user.fullName ILIKE :search)',
+        { search: `%${query}%` },
+      );
+    }
+
+    const [users, total] = await qb
+      .select(['user.id', 'user.username', 'user.fullName', 'user.avatarKey'])
+      .skip(skip)
+      .take(limit)
+      .orderBy('user.id', 'DESC')
+      .getManyAndCount();
+
+    const transformedUsers = users.map((user) => {
+      let avatarUrl = DEFAULT_AVATAR_URL;
+      if (user.avatarKey && this.isS3Key(user.avatarKey)) {
+        avatarUrl = this.storageService.getCloudFrontUrl(user.avatarKey);
+      } else if (user.avatarKey && !this.isS3Key(user.avatarKey)) {
+        avatarUrl = user.avatarKey;
+      }
+      return {
+        id: user.id,
+        username: user.username,
+        fullName: user.fullName,
+        avatarUrl,
+      };
+    });
+
+    return {
+      data: transformedUsers,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page < Math.ceil(total / limit),
+        hasPreviousPage: page > 1,
+      },
+    };
+  }
+
   async findAll(query: GetUsersQueryDto): Promise<PaginatedResultDto<User>> {
     const {
       page = 1,
