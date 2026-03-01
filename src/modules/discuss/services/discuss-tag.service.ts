@@ -2,7 +2,11 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PaginatedResultDto } from '../../../common';
-import { CreateTagDto, FilterTagDto, UpdateTagDto } from '../dto';
+import {
+  CreateDiscussionTagDto,
+  FilterTagDto,
+  UpdateDiscussionTagDto,
+} from '../dto';
 import { DiscussTag } from '../entities/discuss-tag.entity';
 
 @Injectable()
@@ -44,7 +48,7 @@ export class DiscussTagService {
     });
   }
 
-  async createTag(dto: CreateTagDto): Promise<DiscussTag> {
+  async createTag(dto: CreateDiscussionTagDto): Promise<DiscussTag> {
     const slug = this.generateSlug(dto.name);
     const tag = this.tagRepository.create({
       ...dto,
@@ -53,7 +57,10 @@ export class DiscussTagService {
     return this.tagRepository.save(tag);
   }
 
-  async updateTag(id: number, dto: UpdateTagDto): Promise<DiscussTag> {
+  async updateTag(
+    id: number,
+    dto: UpdateDiscussionTagDto,
+  ): Promise<DiscussTag> {
     const tag = await this.tagRepository.findOneBy({ id });
     if (!tag) {
       throw new NotFoundException(`Tag with ID ${id} not found`);

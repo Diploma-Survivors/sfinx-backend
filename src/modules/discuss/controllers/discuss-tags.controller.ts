@@ -21,7 +21,11 @@ import {
 import { CheckPolicies, PaginatedResultDto } from '../../../common';
 import { CaslGuard } from '../../auth/guards/casl.guard';
 import { Action } from '../../rbac/casl';
-import { CreateTagDto, FilterTagDto, UpdateTagDto } from '../dto';
+import {
+  CreateDiscussionTagDto,
+  FilterTagDto,
+  UpdateDiscussionTagDto,
+} from '../dto';
 import { DiscussTag } from '../entities/discuss-tag.entity';
 import { DiscussTagService } from '../services/discuss-tag.service';
 
@@ -41,7 +45,7 @@ export class DiscussTagsController {
     type: DiscussTag,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async createTag(@Body() dto: CreateTagDto): Promise<DiscussTag> {
+  async createTag(@Body() dto: CreateDiscussionTagDto): Promise<DiscussTag> {
     return this.discussTagService.createTag(dto);
   }
 
@@ -71,7 +75,7 @@ export class DiscussTagsController {
   @ApiResponse({ status: 404, description: 'Tag not found' })
   async updateTag(
     @Param('id') id: number,
-    @Body() dto: UpdateTagDto,
+    @Body() dto: UpdateDiscussionTagDto,
   ): Promise<DiscussTag> {
     return this.discussTagService.updateTag(id, dto);
   }
