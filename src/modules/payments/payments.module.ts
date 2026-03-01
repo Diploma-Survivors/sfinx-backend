@@ -4,11 +4,15 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../auth/entities/user.entity';
 import { PaymentsController } from './controllers/payments.controller';
 import { SubscriptionPlansController } from './controllers/subscription-plans.controller';
+import { PaymentMethod } from './entities/payment.method';
+import { PaymentMethodTranslation } from './entities/payment-method-translation.entity';
 import { PaymentTransaction } from './entities/payment-transaction.entity';
 import { SubscriptionPlanTranslation } from './entities/subscription-plan-translation.entity';
 import { SubscriptionPlan } from './entities/subscription-plan.entity';
 import { VnPayProvider } from './providers/vnpay.provider';
+import { PaymentProviderFactory } from './providers/payment-provider.factory';
 import { ExchangeRateService } from './services/exchange-rate.service';
+import { PaymentMethodService } from './services/payment-method.service';
 import { PaymentSubscriptionService } from './services/payment-subscription.service';
 import { PaymentsService } from './services/payments.service';
 import { SubscriptionPlansService } from './services/subscription-plans.service';
@@ -23,6 +27,8 @@ import { SubscriptionFeaturesController } from './controllers/subscription-featu
   imports: [
     TypeOrmModule.forFeature([
       PaymentTransaction,
+      PaymentMethod,
+      PaymentMethodTranslation,
       SubscriptionPlan,
       SubscriptionPlanTranslation,
       SubscriptionFeature,
@@ -42,6 +48,8 @@ import { SubscriptionFeaturesController } from './controllers/subscription-featu
     PaymentsService,
     ExchangeRateService,
     VnPayProvider,
+    PaymentProviderFactory,
+    PaymentMethodService,
     PaymentSubscriptionService,
     SubscriptionPlansService,
     SubscriptionFeatureService,

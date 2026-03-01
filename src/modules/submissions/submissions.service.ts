@@ -327,6 +327,7 @@ export class SubmissionsService {
     submission.runtimeMs = runtimeMs ?? null;
     submission.memoryKb = memoryKb ?? null;
     submission.resultDescription = resultDescription ?? null;
+    submission.totalTestcases = totalTestcases;
     submission.judgedAt = new Date();
 
     await this.submissionRepository.save(submission);

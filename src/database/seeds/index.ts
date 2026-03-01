@@ -5,10 +5,11 @@ import { seedProgrammingLanguages } from './2-programming-languages.seed';
 import { seedTopics } from './3-topics.seed';
 import { seedTags } from './4-tags.seed';
 import { seedProblems } from './5-problems.seed';
-import { CreateSubscriptionPlans } from './create-subscription-plans.seed';
-import { CreateSubscriptionFeatures } from './create-subscription-features.seed';
+import { CreateSubscriptionPlans } from './9-create-subscription-plans.seed';
+import { CreateSubscriptionFeatures } from './8-create-subscription-features.seed';
 import { seedDiscuss } from './6-discuss.seed';
 import { seedPromptConfigs } from './7-prompt-configs.seed';
+import { seedPaymentMethods } from './10-payment-methods.seed';
 
 // Load environment variables
 config();
@@ -31,6 +32,7 @@ async function runSeeds() {
     await CreateSubscriptionPlans(dataSource);
     await seedDiscuss(dataSource);
     await seedPromptConfigs(dataSource);
+    await seedPaymentMethods(dataSource);
 
     console.log('🎉 All seeds completed successfully!');
   } catch (error) {

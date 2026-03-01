@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsNotEmpty, Min, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsInt, IsNotEmpty, Min } from 'class-validator';
+import { PaymentMethodEnum } from '../enums/payment-method.enum';
 
 export class CreatePaymentDto {
   @ApiProperty({ description: 'ID of the subscription plan', example: 1 })
@@ -9,11 +10,10 @@ export class CreatePaymentDto {
   planId: number;
 
   @ApiProperty({
-    description: 'Bank code (optional)',
-    example: 'NCB',
-    required: false,
+    description: 'Payment method/provider',
+    enum: PaymentMethodEnum,
+    example: PaymentMethodEnum.VNPAY,
   })
-  @IsOptional()
-  @IsString()
-  bankCode?: string;
+  @IsEnum(PaymentMethodEnum)
+  paymentMethod: PaymentMethodEnum = PaymentMethodEnum.VNPAY;
 }
