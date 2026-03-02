@@ -63,12 +63,12 @@ export class ContestController {
   @ApiOperation({ summary: 'Get all contests with filtering' })
   @ApiPaginatedResponse(Contest, 'Contests retrieved successfully')
   @ApiBearerAuth('JWT-auth')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(OptionalJwtAuthGuard)
   async getContestsForNotAdminUser(
     @Query() filterDto: FilterContestDto,
-    @GetUser() user: User,
+    @GetUser() user?: User,
   ): Promise<PaginatedResultDto<Contest>> {
-    return this.contestService.getContestsForNotAdminUser(filterDto, user.id);
+    return this.contestService.getContestsForNotAdminUser(filterDto, user?.id);
   }
 
   @Get('admin')
