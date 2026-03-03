@@ -12,6 +12,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { ContestStatus } from '../enums/contest-status.enum';
+import { RankingType } from '../enums/ranking-type.enum';
 import { AddProblemToContestDto } from './create-contest.dto';
 
 export class UpdateContestDto {
@@ -58,6 +59,14 @@ export class UpdateContestDto {
   @Min(0)
   @IsOptional()
   maxParticipants?: number;
+
+  @ApiPropertyOptional({
+    description: 'Ranking type for this contest',
+    enum: RankingType,
+  })
+  @IsEnum(RankingType)
+  @IsOptional()
+  rankingType?: RankingType;
 
   @ApiPropertyOptional({
     description: 'Problems to include in contest',
