@@ -13,6 +13,8 @@ COPY --chown=node:node . .
 
 RUN npm run build
 
+RUN cp -r src/modules/mail/templates dist/src/modules/mail/templates
+
 RUN npm prune --omit=dev --ignore-scripts
 
 FROM node:24-alpine AS production
