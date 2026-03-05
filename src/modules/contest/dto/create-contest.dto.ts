@@ -13,6 +13,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { ContestStatus } from '../enums';
+import { RankingType } from '../enums/ranking-type.enum';
 
 export class AddProblemToContestDto {
   @ApiProperty({ description: 'Problem ID' })
@@ -86,6 +87,15 @@ export class CreateContestDto {
   @IsEnum(ContestStatus)
   @IsOptional()
   status?: ContestStatus = ContestStatus.DRAFT;
+
+  @ApiPropertyOptional({
+    description: 'Ranking type for this contest',
+    enum: RankingType,
+    default: RankingType.IOI,
+  })
+  @IsEnum(RankingType)
+  @IsOptional()
+  rankingType?: RankingType = RankingType.IOI;
 
   @ApiPropertyOptional({
     description: 'Problems to include in contest',

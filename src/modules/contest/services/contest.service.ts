@@ -140,6 +140,7 @@ export class ContestService {
     if (dto.status !== undefined) updateData.status = dto.status;
     if (dto.maxParticipants !== undefined)
       updateData.maxParticipants = dto.maxParticipants;
+    if (dto.rankingType !== undefined) updateData.rankingType = dto.rankingType;
 
     // Recalculate duration if time changed
     if (dto.startTime || dto.endTime) {

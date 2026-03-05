@@ -25,6 +25,9 @@ import { ContestEventHandlers } from './events/contest.event-handlers';
 import { ContestSchedulerProcessor } from './processors/contest-scheduler.processor';
 import { CONTEST_QUEUE } from './constants/scheduler.constants';
 import { UserStatistics } from '../submissions/entities/user-statistics.entity';
+import { IoiRankingStrategy } from './strategies/ioi-ranking.strategy';
+import { RankingStrategyFactory } from './strategies/ranking-strategy.factory';
+import { SystemConfigModule } from '../system-config/system-config.module';
 
 @Module({
   imports: [
@@ -39,6 +42,7 @@ import { UserStatistics } from '../submissions/entities/user-statistics.entity';
     StorageModule,
     forwardRef(() => SubmissionsModule),
     ProblemsModule,
+    SystemConfigModule,
     ScheduleModule,
     BullModule.registerQueueAsync({
       name: CONTEST_QUEUE,
@@ -67,6 +71,8 @@ import { UserStatistics } from '../submissions/entities/user-statistics.entity';
     ContestSubmissionListener,
     ContestEventHandlers,
     ContestSchedulerProcessor,
+    IoiRankingStrategy,
+    RankingStrategyFactory,
   ],
   exports: [
     ContestService,

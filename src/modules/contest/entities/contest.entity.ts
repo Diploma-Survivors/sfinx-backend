@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { User } from '../../auth/entities/user.entity';
 import { ContestStatus } from '../enums';
+import { RankingType } from '../enums/ranking-type.enum';
 import { ContestParticipant } from './contest-participant.entity';
 import { ContestProblem } from './contest-problem.entity';
 
@@ -58,6 +59,19 @@ export class Contest {
     default: ContestStatus.DRAFT,
   })
   status: ContestStatus;
+
+  @ApiProperty({
+    description: 'Ranking type for this contest',
+    enum: RankingType,
+    example: RankingType.IOI,
+  })
+  @Column({
+    name: 'ranking_type',
+    type: 'enum',
+    enum: RankingType,
+    default: RankingType.IOI,
+  })
+  rankingType: RankingType;
 
   @ApiProperty({ description: 'Total number of participants', default: 0 })
   @Column({ name: 'participant_count', default: 0 })

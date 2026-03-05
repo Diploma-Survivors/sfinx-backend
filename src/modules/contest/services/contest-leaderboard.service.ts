@@ -23,6 +23,7 @@ import {
 import { SystemConfigService } from '../../system-config/system-config.service';
 import { ContestService } from './contest.service';
 import { SubmissionStatus } from '../../submissions/enums';
+import { RankingStrategyFactory } from '../strategies/ranking-strategy.factory';
 
 /** Cache TTL for leaderboard (30 seconds for near-real-time) */
 const LEADERBOARD_CACHE_TTL = 30;
@@ -41,6 +42,7 @@ export class ContestLeaderboardService {
     private readonly pubSubService: PubSubService,
     private readonly storageService: StorageService,
     private readonly systemConfigService: SystemConfigService,
+    private readonly rankingStrategyFactory: RankingStrategyFactory,
   ) {}
 
   /**
@@ -63,8 +65,16 @@ export class ContestLeaderboardService {
       cacheKey,
       async () => {
         const skip = (page - 1) * limit;
+        const contest = await this.contestService.getContestById(contestId);
+        const strategy = this.rankingStrategyFactory.getStrategy(
+          contest.rankingType,
+        );
+        const orderColumns = strategy.buildOrderByColumns();
 
-        // Use raw query for Window Functions to handle ranking correctly across pages
+        const rankOrderSql = orderColumns
+          .map((c) => `${c.sqlColumn} ${c.order}`)
+          .join(', ');
+
         const queryBuilder = this.participantRepository
           .createQueryBuilder('p')
           .leftJoinAndSelect('p.user', 'u')
@@ -76,16 +86,14 @@ export class ContestLeaderboardService {
           .addSelect('u.username', 'username')
           .addSelect('u.avatarKey', 'avatarKey')
           .addSelect('u.fullName', 'fullName')
-          .addSelect(
-            'DENSE_RANK() OVER (ORDER BY p.solved_count DESC, p.total_score DESC, p.finish_time ASC)',
-            'rank',
-          )
-          .where('p.contestId = :contestId', { contestId })
-          .orderBy('p.solvedCount', 'DESC')
-          .addOrderBy('p.totalScore', 'DESC')
-          .addOrderBy('p.finishTime', 'ASC')
-          .offset(skip)
-          .limit(limit);
+          .addSelect(`DENSE_RANK() OVER (ORDER BY ${rankOrderSql})`, 'rank')
+          .where('p.contestId = :contestId', { contestId });
+
+        for (const col of orderColumns) {
+          queryBuilder.addOrderBy(`p.${col.column}`, col.order);
+        }
+
+        queryBuilder.offset(skip).limit(limit);
 
         if (search) {
           queryBuilder.andWhere(
@@ -164,7 +172,6 @@ export class ContestLeaderboardService {
     problemId: number,
     submissionStatus: SubmissionStatus,
   ): Promise<void> {
-    // Optimization: Only fetch contest/problem if needed for score calculation
     const isAccepted = submissionStatus === SubmissionStatus.ACCEPTED;
     let contest: Contest | undefined;
     let contestProblem: ContestProblem | null | undefined;
@@ -203,11 +210,10 @@ export class ContestLeaderboardService {
         let scoreToApply = 0;
 
         if (isAccepted && contest && contestProblem) {
-          scoreToApply = this.calculateDecayedScore(
-            contest,
-            contestProblem,
-            now,
+          const strategy = this.rankingStrategyFactory.getStrategy(
+            contest.rankingType,
           );
+          scoreToApply = strategy.calculateScore(contest, contestProblem, now);
         }
 
         this.applyParticipantUpdate(
@@ -240,36 +246,6 @@ export class ContestLeaderboardService {
     if (entry) {
       await this.publishLeaderboardUpdate(contestId, entry);
     }
-  }
-
-  /**
-   * Calculate IOI-style score with time decay
-   */
-  private calculateDecayedScore(
-    contest: Contest,
-    problem: ContestProblem,
-    submissionTime: Date,
-  ): number {
-    const startTime = contest.startTime;
-    const durationMinutes = contest.durationMinutes;
-    const baseScore = problem.points;
-
-    if (durationMinutes <= 0 || baseScore <= 0) return baseScore;
-
-    const decayRate = this.systemConfigService.getFloat(
-      'CONTEST_DECAY_RATE',
-      0,
-    );
-    const timeTakenMs = Math.max(
-      0,
-      submissionTime.getTime() - startTime.getTime(),
-    );
-    const timeTakenMinutes = timeTakenMs / 60000;
-
-    const decayFactor = (timeTakenMinutes / durationMinutes) * decayRate;
-    const penalty = baseScore * Math.min(decayFactor, 1);
-
-    return Math.round(Math.max(0, baseScore - penalty) * 100) / 100;
   }
 
   /**
@@ -360,20 +336,6 @@ export class ContestLeaderboardService {
   }
 
   /**
-   * Calculate IOI-style score
-   */
-  private calculateScore(
-    passedTestcases: number,
-    totalTestcases: number,
-    problemPoints: number,
-  ): number {
-    if (totalTestcases === 0) return 0;
-    return (
-      Math.round((passedTestcases / totalTestcases) * problemPoints * 100) / 100
-    );
-  }
-
-  /**
    * Get a single participant's current standing
    */
   async getParticipantStanding(
@@ -420,19 +382,48 @@ export class ContestLeaderboardService {
       };
     });
 
-    // Calculate rank dynamically
-    const rank = await this.participantRepository
+    const contest = await this.contestService.getContestById(contestId);
+    const strategy = this.rankingStrategyFactory.getStrategy(
+      contest.rankingType,
+    );
+    const orderColumns = strategy.buildOrderByColumns();
+
+    const rankQuery = this.participantRepository
       .createQueryBuilder('p')
-      .where('p.contestId = :contestId', { contestId })
-      .andWhere(
-        '(p.solvedCount > :solvedCount OR (p.solvedCount = :solvedCount AND p.totalScore > :totalScore) OR (p.solvedCount = :solvedCount AND p.totalScore = :totalScore AND p.finishTime < :finishTime))',
-        {
-          solvedCount: participant.solvedCount,
-          totalScore: participant.totalScore,
-          finishTime: participant.finishTime,
-        },
-      )
-      .getCount();
+      .where('p.contestId = :contestId', { contestId });
+
+    const conditions: string[] = [];
+    const params: Record<string, number> = {};
+
+    for (let i = 0; i < orderColumns.length; i++) {
+      const col = orderColumns[i];
+      const paramName = `val_${i}`;
+      const betterOp = col.order === SortOrder.DESC ? '>' : '<';
+
+      const equalParts = orderColumns
+        .slice(0, i)
+        .map((prev, j) => `p.${prev.column} = :val_${j}`)
+        .join(' AND ');
+
+      const condition = equalParts
+        ? `(${equalParts} AND p.${col.column} ${betterOp} :${paramName})`
+        : `(p.${col.column} ${betterOp} :${paramName})`;
+
+      conditions.push(condition);
+      params[paramName] = Number(
+        participant[col.column as keyof ContestParticipant],
+      );
+    }
+
+    // Also set params for equality checks
+    for (let i = 0; i < orderColumns.length; i++) {
+      params[`val_${i}`] = Number(
+        participant[orderColumns[i].column as keyof ContestParticipant],
+      );
+    }
+
+    rankQuery.andWhere(`(${conditions.join(' OR ')})`, params);
+    const rank = await rankQuery.getCount();
 
     return {
       rank: rank + 1,
