@@ -73,6 +73,17 @@ export class UsersService {
     return user.role.permissions;
   }
 
+  async getUserRole(userId: number): Promise<Role> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['role', 'role.permissions'],
+    });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+    return user.role;
+  }
+
   async updateUserRole(userId: number, roleId: number): Promise<User> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
