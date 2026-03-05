@@ -100,6 +100,11 @@ export class SubmissionResponseDto {
 
   @ApiPropertyOptional({ description: 'Source code (own submissions only)' })
   sourceCode?: string;
+
+  @ApiPropertyOptional({
+    description: 'AI-generated code review in Markdown format',
+  })
+  aiReview?: string;
 }
 
 export class SubmissionListResponseDto {

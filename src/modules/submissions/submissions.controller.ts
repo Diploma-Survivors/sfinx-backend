@@ -33,6 +33,7 @@ import { CaslGuard } from '../auth/guards/casl.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ViewAllSubmissionsPolicy } from '../rbac/casl';
 import { SUBMISSION_SSE } from './constants/submission.constants';
+import { AIReviewRequestDto, AIReviewResponseDto } from './dto/ai-review.dto';
 import { CreateSubmissionResponseDto } from './dto/create-submission-response.dto';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { FilterSubmissionDto } from './dto/filter-submission.dto';
@@ -319,5 +320,37 @@ export class SubmissionsController {
     return merge(this.submissionSseService.connect(submissionId), ping$).pipe(
       finalize(() => this.submissionSseService.cleanup(submissionId)),
     );
+  }
+
+  @Post(':id/ai-review')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Generate or retrieve AI review for a submission' })
+  @ApiParam({ name: 'id', description: 'Submission ID', type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'AI review generated or retrieved successfully',
+    type: AIReviewResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Submission not found' })
+  @ApiResponse({
+    status: 403,
+    description: 'Cannot review other users submissions',
+  })
+  async generateAIReview(
+    @Param('id') id: string,
+    @GetUser() user: User,
+    @Body() dto?: AIReviewRequestDto,
+  ): Promise<AIReviewResponseDto> {
+    const result = await this.submissionsService.generateAIReview(
+      +id,
+      user.id,
+      dto?.customPrompt,
+    );
+    return {
+      review: result.review,
+      cached: result.cached,
+      generatedAt: result.cached ? undefined : new Date(),
+    };
   }
 }

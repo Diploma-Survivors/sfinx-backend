@@ -13,6 +13,7 @@ import { ProblemsModule } from '../problems/problems.module';
 import { ProgrammingLanguageModule } from '../programming-language';
 import { RedisModule } from '../redis';
 import { StorageModule } from '../storage/storage.module';
+import { AiModule } from '../ai';
 import { ContestModule } from '../contest/contest.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { SUBMISSION_QUEUES } from './constants/submission.constants';
@@ -90,6 +91,7 @@ import { RankingAdminController } from './controllers/ranking-admin.controller';
     MailModule,
     forwardRef(() => ContestModule),
     NotificationsModule,
+    AiModule,
   ],
   controllers: [
     SubmissionsController,

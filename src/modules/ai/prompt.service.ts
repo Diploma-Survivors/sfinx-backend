@@ -13,6 +13,7 @@ import { PromptConfigService } from './prompt-config.service';
 export enum PromptFeature {
   INTERVIEWER = 'interviewer',
   EVALUATOR = 'evaluator',
+  CODE_REVIEWER = 'code-reviewer',
 }
 
 export interface PromptStatus {
