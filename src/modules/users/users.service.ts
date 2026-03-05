@@ -17,6 +17,7 @@ import {
 } from './dto/contest-rating-chart.dto';
 import { ContestRatingLeaderboardEntryDto } from './dto/contest-rating-leaderboard.dto';
 import { GetUsersQueryDto } from './dto/get-users-query.dto';
+import { Role } from '../rbac/entities/role.entity';
 import { SystemUserStatisticsDto } from './dto/system-user-statistics.dto';
 
 @Injectable()
@@ -26,6 +27,8 @@ export class UsersService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(ContestParticipant)
     private readonly contestParticipantRepository: Repository<ContestParticipant>,
+    @InjectRepository(Role)
+    private readonly roleRepository: Repository<Role>,
     private readonly storageService: StorageService,
     private readonly redisService: RedisService,
   ) {}
@@ -68,6 +71,21 @@ export class UsersService {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
     return user.role.permissions;
+  }
+
+  async updateUserRole(userId: number, roleId: number): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const role = await this.roleRepository.findOne({ where: { id: roleId } });
+    if (!role) {
+      throw new NotFoundException(`Role with ID ${roleId} not found`);
+    }
+
+    user.role = role;
+    return this.userRepository.save(user);
   }
 
   async searchPublicUsers(

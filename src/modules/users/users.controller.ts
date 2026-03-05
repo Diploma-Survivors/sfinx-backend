@@ -1,4 +1,13 @@
-import { Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -22,6 +31,7 @@ import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { GetPracticeHistoryDto } from '../submissions/dto/get-practice-history.dto';
 import { Permission } from '../rbac/entities/permission.entity';
 import { GetUsersQueryDto } from './dto/get-users-query.dto';
+import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { CheckPolicies } from '../../common';
 import { Action } from '../rbac/casl';
 import { User } from '../auth/entities/user.entity';
@@ -70,6 +80,24 @@ export class UsersController {
     @Query('userId') userId: number,
   ): Promise<Permission[]> {
     return this.usersService.getUserPermisison(userId);
+  }
+
+  @Patch(':userId/role')
+  @UseGuards(CaslGuard)
+  @CheckPolicies((ability) => ability.can(Action.Manage, User))
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Update user role' })
+  @ApiResponse({
+    status: 200,
+    description: 'User role updated successfully',
+    type: User,
+  })
+  @ApiResponse({ status: 404, description: 'User or Role not found' })
+  async updateUserRole(
+    @Param('userId') userId: number,
+    @Body() updateUserRoleDto: UpdateUserRoleDto,
+  ): Promise<User> {
+    return this.usersService.updateUserRole(userId, updateUserRoleDto.roleId);
   }
 
   @Get('public/search')
