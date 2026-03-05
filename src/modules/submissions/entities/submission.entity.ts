@@ -11,8 +11,8 @@ import { User } from '../../auth/entities/user.entity';
 import { Contest } from '../../contest/entities';
 import { Problem } from '../../problems/entities/problem.entity';
 import { ProgrammingLanguage } from '../../programming-language/entities/programming-language.entity';
+import { ResultDescriptionDto } from '../dto/submission-result.dto';
 import { SubmissionStatus } from '../enums';
-import { ResultDescription } from '../dto/result-description.dto';
 
 @Entity('submissions')
 export class Submission {
@@ -93,7 +93,7 @@ export class Submission {
     ],
   })
   @Column({ name: 'result_description', type: 'jsonb', nullable: true })
-  resultDescription: ResultDescription | null;
+  resultDescription: ResultDescriptionDto | null;
 
   @ApiProperty({ description: 'IP address of submitter', required: false })
   @Column({ name: 'ip_address', type: 'inet', nullable: true })

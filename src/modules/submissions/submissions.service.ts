@@ -25,11 +25,11 @@ import { SUBMISSION_EVENTS } from './constants/submission-events.constants';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { FilterSubmissionDto } from './dto/filter-submission.dto';
 import { GetPracticeHistoryDto } from './dto/get-practice-history.dto';
-import { ResultDescription } from './dto/result-description.dto';
 import {
   SubmissionListResponseDto,
   SubmissionResponseDto,
 } from './dto/submission-response.dto';
+import { ResultDescriptionDto } from './dto/submission-result.dto';
 import { UserPracticeHistoryDto } from './dto/user-practice-history.dto';
 import { UserProblemProgressDetailResponseDto } from './dto/user-problem-progress-detail-response.dto';
 import { UserStatisticsDto } from './dto/user-statistics.dto';
@@ -305,7 +305,7 @@ export class SubmissionsService {
     totalTestcases: number,
     runtimeMs?: number,
     memoryKb?: number,
-    resultDescription?: ResultDescription,
+    resultDescription?: ResultDescriptionDto,
   ): Promise<void> {
     const submission = await this.submissionRepository.findOne({
       where: { id: submissionId },
