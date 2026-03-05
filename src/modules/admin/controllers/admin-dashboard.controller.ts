@@ -1,4 +1,10 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  ParseDatePipe,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CheckPolicies } from '../../../common';
 import { Action } from '../../rbac/casl';
@@ -50,8 +56,8 @@ export class AdminDashboardController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   async getTimeSeriesMetrics(
-    @Query('from') from?: Date,
-    @Query('to') to?: Date,
+    @Query('from', new ParseDatePipe({ optional: true })) from?: Date,
+    @Query('to', new ParseDatePipe({ optional: true })) to?: Date,
   ): Promise<TimeSeriesMetricsDto> {
     return this.platformStatisticsService.getTimeSeriesMetrics(from, to);
   }
