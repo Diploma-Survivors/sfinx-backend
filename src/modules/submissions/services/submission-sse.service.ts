@@ -8,6 +8,7 @@ import {
   SUBMISSION_SSE,
 } from '../constants/submission.constants';
 import { SubmissionEvent } from '../enums/submission-event.enum';
+import { SubmissionResultDto } from '../dto/submission-result.dto';
 
 /**
  * Message event interface for SSE
@@ -22,7 +23,7 @@ export interface MessageEvent {
  */
 interface SubmissionResultPayload {
   submissionId: string;
-  payload: unknown;
+  payload: SubmissionResultDto;
 }
 
 /**
