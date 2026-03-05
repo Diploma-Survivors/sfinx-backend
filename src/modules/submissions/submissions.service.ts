@@ -4,12 +4,15 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
+  NotFoundException,
   forwardRef,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { v4 as uuidV4 } from 'uuid';
+
+import { LangChainService, PromptFeature, PromptService } from '../ai';
 
 import { PaginatedResultDto } from '../../common';
 import { Language } from '../auth/enums';
@@ -71,6 +74,8 @@ export class SubmissionsService {
     @Inject(forwardRef(() => ContestSubmissionService))
     private readonly contestSubmissionService: ContestSubmissionService,
     private readonly notificationsService: NotificationsService,
+    private readonly promptService: PromptService,
+    private readonly langChainService: LangChainService,
   ) {}
 
   /**
@@ -498,5 +503,88 @@ export class SubmissionsService {
    */
   async getTopPerformers(problemId: number, limit: number = 10) {
     return this.analysisService.getTopPerformers(problemId, limit);
+  }
+
+  /**
+   * Generate or retrieve AI review for a submission
+   */
+  async generateAIReview(
+    submissionId: number,
+    userId: number,
+    customPrompt?: string,
+  ): Promise<{ review: string; cached: boolean }> {
+    // Fetch submission with problem details
+    const submission = await this.submissionRepository.findOne({
+      where: { id: submissionId },
+      relations: ['problem', 'language'],
+    });
+
+    if (!submission) {
+      throw new NotFoundException(`Submission ${submissionId} not found`);
+    }
+
+    // Verify ownership (users can only review their own submissions)
+    if (submission.userId !== userId) {
+      throw new BadRequestException('You can only review your own submissions');
+    }
+
+    // Return cached review if available
+    if (submission.aiReview) {
+      return { review: submission.aiReview, cached: true };
+    }
+
+    // Get problem details
+    const problem = submission.problem;
+    if (!problem) {
+      throw new NotFoundException('Problem not found for this submission');
+    }
+
+    // Prepare template variables
+    const variables: Record<string, string> = {
+      problem_title_and_description: `${problem.title}\n\n${problem.description || ''}`,
+      language: submission.language?.name || 'Unknown',
+      user_code_block: submission.sourceCode || '',
+    };
+
+    // Add custom prompt if provided
+    if (customPrompt) {
+      variables.custom_instructions = customPrompt;
+    }
+
+    try {
+      // Compile prompt from Langfuse template
+      const compiledPrompt = await this.promptService.getCompiledPrompt(
+        PromptFeature.CODE_REVIEWER,
+        variables,
+      );
+
+      // Generate AI review
+      const review = await this.langChainService.generateContent(
+        compiledPrompt,
+        {
+          threadId: `ai-review-${submissionId}`,
+          runName: 'code-review',
+          metadata: {
+            submissionId,
+            problemId: problem.id,
+            userId,
+          },
+        },
+      );
+
+      // Save review to database
+      submission.aiReview = review;
+      await this.submissionRepository.save(submission);
+
+      return { review, cached: false };
+    } catch (error) {
+      this.logger.error(
+        `Failed to generate AI review for submission ${submissionId}:`,
+        error,
+      );
+      throw new InternalServerErrorException(
+        'Failed to generate AI review. Please try again later.',
+      );
+    }
   }
 }

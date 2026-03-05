@@ -131,4 +131,11 @@ export class Submission {
   @ManyToOne(() => Contest, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'contest_id' })
   contest: Contest | null;
+
+  @ApiPropertyOptional({
+    description: 'AI-generated code review in Markdown format',
+    required: false,
+  })
+  @Column({ name: 'ai_review', type: 'text', nullable: true })
+  aiReview: string | null;
 }
