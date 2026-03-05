@@ -162,6 +162,9 @@ export class CallbackProcessorService implements OnModuleInit {
             Number.parseInt(meta.problemId),
           );
 
+        // Attach the submission ID so the frontend can query performance stats
+        finalResult.id = Number.parseInt(submissionId);
+
         // Use SubmissionsService to update submission (triggers events)
         await this.submissionsService.updateSubmissionAfterJudge(
           Number.parseInt(submissionId),
