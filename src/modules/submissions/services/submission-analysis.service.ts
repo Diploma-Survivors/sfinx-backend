@@ -6,6 +6,13 @@ import { SortOrder } from 'src/common';
 import { Submission } from '../entities/submission.entity';
 import { SubmissionStatus } from '../enums/submission-status.enum';
 
+export interface DistributionBin {
+  bin: string;
+  count: number;
+  min: number;
+  max: number;
+}
+
 export interface SubmissionPerformanceStats {
   averageRuntime: number | null;
   averageMemory: number | null;
@@ -14,6 +21,10 @@ export interface SubmissionPerformanceStats {
   percentile: {
     runtime: number | null;
     memory: number | null;
+  };
+  distribution?: {
+    runtime: DistributionBin[];
+    memory: DistributionBin[];
   };
 }
 
@@ -87,20 +98,19 @@ export class SubmissionAnalysisService {
   ): Promise<SubmissionPerformanceStats | null> {
     const submission = await this.submissionRepository.findOne({
       where: { id: submissionId },
-      relations: ['problem', 'language'],
+      relations: ['problem'],
     });
 
     if (!submission || submission.status !== SubmissionStatus.ACCEPTED) {
       return null;
     }
 
-    const { problem, language, runtimeMs, memoryKb } = submission;
+    const { problem, runtimeMs, memoryKb } = submission;
 
     // Get all accepted submissions for comparison
     const allAccepted = await this.submissionRepository.find({
       where: {
         problem: { id: problem.id },
-        language: { id: language.id },
         status: SubmissionStatus.ACCEPTED,
       },
       select: ['runtimeMs', 'memoryKb'],
@@ -142,6 +152,10 @@ export class SubmissionAnalysisService {
       ? this.calculatePercentile(memoryKb, validMemories)
       : null;
 
+    // Calculate distributions
+    const runtimeDistribution = this.calculateDistribution(validRuntimes, 10);
+    const memoryDistribution = this.calculateDistribution(validMemories, 10);
+
     return {
       averageRuntime,
       averageMemory,
@@ -150,6 +164,10 @@ export class SubmissionAnalysisService {
       percentile: {
         runtime: runtimePercentile,
         memory: memoryPercentile,
+      },
+      distribution: {
+        runtime: runtimeDistribution,
+        memory: memoryDistribution,
       },
     };
   }
@@ -163,6 +181,49 @@ export class SubmissionAnalysisService {
     const sorted = [...dataset].sort((a, b) => a - b);
     const rank = sorted.filter((v) => v < value).length;
     return Math.round((rank / dataset.length) * 100);
+  }
+
+  /**
+   * Calculate distribution for histogram
+   */
+  private calculateDistribution(
+    dataset: number[],
+    binCount: number,
+  ): DistributionBin[] {
+    if (dataset.length === 0) return [];
+
+    const min = Math.min(...dataset);
+    const max = Math.max(...dataset);
+
+    if (min === max) {
+      return [{ bin: `${min.toFixed(2)}`, count: dataset.length, min, max }];
+    }
+
+    // Calculate bin width
+    const binWidth = (max - min) / binCount;
+
+    // Initialize bins
+    const bins: DistributionBin[] = Array.from(
+      { length: binCount },
+      (_, i) => ({
+        bin: `${(min + i * binWidth).toFixed(1)}-${(min + (i + 1) * binWidth).toFixed(1)}`,
+        min: min + i * binWidth,
+        max: min + (i + 1) * binWidth,
+        count: 0,
+      }),
+    );
+
+    // Count items in each bin
+    dataset.forEach((value) => {
+      let binIndex = Math.floor((value - min) / binWidth);
+      // Handle the edge case where value === max
+      if (binIndex >= binCount) {
+        binIndex = binCount - 1;
+      }
+      bins[binIndex].count++;
+    });
+
+    return bins;
   }
 
   /**
