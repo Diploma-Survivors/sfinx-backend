@@ -7,7 +7,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Language } from 'src/modules/auth/enums';
 import { StorageService } from 'src/modules/storage/storage.service';
 import { In, Repository } from 'typeorm';
-import { PaginatedResultDto } from '../../../common';
+import { PaginatedResultDto, getAvatarUrl } from '../../../common';
+import { DEFAULT_AVATAR_URL } from '../../auth/constants/avatar.constants';
 import { VoteType } from '../../comments-base/enums';
 import { NotificationType } from '../../notifications/enums/notification-type.enum';
 import { NotificationsService } from '../../notifications/notifications.service';
@@ -122,12 +123,11 @@ export class DiscussService {
 
     // Transform author avatarUrl
     items.forEach((item) => {
-      if (item.author?.avatarKey && this.isS3Key(item.author.avatarKey)) {
-        Object.assign(item.author, {
-          avatarUrl: this.storageService.getCloudFrontUrl(
-            item.author.avatarKey,
-          ),
-        });
+      if (item.author) {
+        const avatarUrl =
+          getAvatarUrl(item.author.avatarKey, this.storageService) ??
+          DEFAULT_AVATAR_URL;
+        Object.assign(item.author, { avatarUrl });
       }
     });
 
@@ -149,10 +149,11 @@ export class DiscussService {
     }
 
     // Transform author avatarUrl
-    if (post.author?.avatarKey && this.isS3Key(post.author.avatarKey)) {
-      Object.assign(post.author, {
-        avatarUrl: this.storageService.getCloudFrontUrl(post.author.avatarKey),
-      });
+    if (post.author) {
+      const avatarUrl =
+        getAvatarUrl(post.author.avatarKey, this.storageService) ??
+        DEFAULT_AVATAR_URL;
+      Object.assign(post.author, { avatarUrl });
     }
 
     return post;
@@ -276,12 +277,11 @@ export class DiscussService {
       .getManyAndCount();
 
     items.forEach((item) => {
-      if (item.author?.avatarKey && this.isS3Key(item.author.avatarKey)) {
-        Object.assign(item.author, {
-          avatarUrl: this.storageService.getCloudFrontUrl(
-            item.author.avatarKey,
-          ),
-        });
+      if (item.author) {
+        const avatarUrl =
+          getAvatarUrl(item.author.avatarKey, this.storageService) ??
+          DEFAULT_AVATAR_URL;
+        Object.assign(item.author, { avatarUrl });
       }
     });
 
@@ -420,10 +420,5 @@ export class DiscussService {
       '-' +
       Math.random().toString(36).substring(2, 7)
     );
-  }
-
-  private isS3Key(value: string): boolean {
-    if (!value) return false;
-    return !value.startsWith('http://') && !value.startsWith('https://');
   }
 }
