@@ -15,7 +15,6 @@ export class BaseCommentResponseDto {
   createdAt: Date;
   updatedAt: Date;
   author: AuthorDto;
-  replyCounts?: number;
   userVote?: number | null;
   myVote?: 'up_vote' | 'down_vote' | null;
   replies?: BaseCommentResponseDto[];

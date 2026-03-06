@@ -292,7 +292,6 @@ export abstract class BaseCommentsService<
       createdAt: comment.createdAt,
       updatedAt: comment.updatedAt,
       author,
-      replyCounts: comment.replyCount,
       userVote: userVotes ? (userVotes.get(comment.id) ?? null) : null,
       myVote: comment.myVote,
     };

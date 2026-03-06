@@ -2,6 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsArray,
+  IsBoolean,
   IsEnum,
   IsNumber,
   IsOptional,
@@ -56,4 +57,10 @@ export class FilterSolutionDto extends PaginationQueryDto {
   @IsOptional()
   @IsEnum(SolutionSortBy)
   sortBy?: SolutionSortBy = SolutionSortBy.RECENT;
+
+  @ApiPropertyOptional({ description: 'Filter by editorial status' })
+  @IsOptional()
+  @Transform(({ value }: { value: string }) => value === 'true')
+  @IsBoolean()
+  isEditorial?: boolean;
 }

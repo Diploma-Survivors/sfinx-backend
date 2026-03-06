@@ -75,4 +75,11 @@ export class SolutionResponseDto {
   @ApiProperty({ type: [Number] })
   @Expose()
   languageIds: number[];
+
+  @ApiProperty({
+    description: 'Marks solution as official editorial (admin only)',
+    default: false,
+  })
+  @Expose()
+  isEditorial: boolean;
 }

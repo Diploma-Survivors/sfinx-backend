@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Delete,
   HttpCode,
@@ -6,6 +7,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Put,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -15,10 +17,16 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { CheckPolicies } from '../../common';
+import { CheckPolicies, GetUser } from '../../common';
+import { User } from '../auth/entities/user.entity';
 import { CaslGuard } from '../auth/guards/casl.guard';
 import { Action } from '../rbac/casl';
-import { SolutionCommentResponseDto } from './dto';
+import {
+  CreateSolutionDto,
+  SolutionCommentResponseDto,
+  SolutionResponseDto,
+  UpdateSolutionDto,
+} from './dto';
 import { SolutionCommentsService } from './services/solution-comments.service';
 import { SolutionsService } from './solutions.service';
 
@@ -31,6 +39,44 @@ export class SolutionsAdminController {
     private readonly solutionsService: SolutionsService,
     private readonly solutionCommentsService: SolutionCommentsService,
   ) {}
+
+  @Post()
+  @CheckPolicies((ability) => ability.can(Action.Access, 'Admin'))
+  @ApiOperation({
+    summary: 'Create an editorial solution (admin)',
+    description: 'Creates a solution marked as official editorial.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Editorial solution created',
+    type: SolutionResponseDto,
+  })
+  createEditorial(
+    @Body() dto: CreateSolutionDto,
+    @GetUser() user: User,
+  ): Promise<SolutionResponseDto> {
+    return this.solutionsService.adminCreate(user.id, dto);
+  }
+
+  @Put(':id')
+  @CheckPolicies((ability) => ability.can(Action.Access, 'Admin'))
+  @ApiOperation({
+    summary: 'Update any solution (admin)',
+    description: 'Updates a solution regardless of ownership.',
+  })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'Solution updated',
+    type: SolutionResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Solution not found' })
+  updateSolution(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateSolutionDto,
+  ): Promise<SolutionResponseDto> {
+    return this.solutionsService.adminUpdate(id, dto);
+  }
 
   @Delete(':id')
   @CheckPolicies((ability) => ability.can(Action.Access, 'Admin'))
