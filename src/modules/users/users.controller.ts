@@ -1,4 +1,13 @@
-import { Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -21,7 +30,9 @@ import { UserProfileResponseDto } from '../auth/dto/user-profile-response.dto';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { GetPracticeHistoryDto } from '../submissions/dto/get-practice-history.dto';
 import { Permission } from '../rbac/entities/permission.entity';
+import { Role } from '../rbac/entities/role.entity';
 import { GetUsersQueryDto } from './dto/get-users-query.dto';
+import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { CheckPolicies } from '../../common';
 import { Action } from '../rbac/casl';
 import { User } from '../auth/entities/user.entity';
@@ -70,6 +81,39 @@ export class UsersController {
     @Query('userId') userId: number,
   ): Promise<Permission[]> {
     return this.usersService.getUserPermisison(userId);
+  }
+
+  @Get(':userId/role')
+  @UseGuards(CaslGuard)
+  @CheckPolicies((ability) => ability.can(Action.Read, User))
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get user role' })
+  @ApiResponse({
+    status: 200,
+    description: 'User role retrieved successfully',
+    type: Role,
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async getUserRole(@Param('userId') userId: number): Promise<Role> {
+    return this.usersService.getUserRole(userId);
+  }
+
+  @Patch(':userId/role')
+  @UseGuards(CaslGuard)
+  @CheckPolicies((ability) => ability.can(Action.Manage, User))
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Update user role' })
+  @ApiResponse({
+    status: 200,
+    description: 'User role updated successfully',
+    type: User,
+  })
+  @ApiResponse({ status: 404, description: 'User or Role not found' })
+  async updateUserRole(
+    @Param('userId') userId: number,
+    @Body() updateUserRoleDto: UpdateUserRoleDto,
+  ): Promise<User> {
+    return this.usersService.updateUserRole(userId, updateUserRoleDto.roleId);
   }
 
   @Get('public/search')

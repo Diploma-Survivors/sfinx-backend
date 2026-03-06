@@ -14,6 +14,12 @@ const PROMPT_CONFIGS = [
     langfusePromptName: 'evaluator',
     langfuseLabel: 'production',
   },
+  {
+    featureName: 'code-reviewer',
+    description: 'AI code reviewer for analyzing code submissions',
+    langfusePromptName: 'code_review',
+    langfuseLabel: 'production',
+  },
 ];
 
 export async function seedPromptConfigs(dataSource: DataSource) {

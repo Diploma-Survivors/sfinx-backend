@@ -11,8 +11,8 @@ import { User } from '../../auth/entities/user.entity';
 import { Contest } from '../../contest/entities';
 import { Problem } from '../../problems/entities/problem.entity';
 import { ProgrammingLanguage } from '../../programming-language/entities/programming-language.entity';
+import { ResultDescriptionDto } from '../dto/submission-result.dto';
 import { SubmissionStatus } from '../enums';
-import { ResultDescription } from '../dto/result-description.dto';
 
 @Entity('submissions')
 export class Submission {
@@ -93,7 +93,7 @@ export class Submission {
     ],
   })
   @Column({ name: 'result_description', type: 'jsonb', nullable: true })
-  resultDescription: ResultDescription | null;
+  resultDescription: ResultDescriptionDto | null;
 
   @ApiProperty({ description: 'IP address of submitter', required: false })
   @Column({ name: 'ip_address', type: 'inet', nullable: true })
@@ -131,4 +131,11 @@ export class Submission {
   @ManyToOne(() => Contest, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'contest_id' })
   contest: Contest | null;
+
+  @ApiPropertyOptional({
+    description: 'AI-generated code review in Markdown format',
+    required: false,
+  })
+  @Column({ name: 'ai_review', type: 'text', nullable: true })
+  aiReview: string | null;
 }

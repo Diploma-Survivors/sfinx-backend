@@ -64,14 +64,15 @@ export class PlatformStatisticsService {
 
   private async getPlatformMetrics(): Promise<PlatformMetricsDto> {
     const [
-      totalUsers, // Added back to capture the first promise result
+      totalUsers,
       activeUsers,
       totalProblems,
       activeProblems,
       totalSubmissions,
       totalContests,
     ] = await Promise.all([
-      this.userRepository.count(),
+      // Total non-banned users (consistent with other metrics)
+      this.userRepository.count({ where: { isBanned: false } }),
 
       // Active users (active in calculated threshold)
       this.getActiveUsersCount(ACTIVE_USER_THRESHOLD_DAYS),
@@ -186,29 +187,21 @@ export class PlatformStatisticsService {
         .andWhere('user.isBanned = false')
         .getCount(),
 
-      // Average submissions per user
-      this.submissionRepository
-        .createQueryBuilder('submission')
-        .select('COALESCE(AVG(sub_count), 0)', 'avg')
-        .from((subQuery) => {
-          return subQuery
-            .select('COUNT(*)', 'sub_count')
-            .from(Submission, 'submission')
-            .groupBy('submission.user_id');
-        }, 'grouped')
-        .getRawOne(),
+      // Total non-banned users (denominator for avg submissions per user)
+      this.userRepository.count({ where: { isBanned: false } }),
+
+      // Total submissions count (numerator for avg submissions per user)
+      this.submissionRepository.count(),
     ]);
 
     const dailyActiveUsers = results[0];
     const weeklyActiveUsers = results[1];
     const monthlyActiveUsers = results[2];
-    const avgSubmissionsResult = results[3] as { avg: string } | undefined;
+    const totalUsers = results[3];
+    const totalSubmissions = results[4];
 
     const avgSubmissionsPerUser =
-      (avgSubmissionsResult as { avg: string } | undefined)?.avg !== null &&
-      (avgSubmissionsResult as { avg: string } | undefined)?.avg !== undefined
-        ? parseFloat((avgSubmissionsResult as { avg: string }).avg)
-        : 0;
+      totalUsers > 0 ? totalSubmissions / totalUsers : 0;
 
     return {
       dailyActiveUsers,
@@ -328,9 +321,9 @@ export class PlatformStatisticsService {
     const premiumConversionRate =
       totalUsers > 0 ? (totalPremiumUsers / totalUsers) * 100 : 0;
 
-    // Calculate ARPU (Average Revenue Per User)
+    // Calculate ARPU (Average Revenue Per Premium User)
     const averageRevenuePerUser =
-      totalUsers > 0 ? totalRevenue / totalUsers : 0;
+      totalPremiumUsers > 0 ? totalRevenue / totalPremiumUsers : 0;
 
     return {
       totalPremiumUsers,
@@ -350,30 +343,13 @@ export class PlatformStatisticsService {
    * Get time series metrics for the specified date range (default: last 30 days)
    */
   @Cacheable({
-    key: (args: unknown[]) => {
-      const format = (d: unknown): string => {
-        if (!d) return 'default';
-        try {
-          const dateValue = d as string | number | Date;
-          return new Date(dateValue).toISOString().split('T')[0];
-        } catch {
-          // Handle non-date values - check for object type to avoid [object Object]
-          if (typeof d === 'object') {
-            return 'invalid-date';
-          }
-          if (
-            typeof d === 'string' ||
-            typeof d === 'number' ||
-            typeof d === 'boolean'
-          ) {
-            return String(d);
-          }
-          return 'invalid-type';
-        }
-      };
-      const from = format(args[0]);
-      const to = format(args[1]);
-      return `platform:timeseries:${from}:${to}`;
+    key: (from: unknown, to: unknown) => {
+      const fmt = (d: Date) => d.toISOString().split('T')[0];
+      const endDate = to ? new Date(to as string | number | Date) : new Date();
+      const startDate = from
+        ? new Date(from as string | number | Date)
+        : new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+      return `platform:timeseries:${fmt(startDate)}:${fmt(endDate)}`;
     },
     ttl: CACHE_TTL.FIVE_MINUTES,
   })
@@ -387,11 +363,9 @@ export class PlatformStatisticsService {
 
     // Default to last 30 days if not provided
     const endDate = to ? new Date(to) : new Date();
-    const startDate = from ? new Date(from) : new Date();
-
-    if (!from) {
-      startDate.setDate(endDate.getDate() - 30);
-    }
+    const startDate = from
+      ? new Date(from)
+      : new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     const [
       dailyNewUsers,

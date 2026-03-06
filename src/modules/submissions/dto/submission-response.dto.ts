@@ -1,57 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { AuthorDto } from '../../users/dto/author.dto';
 import { ProblemDifficulty } from '../../problems/enums/problem-difficulty.enum';
+import { AuthorDto } from '../../users/dto/author.dto';
 import { SubmissionStatus } from '../enums';
-import { ResultDescription } from './result-description.dto';
-
-export class TestcaseResultDto {
-  @ApiProperty({ description: 'Testcase ID', type: Number })
-  testcaseId: number;
-
-  @ApiProperty({ description: 'Testcase status' })
-  status: string;
-
-  @ApiPropertyOptional({ description: 'Input for the testcase' })
-  input?: string;
-
-  @ApiPropertyOptional({ description: 'Actual output' })
-  actualOutput?: string;
-
-  @ApiPropertyOptional({ description: 'Expected output' })
-  expectedOutput?: string;
-
-  @ApiPropertyOptional({ description: 'Execution time in ms' })
-  executionTime?: number;
-
-  @ApiPropertyOptional({ description: 'Memory used in KB' })
-  memoryUsed?: number;
-
-  @ApiPropertyOptional({ description: 'Error message' })
-  error?: string;
-
-  @ApiPropertyOptional({ description: 'Standard error output' })
-  stderr?: string;
-}
-
-export class FailedResultDto {
-  @ApiPropertyOptional({ description: 'Error or status message' })
-  message?: string;
-
-  @ApiPropertyOptional({ description: 'Input that caused the failure' })
-  input?: string;
-
-  @ApiPropertyOptional({ description: 'Expected output' })
-  expectedOutput?: string;
-
-  @ApiPropertyOptional({ description: 'Actual output produced' })
-  actualOutput?: string;
-
-  @ApiPropertyOptional({ description: 'Standard error output' })
-  stderr?: string;
-
-  @ApiPropertyOptional({ description: 'Compilation output/error' })
-  compileOutput?: string;
-}
+import { ResultDescriptionDto } from './submission-result.dto';
 
 export class ProblemInfoDto {
   @ApiProperty({ description: 'Problem ID' })
@@ -107,9 +58,9 @@ export class SubmissionResponseDto {
 
   @ApiProperty({
     description: 'Result description',
-    type: ResultDescription,
+    type: ResultDescriptionDto,
   })
-  resultDescription: ResultDescription;
+  resultDescription: ResultDescriptionDto;
 
   @ApiProperty({ description: 'Submission timestamp' })
   submittedAt: Date;
@@ -149,6 +100,11 @@ export class SubmissionResponseDto {
 
   @ApiPropertyOptional({ description: 'Source code (own submissions only)' })
   sourceCode?: string;
+
+  @ApiPropertyOptional({
+    description: 'AI-generated code review in Markdown format',
+  })
+  aiReview?: string;
 }
 
 export class SubmissionListResponseDto {
