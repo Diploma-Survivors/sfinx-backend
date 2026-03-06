@@ -13,7 +13,7 @@ import { StorageService } from '../storage/storage.service';
 import { BaseCommentVote } from './entities/base-comment-vote.entity';
 import { BaseComment } from './entities/base-comment.entity';
 
-import { getAvatarUrl } from '../../common';
+import { getAvatarUrl, getTimeAgo } from '../../common';
 import { AuthorDto } from '../users/dto/author.dto';
 import {
   BaseCommentResponseDto,
@@ -291,6 +291,7 @@ export abstract class BaseCommentsService<
       editedAt: comment.editedAt,
       createdAt: comment.createdAt,
       updatedAt: comment.updatedAt,
+      timeAgo: getTimeAgo(comment.createdAt),
       author,
       userVote: userVotes ? (userVotes.get(comment.id) ?? null) : null,
       myVote: comment.myVote,

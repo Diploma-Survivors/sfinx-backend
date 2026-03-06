@@ -106,6 +106,9 @@ export class ResultDescriptionDto {
  * Aggregated submission result after all testcases are processed
  */
 export class SubmissionResultDto {
+  @ApiPropertyOptional({ description: 'Submission ID' })
+  id?: number;
+
   @ApiProperty({
     description: 'Overall submission status',
     enum: SubmissionStatus,

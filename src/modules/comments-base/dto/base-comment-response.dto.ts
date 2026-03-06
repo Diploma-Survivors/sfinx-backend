@@ -14,6 +14,7 @@ export class BaseCommentResponseDto {
   editedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  timeAgo?: string;
   author: AuthorDto;
   userVote?: number | null;
   myVote?: 'up_vote' | 'down_vote' | null;

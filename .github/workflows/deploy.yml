@@ -48,3 +48,5 @@ jobs:
             cd /opt/sfinx/sfinx-backend
             docker compose -f docker-compose.prod.yaml pull app
             docker compose -f docker-compose.prod.yaml up -d app
+            docker compose -f docker-compose.prod.yaml exec -T app node ./node_modules/typeorm/cli.js migration:run -d dist/src/database/data-source.js
+            docker compose -f docker-compose.prod.yaml exec -T app node dist/src/database/seeds/index.js
