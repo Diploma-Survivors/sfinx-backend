@@ -7,7 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Language } from 'src/modules/auth/enums';
 import { StorageService } from 'src/modules/storage/storage.service';
 import { In, Repository } from 'typeorm';
-import { PaginatedResultDto, getAvatarUrl } from '../../../common';
+import { PaginatedResultDto, getAvatarUrl, getTimeAgo } from '../../../common';
 import { DEFAULT_AVATAR_URL } from '../../auth/constants/avatar.constants';
 import { VoteType } from '../../comments-base/enums';
 import { NotificationType } from '../../notifications/enums/notification-type.enum';
@@ -121,8 +121,9 @@ export class DiscussService {
       .take(limit)
       .getManyAndCount();
 
-    // Transform author avatarUrl
+    // Transform author avatarUrl and timeAgo
     items.forEach((item) => {
+      Object.assign(item, { timeAgo: getTimeAgo(item.createdAt) });
       if (item.author) {
         const avatarUrl =
           getAvatarUrl(item.author.avatarKey, this.storageService) ??
@@ -148,7 +149,8 @@ export class DiscussService {
       throw new NotFoundException(`Post with ID ${id} not found`);
     }
 
-    // Transform author avatarUrl
+    // Transform author avatarUrl and timeAgo
+    Object.assign(post, { timeAgo: getTimeAgo(post.createdAt) });
     if (post.author) {
       const avatarUrl =
         getAvatarUrl(post.author.avatarKey, this.storageService) ??
