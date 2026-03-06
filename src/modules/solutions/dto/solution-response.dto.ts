@@ -77,7 +77,7 @@ export class SolutionResponseDto {
   languageIds: number[];
 
   @ApiProperty({
-    description: 'Marks solution as official editorial (admin only)',
+    description: 'Marks solution as official editorial',
     default: false,
   })
   @Expose()

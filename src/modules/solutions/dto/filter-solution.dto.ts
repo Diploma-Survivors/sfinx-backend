@@ -60,7 +60,11 @@ export class FilterSolutionDto extends PaginationQueryDto {
 
   @ApiPropertyOptional({ description: 'Filter by editorial status' })
   @IsOptional()
-  @Transform(({ value }: { value: string }) => value === 'true')
+  @Transform(({ value }: { value?: string }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return undefined;
+  })
   @IsBoolean()
   isEditorial?: boolean;
 }

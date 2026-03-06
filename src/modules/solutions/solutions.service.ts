@@ -285,10 +285,10 @@ export class SolutionsService {
     const updateData: DeepPartial<Solution> = {
       ...dto,
     } as DeepPartial<Solution>;
-    if (dto.tagIds) {
+    if (dto.tagIds !== undefined) {
       updateData.tags = dto.tagIds.map((id) => ({ id }) as Tag);
     }
-    if (dto.languageIds) {
+    if (dto.languageIds !== undefined) {
       updateData.languages = dto.languageIds.map(
         (id) => ({ id }) as ProgrammingLanguage,
       );
