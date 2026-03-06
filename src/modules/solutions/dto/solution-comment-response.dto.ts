@@ -96,12 +96,6 @@ export class SolutionCommentResponseDto extends BaseCommentResponseDto {
   })
   declare userVote?: number | null;
 
-  @ApiProperty({
-    description: 'Total number of replies (frontend alias)',
-    example: 0,
-  })
-  declare replyCounts: number;
-
   @ApiPropertyOptional({
     description: 'Nested replies to this comment',
     type: () => [SolutionCommentResponseDto],

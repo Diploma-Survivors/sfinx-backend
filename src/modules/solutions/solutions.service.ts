@@ -57,6 +57,7 @@ export class SolutionsService {
     dto.languageIds = solution.languages?.map((l) => l.id) || [];
     dto.userVote = userVote;
     dto.problem = solution.problem;
+    dto.isEditorial = solution.isEditorial;
 
     if (solution.author) {
       dto.author = {
@@ -136,6 +137,13 @@ export class SolutionsService {
         'filterLangs.id IN (:...langIds)',
         { langIds: query.languageIds },
       );
+    }
+
+    // Filter by editorial status
+    if (query.isEditorial !== undefined) {
+      qb.andWhere('solution.isEditorial = :isEditorial', {
+        isEditorial: query.isEditorial,
+      });
     }
 
     // Sort
@@ -265,6 +273,52 @@ export class SolutionsService {
     }
 
     await this.solutionRepo.remove(solution);
+  }
+
+  async adminUpdate(
+    id: number,
+    dto: UpdateSolutionDto,
+  ): Promise<SolutionResponseDto> {
+    const solution = await this.solutionRepo.findOne({ where: { id } });
+    if (!solution) throw new NotFoundException('Solution not found');
+
+    const updateData: DeepPartial<Solution> = {
+      ...dto,
+    } as DeepPartial<Solution>;
+    if (dto.tagIds !== undefined) {
+      updateData.tags = dto.tagIds.map((id) => ({ id }) as Tag);
+    }
+    if (dto.languageIds !== undefined) {
+      updateData.languages = dto.languageIds.map(
+        (id) => ({ id }) as ProgrammingLanguage,
+      );
+    }
+
+    const updated = this.solutionRepo.merge(solution, updateData);
+    await this.solutionRepo.save(updated);
+
+    return this.findOne(id);
+  }
+
+  async adminCreate(
+    userId: number,
+    dto: CreateSolutionDto,
+  ): Promise<SolutionResponseDto> {
+    const problem = await this.problemRepo.findOneBy({ id: dto.problemId });
+    if (!problem) throw new NotFoundException('Problem not found');
+
+    const solution = this.solutionRepo.create({
+      ...dto,
+      authorId: userId,
+      isEditorial: true,
+      tags: dto.tagIds ? dto.tagIds.map((id) => ({ id }) as Tag) : [],
+      languages: dto.languageIds
+        ? dto.languageIds.map((id) => ({ id }) as ProgrammingLanguage)
+        : [],
+    });
+
+    const saved = await this.solutionRepo.save(solution);
+    return this.findOne(saved.id, userId);
   }
 
   async adminRemove(id: number): Promise<void> {

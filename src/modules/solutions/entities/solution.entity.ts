@@ -102,4 +102,11 @@ export class Solution {
   @ApiProperty({ description: 'Total comments count', default: 0 })
   @Column({ name: 'comment_count', default: 0 })
   commentCount: number;
+
+  @ApiProperty({
+    description: 'Marks solution as official editorial (admin only)',
+    default: false,
+  })
+  @Column({ name: 'is_editorial', default: false })
+  isEditorial: boolean;
 }

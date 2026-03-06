@@ -243,7 +243,6 @@ export class SolutionCommentsService extends BaseCommentsService<
       isDeleted: comment.isDeleted,
       voteScore: comment.voteScore,
       editedAt: comment.editedAt,
-      replyCounts: comment.replyCount,
       createdAt: comment.createdAt,
       updatedAt: comment.updatedAt,
       author,
