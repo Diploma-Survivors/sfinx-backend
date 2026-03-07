@@ -89,16 +89,17 @@ export class SubmissionResultBuilderService {
       `Stats calculated - status: ${stats.overallStatus}, passed: ${stats.passedTests}/${stats.totalTests}`,
     );
 
-    // If the first error is a Wrong Answer, fetch details to get stdin/expected_output
+    // If there is a failed test that needs enrichment (e.g. WA, RE, MLE, TLE)
     if (
       stats.firstFailedTest &&
-      stats.firstFailedTest.status === SubmissionStatus.WRONG_ANSWER
+      stats.firstFailedTest.status !== SubmissionStatus.ACCEPTED &&
+      stats.firstFailedTest.status !== SubmissionStatus.COMPILATION_ERROR
     ) {
       this.logger.log(
-        `Wrong answer detected, fetching details for token: ${stats.firstFailedTest.token}`,
+        `Failed test detected (${stats.firstFailedTest.status}), fetching details for token: ${stats.firstFailedTest.token}`,
       );
       stats.firstFailedTest =
-        await this.descriptionGenerator.enrichWrongAnswerDetails(
+        await this.descriptionGenerator.enrichFailedTestDetails(
           stats.firstFailedTest,
         );
     }

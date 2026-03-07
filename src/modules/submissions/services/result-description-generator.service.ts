@@ -35,23 +35,35 @@ export class ResultDescriptionGeneratorService {
           stdin: firstFailedTest.stdin || 'N/A',
           expectedOutput: firstFailedTest.expectedOutput || 'N/A',
           stdout: firstFailedTest.stdout || 'N/A',
+          compileOutput: firstFailedTest.compileOutput,
         };
 
       case SubmissionStatus.TIME_LIMIT_EXCEEDED:
         return {
           message: `Time limit exceeded${firstFailedTest.stderr ? `\n${firstFailedTest.stderr}` : ''}`,
+          stdin: firstFailedTest.stdin,
+          expectedOutput: firstFailedTest.expectedOutput,
+          stdout: firstFailedTest.stdout,
+          compileOutput: firstFailedTest.compileOutput,
         };
 
       case SubmissionStatus.MEMORY_LIMIT_EXCEEDED:
         return {
           message: `Memory limit exceeded${firstFailedTest.stderr ? `\n${firstFailedTest.stderr}` : ''}`,
           stderr: firstFailedTest.stderr,
+          stdin: firstFailedTest.stdin,
+          expectedOutput: firstFailedTest.expectedOutput,
+          stdout: firstFailedTest.stdout,
+          compileOutput: firstFailedTest.compileOutput,
         };
 
       case SubmissionStatus.RUNTIME_ERROR:
         return {
-          message: `Runtime error${firstFailedTest.stderr ? `\n${firstFailedTest.stderr}` : ''}`,
-          stderr: firstFailedTest.stderr,
+          message: `Runtime error${firstFailedTest.stderr || firstFailedTest.stdout ? `\n${firstFailedTest.stderr || firstFailedTest.stdout}` : ''}`,
+          stderr: firstFailedTest.stderr || firstFailedTest.stdout,
+          stdin: firstFailedTest.stdin,
+          expectedOutput: firstFailedTest.expectedOutput,
+          compileOutput: firstFailedTest.compileOutput,
         };
 
       case SubmissionStatus.COMPILATION_ERROR:
@@ -69,9 +81,9 @@ export class ResultDescriptionGeneratorService {
   }
 
   /**
-   * Enrich wrong answer test result with additional details from Judge0
+   * Enrich failed test result with additional details (e.g. inputs, outputs) from Judge0.
    */
-  async enrichWrongAnswerDetails(
+  async enrichFailedTestDetails(
     failedTest: TestResultDto,
   ): Promise<TestResultDto> {
     try {
