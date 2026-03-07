@@ -216,6 +216,22 @@ export class ProblemsController {
     return this.problemsService.deleteProblem(+id);
   }
 
+  @Put(':id/toggle')
+  @UseGuards(CaslGuard)
+  @CheckAbility({ action: Action.Manage, subject: Problem })
+  @ApiBearerAuth('JWT-auth')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Deactive/Active problem (Admin only)' })
+  @ApiParam({ name: 'id', description: 'Problem ID', type: Number })
+  @ApiResponse({
+    status: 204,
+    description: 'Problem deactived/actived successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Problem not found' })
+  async toggle(@Param('id') id: string): Promise<void> {
+    return this.problemsService.toggleProblem(+id);
+  }
+
   @Get(':id/statistics')
   @UseGuards(CaslGuard)
   @CheckAbility({ action: Action.ReadAll, subject: Problem })

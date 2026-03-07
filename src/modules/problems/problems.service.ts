@@ -576,6 +576,13 @@ export class ProblemsService {
   }
 
   @Transactional()
+  async toggleProblem(id: number): Promise<void> {
+    const problem = await this.findProblemEntityById(id);
+    problem.isActive = !problem.isActive;
+    await this.problemRepository.save(problem);
+  }
+
+  @Transactional()
   async deleteProblem(id: number): Promise<void> {
     const problem = await this.findProblemEntityById(id);
     await this.problemRepository.remove(problem);
