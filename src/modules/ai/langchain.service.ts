@@ -66,4 +66,35 @@ export class LangChainService {
     const content = response.content;
     return typeof content === 'string' ? content : JSON.stringify(content);
   }
+
+  async *streamChat(
+    history: BaseMessage[],
+    userMessage: string,
+    options: LlmCallOptions,
+  ): AsyncGenerator<string> {
+    const config = this.buildConfig(options);
+    const messages: BaseMessage[] = [...history, new HumanMessage(userMessage)];
+    const stream = await this.model.stream(messages, config);
+    for await (const chunk of stream) {
+      const content = chunk.content;
+      if (typeof content === 'string') {
+        if (content) yield content;
+      } else if (Array.isArray(content)) {
+        for (const part of content) {
+          if (typeof part === 'string' && part) yield part;
+          else if (
+            typeof part === 'object' &&
+            part !== null &&
+            'type' in part &&
+            part.type === 'text' &&
+            'text' in part &&
+            typeof part.text === 'string' &&
+            part.text
+          ) {
+            yield part.text;
+          }
+        }
+      }
+    }
+  }
 }
