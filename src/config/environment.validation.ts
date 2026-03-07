@@ -43,7 +43,7 @@ export const environmentValidation = Joi.object({
   GOOGLE_CALLBACK_URL: Joi.string().required(),
 
   // Judge0 Configuration
-  JUDGE0_URL: Joi.string().uri().required(),
+  JUDGE0_URL: Joi.string().required(),
   JUDGE0_CALLBACK_URL: Joi.string().uri().required(),
   JUDGE0_USE_CE: Joi.boolean().default(true),
   RAPIDAPI_KEY: Joi.string().required(),
