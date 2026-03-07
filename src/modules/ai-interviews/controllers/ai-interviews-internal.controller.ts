@@ -5,8 +5,10 @@ import {
   Body,
   Param,
   Headers,
+  Res,
   UnauthorizedException,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiTags, ApiOperation, ApiHeader } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -17,11 +19,16 @@ import {
   MessageRole,
 } from '../entities/interview-message.entity';
 import { PromptService, PromptFeature } from '../../ai/prompt.service';
+import { AiChatService } from '../services/ai-chat.service';
 
 interface StoreTranscriptDto {
   role: 'user' | 'assistant';
   content: string;
   timestamp?: string;
+}
+
+interface VoiceMessageDto {
+  content: string;
 }
 
 @ApiTags('AI Interviews - Internal')
@@ -34,6 +41,7 @@ export class AiInterviewsInternalController {
     private readonly messageRepo: Repository<InterviewMessage>,
     private readonly configService: ConfigService,
     private readonly promptService: PromptService,
+    private readonly chatService: AiChatService,
   ) {}
 
   private validateApiKey(apiKey: string | undefined): void {
@@ -69,10 +77,14 @@ export class AiInterviewsInternalController {
     }
 
     const problemContext = JSON.stringify(interview.problemSnapshot, null, 2);
-    const systemPrompt = await this.promptService.getCompiledPrompt(
-      PromptFeature.INTERVIEWER,
-      { problemContext },
-    );
+    const [systemPrompt, voiceAdaptationPrompt] = await Promise.all([
+      this.promptService.getCompiledPrompt(PromptFeature.INTERVIEWER, {
+        problemContext,
+      }),
+      this.promptService
+        .getCompiledPrompt(PromptFeature.VOICE_ADAPTATION, {})
+        .catch(() => null),
+    ]);
 
     const existingMessages = await this.messageRepo.find({
       where: { interviewId: id },
@@ -85,6 +97,7 @@ export class AiInterviewsInternalController {
       problemId: interview.problemId,
       problemSnapshot: interview.problemSnapshot as Record<string, unknown>,
       systemPrompt,
+      voiceAdaptationPrompt,
       status: interview.status,
       existingMessages: existingMessages.map((m) => ({
         role: m.role,
@@ -166,5 +179,77 @@ export class AiInterviewsInternalController {
       success: true,
       count: savedMessages.length,
     };
+  }
+
+  @Post(':id/voice-message')
+  @ApiOperation({
+    summary: 'Process a voice message through LangChain/Gemini',
+    description: 'Internal endpoint for Iris to route LLM inference',
+  })
+  @ApiHeader({ name: 'x-api-key', description: 'Internal API key' })
+  async voiceMessage(
+    @Param('id') id: string,
+    @Headers('x-api-key') apiKey: string,
+    @Body() dto: VoiceMessageDto,
+  ) {
+    this.validateApiKey(apiKey);
+    return this.chatService.processVoiceMessage(id, dto.content);
+  }
+
+  @Post(':id/voice-message/stream')
+  @ApiOperation({
+    summary: 'Stream voice message response (SSE)',
+    description:
+      'Internal SSE endpoint for Iris to receive streamed LLM tokens — reduces TTS latency',
+  })
+  @ApiHeader({ name: 'x-api-key', description: 'Internal API key' })
+  async streamVoiceMessage(
+    @Param('id') id: string,
+    @Headers('x-api-key') apiKey: string,
+    @Body() dto: VoiceMessageDto,
+    @Res() res: Response,
+  ): Promise<void> {
+    this.validateApiKey(apiKey);
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    try {
+      for await (const token of this.chatService.streamVoiceMessage(
+        id,
+        dto.content,
+      )) {
+        if (!res.writableEnded) {
+          res.write(`data: ${JSON.stringify({ token })}\n\n`);
+        }
+      }
+      if (!res.writableEnded) {
+        res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      }
+    } catch (err) {
+      if (!res.writableEnded) {
+        res.write(
+          `data: ${JSON.stringify({ error: (err as Error).message || 'Stream failed' })}\n\n`,
+        );
+      }
+    } finally {
+      if (!res.writableEnded) res.end();
+    }
+  }
+
+  @Post(':id/voice-start')
+  @ApiOperation({
+    summary: 'Generate initial greeting for voice interview',
+    description: 'Internal endpoint for Iris to get an opening greeting',
+  })
+  @ApiHeader({ name: 'x-api-key', description: 'Internal API key' })
+  async voiceStart(
+    @Param('id') id: string,
+    @Headers('x-api-key') apiKey: string,
+  ) {
+    this.validateApiKey(apiKey);
+    return this.chatService.generateGreeting(id);
   }
 }
