@@ -14,6 +14,7 @@ export enum PromptFeature {
   INTERVIEWER = 'interviewer',
   EVALUATOR = 'evaluator',
   CODE_REVIEWER = 'code-reviewer',
+  VOICE_ADAPTATION = 'voice-adaptation',
 }
 
 export interface PromptStatus {
