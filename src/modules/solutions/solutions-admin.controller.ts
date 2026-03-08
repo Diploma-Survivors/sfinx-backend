@@ -25,8 +25,8 @@ import {
   CreateSolutionDto,
   SolutionCommentResponseDto,
   SolutionResponseDto,
-  UpdateSolutionDto,
 } from './dto';
+import { AdminUpdateSolutionDto } from './dto/update-solution.dto';
 import { SolutionCommentsService } from './services/solution-comments.service';
 import { SolutionsService } from './solutions.service';
 
@@ -73,7 +73,7 @@ export class SolutionsAdminController {
   @ApiResponse({ status: 404, description: 'Solution not found' })
   updateSolution(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateSolutionDto,
+    @Body() dto: AdminUpdateSolutionDto,
   ): Promise<SolutionResponseDto> {
     return this.solutionsService.adminUpdate(id, dto);
   }
