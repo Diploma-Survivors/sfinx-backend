@@ -541,9 +541,9 @@ export class SubmissionsService {
 
     // Prepare template variables
     const variables: Record<string, string> = {
-      problem_title_and_description: `${problem.title}\n\n${problem.description || ''}`,
+      problemContext: `${problem.title}\n\n${problem.description || ''}`,
       language: submission.language?.name || 'Unknown',
-      user_code_block: submission.sourceCode || '',
+      userCode: submission.sourceCode || '',
     };
 
     // Add custom prompt if provided
@@ -562,7 +562,7 @@ export class SubmissionsService {
       const review = await this.langChainService.generateContent(
         compiledPrompt,
         {
-          threadId: `ai-review-${submissionId}`,
+          threadId: `code-review-${submissionId}`,
           runName: 'code-review',
           metadata: {
             submissionId,

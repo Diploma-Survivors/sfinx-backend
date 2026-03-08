@@ -175,7 +175,7 @@ export class AiInterviewService {
 
     try {
       let aiResponse = await this.langChainService.generateContent(prompt, {
-        threadId: interview.id,
+        threadId: `interview-${interview.id}`,
         runName: 'interview-evaluation',
         metadata: { userId: interview.userId, problemId: interview.problemId },
       });
