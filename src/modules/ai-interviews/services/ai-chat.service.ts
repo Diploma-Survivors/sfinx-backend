@@ -151,7 +151,7 @@ export class AiChatService {
     let aiText = "I'm sorry, I couldn't generate a response.";
     try {
       aiText = await this.langChainService.chat(langChainHistory, userContent, {
-        threadId: interviewId,
+        threadId: `interview-${interviewId}`,
         runName: 'interview-chat',
         metadata: { userId, problemId: interview.problemId },
       });
@@ -201,7 +201,7 @@ export class AiChatService {
     let aiText = "I'm sorry, I couldn't generate a response.";
     try {
       aiText = await this.langChainService.chat(langChainHistory, userContent, {
-        threadId: interviewId,
+        threadId: `interview-${interviewId}`,
         runName: 'interview-voice',
         metadata: { channel: 'voice' },
       });
@@ -257,7 +257,7 @@ export class AiChatService {
         langChainHistory,
         userContent,
         {
-          threadId: interviewId,
+          threadId: `interview-${interviewId}`,
           runName: 'interview-voice',
           metadata: { channel: 'voice' },
         },
@@ -298,7 +298,7 @@ export class AiChatService {
         [new SystemMessage(systemPrompt)],
         'Generate a warm greeting for the candidate. Ask if they are ready to begin. Keep it brief and friendly — one or two sentences. Do NOT mention the problem yet.',
         {
-          threadId: interviewId,
+          threadId: `interview-${interviewId}`,
           runName: 'interview-voice-start',
           metadata: { channel: 'voice' },
         },
