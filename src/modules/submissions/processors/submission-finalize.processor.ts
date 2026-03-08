@@ -17,7 +17,7 @@ interface FinalizeJobData {
  * Processor for submission finalization jobs
  * Handles async finalization after all testcase results are received
  */
-@Processor(SUBMISSION_QUEUES.FINALIZE)
+@Processor(SUBMISSION_QUEUES.FINALIZE, { concurrency: 10 })
 export class SubmissionFinalizeProcessor extends WorkerHost {
   private readonly logger = new Logger(SubmissionFinalizeProcessor.name);
 

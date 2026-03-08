@@ -89,7 +89,7 @@ export class ProgrammingLanguageService {
    */
   @Cacheable({
     key: (id: number) => CACHE_KEYS.PROGRAMMING_LANGUAGES.BY_ID(id),
-    ttl: CACHE_TTL.ONE_DAY,
+    ttl: CACHE_TTL.ONE_MONTH,
   })
   async findById(id: number): Promise<ProgrammingLanguage> {
     const language = await this.languageRepository.findOne({

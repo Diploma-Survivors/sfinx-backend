@@ -16,10 +16,10 @@ export const databaseConfig = registerAs(
     logging: process.env.DB_LOGGING === 'true' || false,
     autoLoadEntities: true,
     extra: {
-      max: 20, // Maximum number of clients in the pool
+      max: 150, // Maximum number of clients in the pool
       min: 5, // Minimum number of clients in the pool
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
+      connectionTimeoutMillis: 15000,
     },
   }),
 );
