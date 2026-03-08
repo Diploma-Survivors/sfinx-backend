@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { SortOrder } from 'src/common';
+import { CacheService } from '../../redis';
 import { Submission } from '../entities/submission.entity';
 import { SubmissionStatus } from '../enums/submission-status.enum';
 
@@ -38,15 +39,50 @@ export interface RelevantSubmission {
   submittedAt: Date;
 }
 
-/**
- * Service for analyzing submissions and providing insights
- * Provides analytics and comparison features
- */
+interface AggregateRow {
+  averageRuntime: string | null;
+  averageMemory: string | null;
+  fastestRuntime: string | null;
+  lowestMemory: string | null;
+  maxRuntime: string | null;
+  maxMemory: string | null;
+  runtimeTotal: string;
+  memoryTotal: string;
+}
+
+interface BucketRow {
+  bucket: number;
+  count: string;
+  bucketMin: string;
+  bucketMax: string;
+}
+
+/** Cached problem-level aggregates (excludes per-submission percentile) */
+interface CachedAggregates {
+  averageRuntime: number | null;
+  averageMemory: number | null;
+  fastestRuntime: number | null;
+  lowestMemory: number | null;
+  maxRuntime: number | null;
+  maxMemory: number | null;
+  distribution?: {
+    runtime: DistributionBin[];
+    memory: DistributionBin[];
+  };
+}
+
+const STATS_CACHE_TTL = 60;
+const STATS_CACHE_PREFIX = 'submission:perf_stats';
+const DISTRIBUTION_BIN_COUNT = 10;
+
 @Injectable()
 export class SubmissionAnalysisService {
+  private readonly logger = new Logger(SubmissionAnalysisService.name);
+
   constructor(
     @InjectRepository(Submission)
     private readonly submissionRepository: Repository<Submission>,
+    private readonly cacheService: CacheService,
   ) {}
 
   /**
@@ -77,21 +113,16 @@ export class SubmissionAnalysisService {
       });
     }
 
-    const submissions = await queryBuilder.getMany();
-
-    return submissions.map((s) => ({
-      id: s.id,
-      userId: s.user.id,
-      username: s.user.username,
-      runtimeMs: s.runtimeMs,
-      memoryKb: s.memoryKb,
-      languageName: s.language.name,
-      submittedAt: s.submittedAt,
-    }));
+    return (await queryBuilder.getMany()).map(this.toRelevantSubmission);
   }
 
   /**
-   * Calculate performance statistics for a submission compared to others
+   * Calculate performance statistics for a submission compared to all accepted
+   * submissions for the same problem.
+   *
+   * All aggregation runs inside PostgreSQL — O(1) memory.
+   * Problem-level aggregates are cached for 60s via CacheService.
+   * Per-submission percentile is always computed fresh.
    */
   async calculatePerformanceStats(
     submissionId: number,
@@ -106,124 +137,82 @@ export class SubmissionAnalysisService {
     }
 
     const { problem, runtimeMs, memoryKb } = submission;
+    const problemId = problem.id;
+    const cacheKey = `${STATS_CACHE_PREFIX}:${problemId}`;
 
-    // Get all accepted submissions for comparison
-    const allAccepted = await this.submissionRepository.find({
-      where: {
-        problem: { id: problem.id },
-        status: SubmissionStatus.ACCEPTED,
-      },
-      select: ['runtimeMs', 'memoryKb'],
-    });
+    // 1. Try cache for problem-level aggregates
+    const cached = await this.cacheService.get<CachedAggregates>(cacheKey);
 
-    if (allAccepted.length === 0) {
+    if (cached) {
+      const percentile = await this.computePercentile(
+        problemId,
+        runtimeMs,
+        memoryKb,
+      );
+      return {
+        averageRuntime: cached.averageRuntime,
+        averageMemory: cached.averageMemory,
+        fastestRuntime: cached.fastestRuntime,
+        lowestMemory: cached.lowestMemory,
+        percentile,
+        distribution: cached.distribution,
+      };
+    }
+
+    // 2. Single aggregate query: AVG / MIN / MAX / COUNT
+    const agg = await this.fetchAggregates(problemId);
+
+    const runtimeTotal = parseInt(agg.runtimeTotal, 10);
+    const memoryTotal = parseInt(agg.memoryTotal, 10);
+
+    if (runtimeTotal === 0 && memoryTotal === 0) {
       return null;
     }
 
-    // Calculate average runtime and memory
-    const validRuntimes = allAccepted
-      .filter((s) => s.runtimeMs !== null)
-      .map((s) => s.runtimeMs!);
-    const validMemories = allAccepted
-      .filter((s) => s.memoryKb !== null)
-      .map((s) => s.memoryKb!);
+    const fastestRuntime = this.parseNullableFloat(agg.fastestRuntime);
+    const lowestMemory = this.parseNullableFloat(agg.lowestMemory);
+    const maxRuntime = this.parseNullableFloat(agg.maxRuntime);
+    const maxMemory = this.parseNullableFloat(agg.maxMemory);
 
-    const averageRuntime =
-      validRuntimes.length > 0
-        ? validRuntimes.reduce((a, b) => a + b, 0) / validRuntimes.length
-        : null;
+    // 3. Distribution via PostgreSQL width_bucket()
+    const [runtimeDist, memoryDist] = await Promise.all([
+      this.fetchDistribution(
+        'runtimeMs',
+        problemId,
+        fastestRuntime,
+        maxRuntime,
+      ),
+      this.fetchDistribution('memoryKb', problemId, lowestMemory, maxMemory),
+    ]);
 
-    const averageMemory =
-      validMemories.length > 0
-        ? validMemories.reduce((a, b) => a + b, 0) / validMemories.length
-        : null;
-
-    // Find fastest and lowest memory
-    const fastestRuntime =
-      validRuntimes.length > 0 ? Math.min(...validRuntimes) : null;
-    const lowestMemory =
-      validMemories.length > 0 ? Math.min(...validMemories) : null;
-
-    // Calculate percentile rank
-    const runtimePercentile = runtimeMs
-      ? this.calculatePercentile(runtimeMs, validRuntimes)
-      : null;
-    const memoryPercentile = memoryKb
-      ? this.calculatePercentile(memoryKb, validMemories)
-      : null;
-
-    // Calculate distributions
-    const runtimeDistribution = this.calculateDistribution(validRuntimes, 10);
-    const memoryDistribution = this.calculateDistribution(validMemories, 10);
-
-    return {
-      averageRuntime,
-      averageMemory,
+    // 4. Cache problem-level aggregates (percentile excluded — per-submission)
+    const toCache: CachedAggregates = {
+      averageRuntime: this.parseNullableFloat(agg.averageRuntime),
+      averageMemory: this.parseNullableFloat(agg.averageMemory),
       fastestRuntime,
       lowestMemory,
-      percentile: {
-        runtime: runtimePercentile,
-        memory: memoryPercentile,
-      },
-      distribution: {
-        runtime: runtimeDistribution,
-        memory: memoryDistribution,
-      },
+      maxRuntime,
+      maxMemory,
+      distribution: { runtime: runtimeDist, memory: memoryDist },
     };
-  }
 
-  /**
-   * Calculate percentile rank (lower is better)
-   */
-  private calculatePercentile(value: number, dataset: number[]): number {
-    if (dataset.length === 0) return 0;
+    await this.cacheService.set(cacheKey, toCache, { ttl: STATS_CACHE_TTL });
 
-    const sorted = [...dataset].sort((a, b) => a - b);
-    const rank = sorted.filter((v) => v < value).length;
-    return Math.round((rank / dataset.length) * 100);
-  }
-
-  /**
-   * Calculate distribution for histogram
-   */
-  private calculateDistribution(
-    dataset: number[],
-    binCount: number,
-  ): DistributionBin[] {
-    if (dataset.length === 0) return [];
-
-    const min = Math.min(...dataset);
-    const max = Math.max(...dataset);
-
-    if (min === max) {
-      return [{ bin: `${min.toFixed(2)}`, count: dataset.length, min, max }];
-    }
-
-    // Calculate bin width
-    const binWidth = (max - min) / binCount;
-
-    // Initialize bins
-    const bins: DistributionBin[] = Array.from(
-      { length: binCount },
-      (_, i) => ({
-        bin: `${(min + i * binWidth).toFixed(1)}-${(min + (i + 1) * binWidth).toFixed(1)}`,
-        min: min + i * binWidth,
-        max: min + (i + 1) * binWidth,
-        count: 0,
-      }),
+    // 5. Compute fresh percentile for this specific submission
+    const percentile = await this.computePercentile(
+      problemId,
+      runtimeMs,
+      memoryKb,
     );
 
-    // Count items in each bin
-    dataset.forEach((value) => {
-      let binIndex = Math.floor((value - min) / binWidth);
-      // Handle the edge case where value === max
-      if (binIndex >= binCount) {
-        binIndex = binCount - 1;
-      }
-      bins[binIndex].count++;
-    });
-
-    return bins;
+    return {
+      averageRuntime: toCache.averageRuntime,
+      averageMemory: toCache.averageMemory,
+      fastestRuntime,
+      lowestMemory,
+      percentile,
+      distribution: toCache.distribution,
+    };
   }
 
   /**
@@ -233,28 +222,20 @@ export class SubmissionAnalysisService {
     problemId: number,
     limit: number = 10,
   ): Promise<RelevantSubmission[]> {
-    const submissions = await this.submissionRepository
-      .createQueryBuilder('submission')
-      .leftJoinAndSelect('submission.user', 'user')
-      .leftJoinAndSelect('submission.language', 'language')
-      .where('submission.problem.id = :problemId', { problemId })
-      .andWhere('submission.status = :status', {
-        status: SubmissionStatus.ACCEPTED,
-      })
-      .andWhere('submission.runtimeMs IS NOT NULL')
-      .orderBy('submission.runtimeMs', SortOrder.ASC)
-      .take(limit)
-      .getMany();
-
-    return submissions.map((s) => ({
-      id: s.id,
-      userId: s.user.id,
-      username: s.user.username,
-      runtimeMs: s.runtimeMs,
-      memoryKb: s.memoryKb,
-      languageName: s.language.name,
-      submittedAt: s.submittedAt,
-    }));
+    return (
+      await this.submissionRepository
+        .createQueryBuilder('submission')
+        .leftJoinAndSelect('submission.user', 'user')
+        .leftJoinAndSelect('submission.language', 'language')
+        .where('submission.problem.id = :problemId', { problemId })
+        .andWhere('submission.status = :status', {
+          status: SubmissionStatus.ACCEPTED,
+        })
+        .andWhere('submission.runtimeMs IS NOT NULL')
+        .orderBy('submission.runtimeMs', SortOrder.ASC)
+        .take(limit)
+        .getMany()
+    ).map(this.toRelevantSubmission);
   }
 
   /**
@@ -286,10 +267,14 @@ export class SubmissionAnalysisService {
     }
 
     const runtimeDiff =
-      sub1.runtimeMs && sub2.runtimeMs ? sub1.runtimeMs - sub2.runtimeMs : null;
+      sub1.runtimeMs != null && sub2.runtimeMs != null
+        ? sub1.runtimeMs - sub2.runtimeMs
+        : null;
 
     const memoryDiff =
-      sub1.memoryKb && sub2.memoryKb ? sub1.memoryKb - sub2.memoryKb : null;
+      sub1.memoryKb != null && sub2.memoryKb != null
+        ? sub1.memoryKb - sub2.memoryKb
+        : null;
 
     const faster =
       runtimeDiff !== null
@@ -306,4 +291,157 @@ export class SubmissionAnalysisService {
       faster,
     };
   }
+
+  // ---------------------------------------------------------------------------
+  // Private helpers
+  // ---------------------------------------------------------------------------
+
+  /** Single-pass streaming aggregate — O(1) RAM in PostgreSQL */
+  private async fetchAggregates(problemId: number): Promise<AggregateRow> {
+    return this.submissionRepository
+      .createQueryBuilder('s')
+      .select([
+        'AVG(s.runtimeMs)  AS "averageRuntime"',
+        'AVG(s.memoryKb)   AS "averageMemory"',
+        'MIN(s.runtimeMs)  AS "fastestRuntime"',
+        'MIN(s.memoryKb)   AS "lowestMemory"',
+        'MAX(s.runtimeMs)  AS "maxRuntime"',
+        'MAX(s.memoryKb)   AS "maxMemory"',
+        'COUNT(s.runtimeMs) AS "runtimeTotal"',
+        'COUNT(s.memoryKb)  AS "memoryTotal"',
+      ])
+      .where('s.problem.id = :problemId', { problemId })
+      .andWhere('s.status = :status', { status: SubmissionStatus.ACCEPTED })
+      .getRawOne() as Promise<AggregateRow>;
+  }
+
+  /** Lightweight COUNT FILTER query for per-submission percentile */
+  private async computePercentile(
+    problemId: number,
+    runtimeMs: number | null,
+    memoryKb: number | null,
+  ): Promise<{ runtime: number | null; memory: number | null }> {
+    const row = (await this.submissionRepository
+      .createQueryBuilder('s')
+      .select([
+        'COUNT(*) FILTER (WHERE s.runtimeMs < :runtimeMs) AS "runtimeBetterCount"',
+        'COUNT(*) FILTER (WHERE s.memoryKb  < :memoryKb)  AS "memoryBetterCount"',
+        'COUNT(s.runtimeMs) AS "runtimeTotal"',
+        'COUNT(s.memoryKb)  AS "memoryTotal"',
+      ])
+      .where('s.problem.id = :problemId', { problemId })
+      .andWhere('s.status = :status', { status: SubmissionStatus.ACCEPTED })
+      .setParameters({
+        runtimeMs: runtimeMs ?? -1,
+        memoryKb: memoryKb ?? -1,
+      })
+      .getRawOne()) as {
+      runtimeBetterCount: string;
+      memoryBetterCount: string;
+      runtimeTotal: string;
+      memoryTotal: string;
+    };
+
+    const runtimeTotal = parseInt(row.runtimeTotal, 10);
+    const memoryTotal = parseInt(row.memoryTotal, 10);
+
+    return {
+      runtime:
+        runtimeMs != null && runtimeTotal > 0
+          ? Math.round(
+              (parseInt(row.runtimeBetterCount, 10) / runtimeTotal) * 100,
+            )
+          : null,
+      memory:
+        memoryKb != null && memoryTotal > 0
+          ? Math.round(
+              (parseInt(row.memoryBetterCount, 10) / memoryTotal) * 100,
+            )
+          : null,
+    };
+  }
+
+  /** Build a 10-bin histogram via PostgreSQL width_bucket() */
+  private async fetchDistribution(
+    column: 'runtimeMs' | 'memoryKb',
+    problemId: number,
+    minVal: number | null,
+    maxVal: number | null,
+  ): Promise<DistributionBin[]> {
+    if (minVal == null || maxVal == null) return [];
+
+    if (minVal === maxVal) {
+      const { total } = (await this.submissionRepository
+        .createQueryBuilder('s')
+        .select('COUNT(*) AS total')
+        .where('s.problem.id = :problemId', { problemId })
+        .andWhere('s.status = :status', { status: SubmissionStatus.ACCEPTED })
+        .andWhere(`s.${column} IS NOT NULL`)
+        .getRawOne()) as { total: string };
+
+      return [
+        {
+          bin: `${minVal.toFixed(2)}`,
+          count: parseInt(total, 10),
+          min: minVal,
+          max: maxVal,
+        },
+      ];
+    }
+
+    const upperBound = maxVal + 0.001;
+    const binCount = DISTRIBUTION_BIN_COUNT;
+
+    const rows: BucketRow[] = await this.submissionRepository
+      .createQueryBuilder('s')
+      .select([
+        `width_bucket(s.${column}, :minVal, :upperBound, :binCount) AS bucket`,
+        'COUNT(*)       AS count',
+        `MIN(s.${column}) AS "bucketMin"`,
+        `MAX(s.${column}) AS "bucketMax"`,
+      ])
+      .where('s.problem.id = :problemId', { problemId })
+      .andWhere('s.status = :status', { status: SubmissionStatus.ACCEPTED })
+      .andWhere(`s.${column} IS NOT NULL`)
+      .setParameters({ problemId, minVal, upperBound, binCount })
+      .groupBy('bucket')
+      .orderBy('bucket', 'ASC')
+      .getRawMany();
+
+    const binWidth = (maxVal - minVal) / binCount;
+    const bins: DistributionBin[] = Array.from(
+      { length: binCount },
+      (_, i) => ({
+        bin: `${(minVal + i * binWidth).toFixed(1)}-${(minVal + (i + 1) * binWidth).toFixed(1)}`,
+        min: minVal + i * binWidth,
+        max: minVal + (i + 1) * binWidth,
+        count: 0,
+      }),
+    );
+
+    for (const row of rows) {
+      const idx = Math.min(row.bucket - 1, binCount - 1);
+      if (idx >= 0) {
+        bins[idx].count = parseInt(row.count, 10);
+        bins[idx].min = parseFloat(row.bucketMin);
+        bins[idx].max = parseFloat(row.bucketMax);
+      }
+    }
+
+    return bins;
+  }
+
+  private parseNullableFloat(value: string | null): number | null {
+    return value != null ? parseFloat(value) : null;
+  }
+
+  private toRelevantSubmission = (s: Submission): RelevantSubmission => ({
+    id: s.id,
+    userId: s.user.id,
+    username: s.user.username,
+    runtimeMs: s.runtimeMs,
+    memoryKb: s.memoryKb,
+    languageName: s.language.name,
+    submittedAt: s.submittedAt,
+  });
 }

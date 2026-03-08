@@ -18,6 +18,7 @@ import {
   SolutionSortBy,
   UpdateSolutionDto,
 } from './dto';
+import { AdminUpdateSolutionDto } from './dto/update-solution.dto';
 import { Solution } from './entities/solution.entity';
 import { SolutionVotesService } from './services/solution-votes.service';
 
@@ -277,7 +278,7 @@ export class SolutionsService {
 
   async adminUpdate(
     id: number,
-    dto: UpdateSolutionDto,
+    dto: AdminUpdateSolutionDto,
   ): Promise<SolutionResponseDto> {
     const solution = await this.solutionRepo.findOne({ where: { id } });
     if (!solution) throw new NotFoundException('Solution not found');
