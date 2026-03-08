@@ -46,6 +46,9 @@ export class Interview {
   @Column('jsonb', { name: 'problem_snapshot' })
   problemSnapshot: ProblemSnapshot;
 
+  @Column({ type: 'varchar', length: 10, default: 'en' })
+  language: string;
+
   @Column({
     type: 'enum',
     enum: InterviewStatus,

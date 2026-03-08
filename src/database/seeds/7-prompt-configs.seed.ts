@@ -25,6 +25,18 @@ const PROMPT_CONFIGS = [
     langfusePromptName: 'voice-adaptation',
     langfuseLabel: 'production',
   },
+  {
+    featureName: 'interviewer-vi',
+    description: 'Vietnamese AI interviewer system prompt',
+    langfusePromptName: 'interviewer-vi',
+    langfuseLabel: 'production',
+  },
+  {
+    featureName: 'voice-adaptation-vi',
+    description: 'Vietnamese voice adaptation prompt',
+    langfusePromptName: 'voice-adaptation-vi',
+    langfuseLabel: 'production',
+  },
 ];
 
 export async function seedPromptConfigs(dataSource: DataSource) {

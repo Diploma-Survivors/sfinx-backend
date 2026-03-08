@@ -89,6 +89,7 @@ export class AiInterviewService {
       userId: user.id,
       problemId: problem.id,
       problemSnapshot: problemSnapshot,
+      language: dto.language || 'en',
       status: InterviewStatus.ACTIVE,
     });
     await this.interviewRepo.save(interview);
