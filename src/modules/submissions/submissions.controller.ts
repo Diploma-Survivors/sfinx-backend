@@ -17,7 +17,6 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { Throttle } from '@nestjs/throttler';
 import { interval, merge, Observable } from 'rxjs';
 import { finalize, map } from 'rxjs/operators';
 
@@ -58,12 +57,12 @@ export class SubmissionsController {
     private readonly configService: ConfigService,
   ) {}
 
-  @Throttle({
-    default: {
-      limit: 10,
-      ttl: 60000,
-    },
-  })
+  // @Throttle({
+  //   default: {
+  //     limit: 10,
+  //     ttl: 60000,
+  //   },
+  // })
   @Post('run')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
@@ -79,12 +78,12 @@ export class SubmissionsController {
     return this.submissionsService.executeTestRun(createSubmissionDto);
   }
 
-  @Throttle({
-    default: {
-      limit: 6,
-      ttl: 60000,
-    },
-  })
+  // @Throttle({
+  //   default: {
+  //     limit: 6,
+  //     ttl: 60000,
+  //   },
+  // })
   @Post('submit')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
