@@ -13,6 +13,7 @@ import { AiChatService } from '../services/ai-chat.service';
 import { StartInterviewDto } from '../dto/start-interview.dto';
 import { SendMessageDto } from '../dto/send-message.dto';
 import { CodeSnapshotDto } from '../dto/code-snapshot.dto';
+import { EndInterviewDto } from '../dto/end-interview.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
@@ -75,7 +76,16 @@ export class AiInterviewController {
 
   @Post(':id/end')
   @ApiOperation({ summary: 'End interview and get evaluation' })
-  endInterview(@GetUser('id') userId: number, @Param('id') id: string) {
-    return this.interviewService.endInterview(id, userId);
+  endInterview(
+    @GetUser('id') userId: number,
+    @Param('id') id: string,
+    @Body() dto: EndInterviewDto,
+  ) {
+    return this.interviewService.endInterview(
+      id,
+      userId,
+      dto.sourceCode,
+      dto.languageId,
+    );
   }
 }

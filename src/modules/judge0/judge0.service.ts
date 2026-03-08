@@ -62,6 +62,27 @@ export class Judge0Service {
   }
 
   /**
+   * Fetches details for multiple submissions from Judge0
+   * @param tokens Array of submission tokens to fetch
+   * @returns Array of submission details
+   */
+  async getSubmissionsBatch(tokens: string[]): Promise<Judge0Response[]> {
+    const tokensParam = tokens.join(',');
+    const endpoint = this.buildEndpoint(
+      `${JUDGE0_ENDPOINTS.BATCH_SUBMISSIONS}`,
+      `tokens=${tokensParam}`,
+      JUDGE0_QUERY_PARAMS.BASE64_ENCODED,
+      JUDGE0_QUERY_PARAMS.SUBMISSION_FIELDS,
+    );
+
+    return this.httpClient
+      .get<{
+        submissions: Judge0Response[];
+      }>(endpoint, `Failed to fetch batch submission details`)
+      .then((response) => response.submissions);
+  }
+
+  /**
    * Builds callback URL for Judge0 to notify about submission completion
    * @param submissionId The submission ID
    * @param testcaseId The test case ID

@@ -133,6 +133,8 @@ import { RankingAdminController } from './controllers/ranking-admin.controller';
     UserProgressService,
     SubmissionRetrievalService,
     SubmissionAnalysisService,
+    Judge0PayloadBuilderService,
+    SubmissionTrackerService,
   ],
 })
 export class SubmissionsModule {}
