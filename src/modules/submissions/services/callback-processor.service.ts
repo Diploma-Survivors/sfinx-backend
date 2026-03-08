@@ -104,6 +104,14 @@ export class CallbackProcessorService implements OnModuleInit {
     payload: Judge0Response,
     isSubmit: boolean,
   ): Promise<void> {
+    // Skip interview submissions - they use synchronous polling, not callbacks
+    if (submissionId.startsWith('interview-')) {
+      this.logger.debug(
+        `[${submissionId}] Skipping interview submission callback - using synchronous polling`,
+      );
+      return;
+    }
+
     this.logger.debug(
       `[${submissionId}] Processing callback for testcase ${index}, token: ${payload.token}, status: ${payload.status.id}`,
     );
@@ -138,6 +146,14 @@ export class CallbackProcessorService implements OnModuleInit {
   async finalizer(submissionId: string, isSubmit: boolean): Promise<void> {
     try {
       this.logger.log('Finalizer started', { submissionId, isSubmit });
+
+      // Skip interview submissions - they use synchronous polling, not callbacks
+      if (submissionId.startsWith('interview-')) {
+        this.logger.log(
+          `Skipping interview submission ${submissionId} - using synchronous polling`,
+        );
+        return;
+      }
 
       const metaKey = CacheKeys.judge0.meta(submissionId);
       const resultsIKey = CacheKeys.judge0.resultsByIndex(submissionId);
