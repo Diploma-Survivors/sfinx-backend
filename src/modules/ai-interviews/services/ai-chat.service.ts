@@ -347,9 +347,17 @@ export class AiChatService {
     });
     if (!interview) throw new NotFoundException('Interview not found');
 
+    const hasUserMessages = await this.messageRepo.existsBy({
+      interviewId,
+      role: MessageRole.USER,
+    });
+
+    if (hasUserMessages) {
+      return { content: '' };
+    }
+
     const language = interview.language || 'en';
     const systemPrompt = await this.buildSystemPrompt(interview, 'voice');
-
     let aiText = this.getGreetingFallback(language);
     try {
       aiText = await this.langChainService.chat(
@@ -357,22 +365,14 @@ export class AiChatService {
         this.getGreetingInstruction(language),
         {
           threadId: `interview-${interviewId}`,
-          runName: 'interview-voice-start',
+          runName: 'interview-greeting',
           metadata: { channel: 'voice', language },
         },
       );
     } catch (error) {
       console.error('LangChain Greeting Error:', error);
     }
-
-    const aiMsg = await this.messageRepo.save(
-      this.messageRepo.create({
-        interviewId,
-        role: MessageRole.ASSISTANT,
-        content: aiText,
-      }),
-    );
-    return { content: aiMsg.content };
+    return { content: aiText };
   }
 
   async getHistory(interviewId: string, userId: number) {

@@ -13,7 +13,6 @@ import { PromptService, PromptFeature } from '../../ai/prompt.service';
 import { StartInterviewDto } from '../dto/start-interview.dto';
 import { CodeSnapshotDto } from '../dto/code-snapshot.dto';
 import { User } from '../../auth/entities/user.entity';
-
 import { Problem } from '../../problems/entities/problem.entity';
 import { Judge0Service } from '../../judge0/judge0.service';
 import { ProgrammingLanguageService } from '../../programming-language/programming-language.service';
@@ -68,38 +67,29 @@ export class AiInterviewService {
   ) {}
 
   async startInterview(user: User, dto: StartInterviewDto) {
-    // 1. Fetch Problem
     const problem = await this.problemRepo.findOne({
       where: { id: dto.problemId },
+      relations: ['sampleTestcases'],
     });
-    if (!problem) {
-      throw new NotFoundException('Problem not found');
-    }
+    if (!problem) throw new NotFoundException('Problem not found');
 
-    // 2. Create Snapshot
-    const problemSnapshot = {
-      title: problem.title,
-      description: problem.description,
-      difficulty: problem.difficulty,
-      // Add other necessary fields
-    };
-
-    // 3. Create Interview
     const interview = this.interviewRepo.create({
       userId: user.id,
       problemId: problem.id,
-      problemSnapshot: problemSnapshot,
+      problemSnapshot: {
+        title: problem.title,
+        description: problem.description,
+        difficulty: problem.difficulty,
+        constraints: problem.constraints,
+        hints: problem.hints,
+        sampleTestcases: problem.sampleTestcases,
+      },
       language: dto.language || 'en',
       status: InterviewStatus.ACTIVE,
     });
     await this.interviewRepo.save(interview);
 
-    // The voice agent (Iris) handles the initial greeting via on_enter.
-    // For text-mode fallback, the AI will greet on the user's first message.
-    return {
-      interviewId: interview.id,
-      greeting: '',
-    };
+    return interview;
   }
 
   async getInterviewHistory(userId: number): Promise<Interview[]> {
