@@ -122,6 +122,12 @@ export class SolutionCommentsService extends BaseCommentsService<
     });
 
     if (createdComment) {
+      const solution = await this.dataSource
+        .getRepository(Solution)
+        .findOne({ where: { id: solutionId }, relations: ['author'] });
+
+      const solutionLink = `/problems/${solution?.problemId}/solutions/${solutionId}`;
+
       if (dto.parentId) {
         const parentComment = await this.commentRepo.findOne({
           where: { id: dto.parentId },
@@ -143,13 +149,10 @@ export class SolutionCommentsService extends BaseCommentsService<
                 content: `${createdComment.author?.username || 'Ai đó'} đã trả lời bình luận của bạn trên một lời giải.`,
               },
             ],
-            link: `/problems/solutions/${solutionId}`,
+            link: solutionLink,
           });
         }
       } else {
-        const solution = await this.dataSource
-          .getRepository(Solution)
-          .findOne({ where: { id: solutionId }, relations: ['author'] });
         if (solution && solution.author?.id !== userId) {
           await this.notificationsService.create({
             recipientId: solution.author.id,
@@ -167,7 +170,7 @@ export class SolutionCommentsService extends BaseCommentsService<
                 content: `${createdComment.author?.username || 'Ai đó'} đã bình luận trên lời giải của bạn.`,
               },
             ],
-            link: `/problems/solutions/${solutionId}`,
+            link: solutionLink,
           });
         }
       }
