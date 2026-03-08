@@ -69,16 +69,17 @@ export class Judge0Service {
   async getSubmissionsBatch(tokens: string[]): Promise<Judge0Response[]> {
     const tokensParam = tokens.join(',');
     const endpoint = this.buildEndpoint(
-      `${JUDGE0_ENDPOINTS.SUBMISSION_DETAILS}`,
+      `${JUDGE0_ENDPOINTS.BATCH_SUBMISSIONS}`,
       `tokens=${tokensParam}`,
       JUDGE0_QUERY_PARAMS.BASE64_ENCODED,
       JUDGE0_QUERY_PARAMS.SUBMISSION_FIELDS,
     );
 
-    return this.httpClient.get<Judge0Response[]>(
-      endpoint,
-      `Failed to fetch batch submission details`,
-    );
+    return this.httpClient
+      .get<{
+        submissions: Judge0Response[];
+      }>(endpoint, `Failed to fetch batch submission details`)
+      .then((response) => response.submissions);
   }
 
   /**

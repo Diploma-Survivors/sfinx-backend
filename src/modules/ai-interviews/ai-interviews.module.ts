@@ -9,6 +9,10 @@ import { AiInterviewsInternalController } from './controllers/ai-interviews-inte
 import { AiInterviewService } from './services/ai-interview.service';
 import { AiChatService } from './services/ai-chat.service';
 import { AiModule } from '../ai/ai.module';
+import { Judge0Module } from '../judge0/judge0.module';
+import { ProgrammingLanguageModule } from '../programming-language/programming-language.module';
+import { ProblemsModule } from '../problems/problems.module';
+import { SubmissionsModule } from '../submissions/submissions.module';
 
 @Module({
   imports: [
@@ -19,6 +23,10 @@ import { AiModule } from '../ai/ai.module';
       Problem,
     ]),
     AiModule,
+    Judge0Module,
+    ProgrammingLanguageModule,
+    ProblemsModule,
+    SubmissionsModule,
   ],
   controllers: [AiInterviewController, AiInterviewsInternalController],
   providers: [AiInterviewService, AiChatService],

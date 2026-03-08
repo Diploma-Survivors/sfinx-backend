@@ -19,6 +19,7 @@ import { Judge0Service } from '../../judge0/judge0.service';
 import { ProgrammingLanguageService } from '../../programming-language/programming-language.service';
 import { ProblemsService } from '../../problems/problems.service';
 import { Judge0PayloadBuilderService } from '../../submissions/services/judge0-payload-builder.service';
+import { SubmissionTrackerService } from '../../submissions/services/submission-tracker.service';
 import { Judge0Response } from '../../judge0/interfaces';
 
 interface Judge0EvaluationContext {
@@ -63,6 +64,7 @@ export class AiInterviewService {
     private readonly languagesService: ProgrammingLanguageService,
     private readonly problemsService: ProblemsService,
     private readonly payloadBuilder: Judge0PayloadBuilderService,
+    private readonly submissionTracker: SubmissionTrackerService,
   ) {}
 
   async startInterview(user: User, dto: StartInterviewDto) {
@@ -145,9 +147,12 @@ export class AiInterviewService {
       };
     }
 
+    // Generate submission ID
+    const submissionId = 'interview-' + Date.now();
+
     // Build payloads for all test cases
     const payloads = await this.payloadBuilder.buildPayloadsForSubmit(
-      'interview-' + Date.now(), // Temporary submission ID
+      submissionId,
       sourceCode,
       judge0LanguageId,
       problem,
@@ -160,6 +165,13 @@ export class AiInterviewService {
         status: 'REJECTED',
       };
     }
+
+    // Initialize tracking in Redis with problemId
+    await this.submissionTracker.initializeTracking(
+      submissionId,
+      payloads.length,
+      problem.id,
+    );
 
     // Submit batch to Judge0
     const batchResponse =
