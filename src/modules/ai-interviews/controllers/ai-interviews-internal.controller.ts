@@ -76,14 +76,33 @@ export class AiInterviewsInternalController {
       return { error: 'Interview not found' };
     }
 
+    const language = interview.language || 'en';
     const problemContext = JSON.stringify(interview.problemSnapshot, null, 2);
+
+    const interviewerFeature =
+      language === 'en'
+        ? PromptFeature.INTERVIEWER
+        : `${PromptFeature.INTERVIEWER}-${language}`;
+    const voiceFeature =
+      language === 'en'
+        ? PromptFeature.VOICE_ADAPTATION
+        : `${PromptFeature.VOICE_ADAPTATION}-${language}`;
+
     const [systemPrompt, voiceAdaptationPrompt] = await Promise.all([
-      this.promptService.getCompiledPrompt(PromptFeature.INTERVIEWER, {
-        problemContext,
-      }),
       this.promptService
-        .getCompiledPrompt(PromptFeature.VOICE_ADAPTATION, {})
-        .catch(() => null),
+        .getCompiledPrompt(interviewerFeature, { problemContext })
+        .catch(() =>
+          this.promptService.getCompiledPrompt(PromptFeature.INTERVIEWER, {
+            problemContext,
+          }),
+        ),
+      this.promptService
+        .getCompiledPrompt(voiceFeature, {})
+        .catch(() =>
+          this.promptService
+            .getCompiledPrompt(PromptFeature.VOICE_ADAPTATION, {})
+            .catch(() => null),
+        ),
     ]);
 
     const existingMessages = await this.messageRepo.find({
@@ -95,6 +114,7 @@ export class AiInterviewsInternalController {
       interviewId: interview.id,
       userId: interview.userId,
       problemId: interview.problemId,
+      language,
       problemSnapshot: interview.problemSnapshot as Record<string, unknown>,
       systemPrompt,
       voiceAdaptationPrompt,

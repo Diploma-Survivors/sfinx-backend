@@ -54,25 +54,69 @@ export class AiChatService {
   }
 
   /**
+   * Returns the language-specific feature name, falling back to the base feature
+   * for English or when a localized prompt config doesn't exist.
+   */
+  private getPromptFeatureName(
+    baseFeature: PromptFeature,
+    language: string,
+  ): string {
+    if (!language || language === 'en') return baseFeature;
+    return `${baseFeature}-${language}`;
+  }
+
+  private static readonly LANGUAGE_DIRECTIVES: Record<string, string> = {
+    vi: 'IMPORTANT: You MUST respond entirely in Vietnamese (Tiếng Việt). All your responses, questions, hints, and feedback must be in Vietnamese. Do NOT use English.',
+  };
+
+  /**
    * Builds the system prompt. Voice turns include the voice-adaptation addendum.
+   * Loads language-specific prompts when available, falling back to English.
+   * Appends a language directive for non-English interviews to guarantee the
+   * LLM responds in the correct language even when the base prompt is English.
    */
   private async buildSystemPrompt(
     interview: Interview,
     channel: 'chat' | 'voice',
   ): Promise<string> {
+    const language = interview.language || 'en';
+    const interviewerFeature = this.getPromptFeatureName(
+      PromptFeature.INTERVIEWER,
+      language,
+    );
+    const voiceFeature = this.getPromptFeatureName(
+      PromptFeature.VOICE_ADAPTATION,
+      language,
+    );
+
     const problemContext = JSON.stringify(interview.problemSnapshot);
     const prompts = await Promise.all([
-      this.promptService.getCompiledPrompt(PromptFeature.INTERVIEWER, {
-        problemContext,
-      }),
+      this.promptService
+        .getCompiledPrompt(interviewerFeature, { problemContext })
+        .catch(() =>
+          this.promptService.getCompiledPrompt(PromptFeature.INTERVIEWER, {
+            problemContext,
+          }),
+        ),
       channel === 'voice'
-        ? this.promptService.getCompiledPrompt(
-            PromptFeature.VOICE_ADAPTATION,
-            {},
-          )
+        ? this.promptService
+            .getCompiledPrompt(voiceFeature, {})
+            .catch(() =>
+              this.promptService
+                .getCompiledPrompt(PromptFeature.VOICE_ADAPTATION, {})
+                .catch(() => ''),
+            )
         : Promise.resolve(''),
     ]);
-    return prompts.filter(Boolean).join('\n\n');
+
+    const parts = prompts.filter(Boolean);
+
+    const directive = AiChatService.LANGUAGE_DIRECTIVES[language];
+    if (directive) {
+      parts.push(directive);
+    }
+
+    return parts.join('\n\n');
   }
 
   /**
@@ -283,38 +327,52 @@ export class AiChatService {
     );
   }
 
+  private getGreetingInstruction(language: string): string {
+    if (language === 'vi') {
+      return 'Chào ứng viên một cách thân thiện và hỏi họ đã sẵn sàng bắt đầu phỏng vấn chưa. Giữ ngắn gọn và thân thiện — một hoặc hai câu. KHÔNG đề cập đến bài toán. Trả lời hoàn toàn bằng tiếng Việt.';
+    }
+    return 'Generate a warm greeting for the candidate. Ask if they are ready to begin. Keep it brief and friendly — one or two sentences. Do NOT mention the problem yet.';
+  }
+
+  private getGreetingFallback(language: string): string {
+    if (language === 'vi') {
+      return 'Xin chào! Chào mừng bạn đến với buổi phỏng vấn lập trình. Bạn đã sẵn sàng chưa?';
+    }
+    return 'Hello! Welcome to your coding interview. Are you ready to begin?';
+  }
+
   async generateGreeting(interviewId: string) {
     const interview = await this.interviewRepo.findOne({
       where: { id: interviewId },
     });
     if (!interview) throw new NotFoundException('Interview not found');
 
-    const systemPrompt = await this.buildSystemPrompt(interview, 'voice');
+    const hasUserMessages = await this.messageRepo.existsBy({
+      interviewId,
+      role: MessageRole.USER,
+    });
 
-    let aiText =
-      'Hello! Welcome to your coding interview. Are you ready to begin?';
+    if (hasUserMessages) {
+      return { content: '' };
+    }
+
+    const language = interview.language || 'en';
+    const systemPrompt = await this.buildSystemPrompt(interview, 'voice');
+    let aiText = this.getGreetingFallback(language);
     try {
       aiText = await this.langChainService.chat(
         [new SystemMessage(systemPrompt)],
-        'Generate a warm greeting for the candidate. Ask if they are ready to begin. Keep it brief and friendly — one or two sentences. Do NOT mention the problem yet.',
+        this.getGreetingInstruction(language),
         {
           threadId: `interview-${interviewId}`,
-          runName: 'interview-voice-start',
-          metadata: { channel: 'voice' },
+          runName: 'interview-greeting',
+          metadata: { channel: 'voice', language },
         },
       );
     } catch (error) {
       console.error('LangChain Greeting Error:', error);
     }
-
-    const aiMsg = await this.messageRepo.save(
-      this.messageRepo.create({
-        interviewId,
-        role: MessageRole.ASSISTANT,
-        content: aiText,
-      }),
-    );
-    return { content: aiMsg.content };
+    return { content: aiText };
   }
 
   async getHistory(interviewId: string, userId: number) {

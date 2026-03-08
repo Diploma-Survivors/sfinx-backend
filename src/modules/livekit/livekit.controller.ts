@@ -31,6 +31,15 @@ export class LiveKitController {
 
     const roomName = `interview-${dto.interviewId}`;
 
+    // Ensure the room exists with the correct settings before issuing the
+    // token. createRoom is idempotent — safe to call on every connect.
+    await this.livekitService.createRoom(roomName, {
+      metadata: {
+        interviewId: dto.interviewId,
+        problemId: interview.problemId,
+      },
+    });
+
     const token = await this.livekitService.generateToken({
       roomName,
       participantIdentity: `user-${user.id}`,
@@ -39,6 +48,7 @@ export class LiveKitController {
         interviewId: dto.interviewId,
         problemId: interview.problemId,
         userId: user.id,
+        language: interview.language || 'en',
       },
     });
 

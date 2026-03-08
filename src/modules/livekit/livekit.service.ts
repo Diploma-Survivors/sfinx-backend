@@ -38,7 +38,7 @@ export class LiveKitService {
     const at = new AccessToken(this.config.apiKey, this.config.apiSecret, {
       identity: participantIdentity,
       name: participantName || participantIdentity,
-      ttl: '10m',
+      ttl: '1h',
     });
 
     at.addGrant({
@@ -64,13 +64,15 @@ export class LiveKitService {
 
   async createRoom(
     roomName: string,
-    metadata?: Record<string, unknown>,
+    options?: { emptyTimeout?: number; metadata?: Record<string, unknown> },
   ): Promise<void> {
     await this.roomService.createRoom({
       name: roomName,
-      emptyTimeout: 300,
+      emptyTimeout: options?.emptyTimeout ?? 3600, // Default to 1 hour
       maxParticipants: 2,
-      metadata: metadata ? JSON.stringify(metadata) : undefined,
+      metadata: options?.metadata
+        ? JSON.stringify(options.metadata)
+        : undefined,
     });
   }
 
