@@ -39,6 +39,7 @@ export class LiveKitController {
         interviewId: dto.interviewId,
         problemId: interview.problemId,
         userId: user.id,
+        language: interview.language || 'en',
       },
     });
 
