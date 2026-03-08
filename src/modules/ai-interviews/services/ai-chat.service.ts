@@ -289,32 +289,32 @@ export class AiChatService {
     });
     if (!interview) throw new NotFoundException('Interview not found');
 
-    const systemPrompt = await this.buildSystemPrompt(interview, 'voice');
+    const hasUserMessages = await this.messageRepo.existsBy({
+      interviewId,
+      role: MessageRole.USER,
+    });
 
+    if (hasUserMessages) {
+      return { content: '' };
+    }
+
+    const systemPrompt = await this.buildSystemPrompt(interview, 'voice');
     let aiText =
       'Hello! Welcome to your coding interview. Are you ready to begin?';
     try {
       aiText = await this.langChainService.chat(
         [new SystemMessage(systemPrompt)],
-        'Generate a warm greeting for the candidate. Ask if they are ready to begin. Keep it brief and friendly — one or two sentences. Do NOT mention the problem yet.',
+        'Greet the candidate warmly and ask if they are ready to begin. Keep it brief — one or two sentences. Do NOT mention the problem yet.',
         {
           threadId: `interview-${interviewId}`,
-          runName: 'interview-voice-start',
+          runName: 'interview-greeting',
           metadata: { channel: 'voice' },
         },
       );
     } catch (error) {
       console.error('LangChain Greeting Error:', error);
     }
-
-    const aiMsg = await this.messageRepo.save(
-      this.messageRepo.create({
-        interviewId,
-        role: MessageRole.ASSISTANT,
-        content: aiText,
-      }),
-    );
-    return { content: aiMsg.content };
+    return { content: aiText };
   }
 
   async getHistory(interviewId: string, userId: number) {
