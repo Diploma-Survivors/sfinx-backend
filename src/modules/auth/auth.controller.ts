@@ -274,12 +274,12 @@ export class AuthController {
     return this.authService.register(registerDto);
   }
 
-  @Throttle({
-    default: {
-      limit: 3,
-      ttl: 60000,
-    },
-  })
+  // @Throttle({
+  //   default: {
+  //     limit: 3,
+  //     ttl: 60000,
+  //   },
+  // })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login user' })
