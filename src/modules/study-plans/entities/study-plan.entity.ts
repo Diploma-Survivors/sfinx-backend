@@ -34,7 +34,11 @@ export class StudyPlan {
   slug: string;
 
   @ApiProperty({ description: 'Difficulty level', enum: StudyPlanDifficulty })
-  @Column({ type: 'enum', enum: StudyPlanDifficulty })
+  @Column({
+    type: 'enum',
+    enum: StudyPlanDifficulty,
+    default: StudyPlanDifficulty.BEGINNER,
+  })
   difficulty: StudyPlanDifficulty;
 
   @ApiProperty({ description: 'Plan status', enum: StudyPlanStatus })

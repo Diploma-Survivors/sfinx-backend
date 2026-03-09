@@ -4,21 +4,21 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
 import { PaginatedResultDto } from 'src/common/dto/paginated-result.dto';
+import { Problem } from 'src/modules/problems/entities/problem.entity';
 import { Tag } from 'src/modules/problems/entities/tag.entity';
 import { Topic } from 'src/modules/problems/entities/topic.entity';
-import { Problem } from 'src/modules/problems/entities/problem.entity';
 import { StorageService } from 'src/modules/storage/storage.service';
-import { CreateStudyPlanDto } from '../dto/create-study-plan.dto';
-import { UpdateStudyPlanDto } from '../dto/update-study-plan.dto';
+import { In, Repository } from 'typeorm';
 import { AddStudyPlanItemDto } from '../dto/add-study-plan-item.dto';
+import { CreateStudyPlanDto } from '../dto/create-study-plan.dto';
 import { FilterStudyPlanDto } from '../dto/filter-study-plan.dto';
 import { ReorderItemsDto } from '../dto/reorder-items.dto';
 import { StudyPlanSummaryResponseDto } from '../dto/study-plan-response.dto';
-import { StudyPlan } from '../entities/study-plan.entity';
+import { UpdateStudyPlanDto } from '../dto/update-study-plan.dto';
 import { StudyPlanItem } from '../entities/study-plan-item.entity';
 import { StudyPlanTranslation } from '../entities/study-plan-translation.entity';
+import { StudyPlan } from '../entities/study-plan.entity';
 import { StudyPlanStatus } from '../enums/study-plan-status.enum';
 import { StudyPlanQueryService } from './study-plan-query.service';
 
@@ -43,7 +43,11 @@ export class StudyPlanService {
 
   // ─── Plan CRUD ────────────────────────────────────────────────────
 
-  async create(userId: number, dto: CreateStudyPlanDto): Promise<StudyPlan> {
+  async create(
+    userId: number,
+    dto: CreateStudyPlanDto,
+    file?: Express.Multer.File,
+  ): Promise<StudyPlan> {
     const existingSlug = await this.studyPlanRepository.findOne({
       where: { slug: dto.slug },
     });
@@ -62,6 +66,10 @@ export class StudyPlanService {
 
     const savedPlan = await this.studyPlanRepository.save(plan);
 
+    if (file) {
+      savedPlan.coverImageKey = await this.uploadCoverImage(savedPlan, file);
+    }
+
     if (dto.translations?.length) {
       const translations = dto.translations.map((t) =>
         this.translationRepository.create({
@@ -78,20 +86,22 @@ export class StudyPlanService {
       savedPlan.topics = await this.topicRepository.findBy({
         id: In(dto.topicIds),
       });
-      await this.studyPlanRepository.save(savedPlan);
     }
 
     if (dto.tagIds?.length) {
       savedPlan.tags = await this.tagRepository.findBy({
         id: In(dto.tagIds),
       });
-      await this.studyPlanRepository.save(savedPlan);
     }
 
     return this.findOneAdmin(savedPlan.id);
   }
 
-  async update(id: number, dto: UpdateStudyPlanDto): Promise<StudyPlan> {
+  async update(
+    id: number,
+    dto: UpdateStudyPlanDto,
+    file?: Express.Multer.File,
+  ): Promise<StudyPlan> {
     const plan = await this.studyPlanRepository.findOne({
       where: { id },
       relations: ['translations', 'topics', 'tags'],
@@ -141,6 +151,10 @@ export class StudyPlanService {
       });
     }
 
+    if (file) {
+      plan.coverImageKey = await this.uploadCoverImage(plan, file);
+    }
+
     await this.studyPlanRepository.save(plan);
     return this.findOneAdmin(id);
   }
@@ -176,26 +190,6 @@ export class StudyPlanService {
     plan.status = StudyPlanStatus.ARCHIVED;
     await this.studyPlanRepository.save(plan);
     return this.findOneAdmin(id);
-  }
-
-  async uploadCoverImage(
-    id: number,
-    file: Express.Multer.File,
-  ): Promise<StudyPlan> {
-    const plan = await this.studyPlanRepository.findOne({ where: { id } });
-    if (!plan) {
-      throw new NotFoundException(`Study plan ${id} not found`);
-    }
-
-    const fileExtension =
-      file.originalname.split('.').pop()?.toLowerCase() || 'png';
-    const timestamp = Date.now();
-    const key = `study-plans/${id}/${timestamp}.${fileExtension}`;
-
-    await this.storageService.uploadFile(key, file.buffer, file.mimetype);
-
-    plan.coverImageKey = key;
-    return this.studyPlanRepository.save(plan);
   }
 
   async findOneAdmin(id: number): Promise<StudyPlan> {
@@ -296,11 +290,35 @@ export class StudyPlanService {
       throw new NotFoundException(`Study plan ${planId} not found`);
     }
 
-    for (const item of dto.items) {
-      await this.itemRepository.update(
-        { id: item.id, studyPlanId: planId },
-        { dayNumber: item.dayNumber, orderIndex: item.orderIndex },
-      );
-    }
+    await this.itemRepository.manager.query(
+      `UPDATE study_plan_items AS spi
+       SET day_number = v.day_number, order_index = v.order_index
+       FROM (SELECT unnest($1::int[]) AS id,
+                    unnest($2::int[]) AS day_number,
+                    unnest($3::int[]) AS order_index) AS v
+       WHERE spi.id = v.id AND spi.study_plan_id = $4`,
+      [
+        dto.items.map((i) => i.id),
+        dto.items.map((i) => i.dayNumber),
+        dto.items.map((i) => i.orderIndex),
+        planId,
+      ],
+    );
+  }
+
+  // ─── Private helpers ────────────────────────────────────────────────
+
+  private async uploadCoverImage(
+    plan: StudyPlan,
+    file: Express.Multer.File,
+  ): Promise<string> {
+    const fileExtension =
+      file.originalname.split('.').pop()?.toLowerCase() || 'png';
+    const timestamp = Date.now();
+    const key = `study-plans/${plan.id}/${timestamp}.${fileExtension}`;
+
+    await this.storageService.uploadFile(key, file.buffer, file.mimetype);
+
+    return key;
   }
 }

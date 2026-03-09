@@ -49,7 +49,10 @@ export class FilterStudyPlanDto extends PaginationQueryDto {
   @ApiPropertyOptional({ description: 'Filter by premium status' })
   @IsOptional()
   @IsBoolean()
-  @Transform(({ value }) => value === 'true' || value === true)
+  @Transform(({ value }) => {
+    if (value == null) return undefined;
+    return value === 'true' || value === true;
+  })
   isPremium?: boolean;
 
   @ApiPropertyOptional({

@@ -6,17 +6,17 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { User } from 'src/modules/auth/entities/user.entity';
+import { Repository } from 'typeorm';
 import {
   EnrolledPlanResponseDto,
   StudyPlanProgressResponseDto,
 } from '../dto/study-plan-response.dto';
-import { StudyPlan } from '../entities/study-plan.entity';
-import { StudyPlanItem } from '../entities/study-plan-item.entity';
 import { StudyPlanEnrollment } from '../entities/study-plan-enrollment.entity';
-import { StudyPlanStatus } from '../enums/study-plan-status.enum';
+import { StudyPlanItem } from '../entities/study-plan-item.entity';
+import { StudyPlan } from '../entities/study-plan.entity';
 import { EnrollmentStatus } from '../enums/enrollment-status.enum';
+import { StudyPlanStatus } from '../enums/study-plan-status.enum';
 import { StudyPlanQueryService } from './study-plan-query.service';
 
 @Injectable()
@@ -131,7 +131,12 @@ export class StudyPlanEnrollmentService {
   ): Promise<StudyPlanProgressResponseDto> {
     const enrollment = await this.enrollmentRepository.findOne({
       where: { studyPlanId: planId, userId },
-      relations: ['studyPlan', 'studyPlan.translations'],
+      relations: [
+        'studyPlan',
+        'studyPlan.translations',
+        'studyPlan.topics',
+        'studyPlan.tags',
+      ],
     });
     if (!enrollment) {
       throw new NotFoundException('Not enrolled in this plan');

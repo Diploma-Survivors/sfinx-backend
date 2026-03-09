@@ -12,10 +12,8 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
-  ApiBody,
   ApiConsumes,
   ApiOperation,
   ApiResponse,
@@ -27,6 +25,7 @@ import {
   GetUser,
   Language,
 } from 'src/common';
+import { CoverImageInterceptor } from '../interceptors/cover-image.interceptor';
 import { CaslGuard } from 'src/modules/auth/guards/casl.guard';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { Action } from 'src/modules/rbac/casl/casl-ability.factory';
@@ -36,8 +35,8 @@ import { FilterStudyPlanDto } from '../dto/filter-study-plan.dto';
 import { ReorderItemsDto } from '../dto/reorder-items.dto';
 import { StudyPlanSummaryResponseDto } from '../dto/study-plan-response.dto';
 import { UpdateStudyPlanDto } from '../dto/update-study-plan.dto';
-import { StudyPlan } from '../entities/study-plan.entity';
 import { StudyPlanItem } from '../entities/study-plan-item.entity';
+import { StudyPlan } from '../entities/study-plan.entity';
 import { StudyPlanService } from '../services/study-plan.service';
 
 @ApiTags('Admin - Study Plans')
@@ -49,10 +48,18 @@ export class StudyPlanAdminController {
 
   @Post()
   @CheckAbility({ action: Action.Create, subject: 'StudyPlan' })
-  @ApiOperation({ summary: 'Create a new study plan' })
+  @UseInterceptors(CoverImageInterceptor())
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Create a new study plan (with optional cover image)',
+  })
   @ApiResponse({ status: 201, type: StudyPlan })
-  create(@GetUser('id') userId: number, @Body() dto: CreateStudyPlanDto) {
-    return this.studyPlanService.create(userId, dto);
+  create(
+    @GetUser('id') userId: number,
+    @Body() dto: CreateStudyPlanDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.studyPlanService.create(userId, dto, file);
   }
 
   @Get()
@@ -73,13 +80,18 @@ export class StudyPlanAdminController {
 
   @Patch(':id')
   @CheckAbility({ action: Action.Update, subject: 'StudyPlan' })
-  @ApiOperation({ summary: 'Update study plan' })
+  @UseInterceptors(CoverImageInterceptor())
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Update study plan (with optional cover image)',
+  })
   @ApiResponse({ status: 200, type: StudyPlan })
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateStudyPlanDto,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.studyPlanService.update(id, dto);
+    return this.studyPlanService.update(id, dto, file);
   }
 
   @Delete(':id')
@@ -104,25 +116,6 @@ export class StudyPlanAdminController {
   @ApiResponse({ status: 200, type: StudyPlan })
   archive(@Param('id', ParseIntPipe) id: number) {
     return this.studyPlanService.archive(id);
-  }
-
-  @Post(':id/cover-image')
-  @CheckAbility({ action: Action.Update, subject: 'StudyPlan' })
-  @UseInterceptors(FileInterceptor('file'))
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: { file: { type: 'string', format: 'binary' } },
-    },
-  })
-  @ApiOperation({ summary: 'Upload cover image' })
-  @ApiResponse({ status: 200, type: StudyPlan })
-  uploadCoverImage(
-    @Param('id', ParseIntPipe) id: number,
-    @UploadedFile() file: Express.Multer.File,
-  ) {
-    return this.studyPlanService.uploadCoverImage(id, file);
   }
 
   // ─── Item management ────────────────────────────────────────────────

@@ -11,6 +11,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import { JsonTransformToInstance, JsonTransformToObject } from 'src/common';
 import { StudyPlanDifficulty } from '../enums/study-plan-difficulty.enum';
 import { StudyPlanTranslationDto } from './study-plan-translation.dto';
 
@@ -38,6 +39,7 @@ export class CreateStudyPlanDto {
   })
   @IsInt()
   @Min(1)
+  @Type(() => Number)
   estimatedDays: number;
 
   @ApiPropertyOptional({
@@ -46,6 +48,7 @@ export class CreateStudyPlanDto {
   })
   @IsOptional()
   @IsBoolean()
+  @Type(() => Boolean)
   isPremium?: boolean;
 
   @ApiProperty({
@@ -66,6 +69,7 @@ export class CreateStudyPlanDto {
   })
   @IsArray()
   @ValidateNested({ each: true })
+  @JsonTransformToInstance(StudyPlanTranslationDto)
   @Type(() => StudyPlanTranslationDto)
   translations: StudyPlanTranslationDto[];
 
@@ -76,6 +80,7 @@ export class CreateStudyPlanDto {
   @IsOptional()
   @IsArray()
   @IsInt({ each: true })
+  @JsonTransformToObject('topicIds')
   topicIds?: number[];
 
   @ApiPropertyOptional({
@@ -85,6 +90,7 @@ export class CreateStudyPlanDto {
   @IsOptional()
   @IsArray()
   @IsInt({ each: true })
+  @JsonTransformToObject('tagIds')
   tagIds?: number[];
 
   @ApiPropertyOptional({
@@ -95,5 +101,6 @@ export class CreateStudyPlanDto {
   @IsOptional()
   @IsArray()
   @IsInt({ each: true })
+  @JsonTransformToObject('similarPlanIds')
   similarPlanIds?: number[];
 }
