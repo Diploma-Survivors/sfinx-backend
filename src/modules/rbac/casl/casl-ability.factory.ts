@@ -6,10 +6,14 @@ import {
   PureAbility,
 } from '@casl/ability';
 import { Injectable } from '@nestjs/common';
+import { StudyPlan } from 'src/modules/study-plans/entities/study-plan.entity';
 import { RefreshToken } from '../../auth/entities/refresh-token.entity';
 import { User } from '../../auth/entities/user.entity';
-import { ProblemComment } from '../../problems/comments/entities/problem-comment.entity';
+import { PaymentTransaction } from '../../payments/entities/payment-transaction.entity';
+import { SubscriptionFeature } from '../../payments/entities/subscription-feature.entity';
+import { SubscriptionPlan } from '../../payments/entities/subscription-plan.entity';
 import { CommentReport } from '../../problems/comments/entities/comment-report.entity';
+import { ProblemComment } from '../../problems/comments/entities/problem-comment.entity';
 import { Problem } from '../../problems/entities/problem.entity';
 import { SampleTestcase } from '../../problems/entities/sample-testcase.entity';
 import { Tag } from '../../problems/entities/tag.entity';
@@ -19,9 +23,6 @@ import { Submission } from '../../submissions/entities/submission.entity';
 import { UserProblemProgress } from '../../submissions/entities/user-problem-progress.entity';
 import { Permission } from '../entities/permission.entity';
 import { Role } from '../entities/role.entity';
-import { SubscriptionPlan } from '../../payments/entities/subscription-plan.entity';
-import { SubscriptionFeature } from '../../payments/entities/subscription-feature.entity';
-import { PaymentTransaction } from '../../payments/entities/payment-transaction.entity';
 
 // Define all possible actions
 export enum Action {
@@ -65,6 +66,7 @@ export type Subjects =
       | typeof SubscriptionPlan
       | typeof SubscriptionFeature
       | typeof PaymentTransaction
+      | typeof StudyPlan
     >
   | 'Problem'
   | 'Tag'
@@ -84,6 +86,7 @@ export type Subjects =
   | 'Role'
   | 'Permission'
   | 'Language'
+  | 'StudyPlan'
   | 'all'; // Special subject: represents all resources
 
 // Define the AppAbility type
@@ -178,11 +181,13 @@ export class CaslAbilityFactory {
       can(Action.ReadPremium, Problem);
       can(Action.ReadPremium, Problem, { isPremium: true });
       can(Action.JoinPremium, 'Contest');
+      can(Action.JoinPremium, StudyPlan);
     } else {
       // Free users cannot access premium content
       cannot(Action.ReadPremium, Problem);
       cannot(Action.ReadPremium, Problem, { isPremium: true });
       cannot(Action.JoinPremium, 'Contest');
+      cannot(Action.JoinPremium, StudyPlan);
     }
 
     // Banned users cannot create content
@@ -250,6 +255,7 @@ export class CaslAbilityFactory {
       role: 'Role',
       permission: 'Permission',
       language: 'Language',
+      study_plan: StudyPlan,
     };
 
     return subjectMap[resource] || null;

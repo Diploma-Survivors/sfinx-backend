@@ -23,6 +23,7 @@ import {
   getDataSourceByName,
 } from 'typeorm-transactional';
 
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AllExceptionsFilter, TransformInterceptor } from './common';
@@ -36,32 +37,32 @@ import {
   googleConfig,
   judge0Config,
   jwtConfig,
+  livekitConfig,
+  paymentConfig,
   redisConfig,
   submissionConfig,
   vnpayConfig,
-  paymentConfig,
 } from './config';
+import { AdminModule } from './modules/admin/admin.module';
+import { AiInterviewsModule } from './modules/ai-interviews/ai-interviews.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { ContestModule } from './modules/contest/contest.module';
+import { DiscussModule } from './modules/discuss/discuss.module';
+import { FavoriteListModule } from './modules/favorite-list/favorite-list.module';
 import { Judge0Module } from './modules/judge0/judge0.module';
+import { LiveKitModule } from './modules/livekit/livekit.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+import { ProblemReportsModule } from './modules/problem-reports/problem-reports.module';
 import { ProblemsModule } from './modules/problems/problems.module';
 import { ProgrammingLanguageModule } from './modules/programming-language';
 import { RbacModule } from './modules/rbac/rbac.module';
 import { RedisModule } from './modules/redis';
-import { SubmissionsModule } from './modules/submissions/submissions.module';
-import { ContestModule } from './modules/contest/contest.module';
-import { UsersModule } from './modules/users/users.module';
 import { SolutionsModule } from './modules/solutions/solutions.module';
-import { PaymentsModule } from './modules/payments/payments.module';
-import { ScheduleModule } from '@nestjs/schedule';
-import { AdminModule } from './modules/admin/admin.module';
+import { StudyPlansModule } from './modules/study-plans/study-plans.module';
+import { SubmissionsModule } from './modules/submissions/submissions.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
-import { AiInterviewsModule } from './modules/ai-interviews/ai-interviews.module';
-import { LiveKitModule } from './modules/livekit/livekit.module';
-import { livekitConfig } from './config';
-import { DiscussModule } from './modules/discuss/discuss.module';
-import { FavoriteListModule } from './modules/favorite-list/favorite-list.module';
-import { NotificationsModule } from './modules/notifications/notifications.module';
-import { ProblemReportsModule } from './modules/problem-reports/problem-reports.module';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
@@ -151,9 +152,7 @@ import { ProblemReportsModule } from './modules/problem-reports/problem-reports.
     FavoriteListModule,
     NotificationsModule,
     ProblemReportsModule,
-    // PaymentsModule,
-    // AiModule,
-    // CommunityModule,
+    StudyPlansModule,
   ],
   controllers: [AppController],
   providers: [

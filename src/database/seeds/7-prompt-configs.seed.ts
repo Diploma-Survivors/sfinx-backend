@@ -17,7 +17,7 @@ const PROMPT_CONFIGS = [
   {
     featureName: 'code-reviewer',
     description: 'AI code reviewer for analyzing code submissions',
-    langfusePromptName: 'code-review',
+    langfusePromptName: 'code-reviewer',
     langfuseLabel: 'production',
   },
   {
