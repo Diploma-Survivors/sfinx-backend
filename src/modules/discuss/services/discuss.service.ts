@@ -10,6 +10,7 @@ import { In, Repository } from 'typeorm';
 import { PaginatedResultDto, getAvatarUrl, getTimeAgo } from '../../../common';
 import { DEFAULT_AVATAR_URL } from '../../auth/constants/avatar.constants';
 import { VoteType } from '../../comments-base/enums';
+import { NotificationEvent } from '../../notifications/enums/notification-event.enum';
 import { NotificationType } from '../../notifications/enums/notification-type.enum';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { CreatePostDto, FilterPostDto, UpdatePostDto } from '../dto';
@@ -62,7 +63,7 @@ export class DiscussService {
         },
       ],
       metadata: {
-        event: 'post_published',
+        event: NotificationEvent.POST_PUBLISHED,
         postId: savedPost.id,
       },
     });

@@ -9,6 +9,7 @@ import { DataSource, In, Repository } from 'typeorm';
 import { BaseCommentsService } from '../../comments-base/base-comments.service';
 import { BaseCommentResponseDto } from '../../comments-base/dto';
 import { VoteType } from '../../comments-base/enums';
+import { NotificationEvent } from '../../notifications/enums/notification-event.enum';
 import { NotificationType } from '../../notifications/enums/notification-type.enum';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { StorageService } from '../../storage/storage.service';
@@ -175,7 +176,7 @@ export class DiscussCommentService extends BaseCommentsService<
             },
           ],
           metadata: {
-            event: 'comment_reply',
+            event: NotificationEvent.POST_COMMENT_REPLY,
             postId,
             commentId: createdComment.id,
             parentCommentId: saved.parentId,
@@ -205,7 +206,7 @@ export class DiscussCommentService extends BaseCommentsService<
             },
           ],
           metadata: {
-            event: 'post_comment',
+            event: NotificationEvent.POST_COMMENT,
             postId,
             commentId: createdComment.id,
           },

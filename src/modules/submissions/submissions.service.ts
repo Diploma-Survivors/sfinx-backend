@@ -19,6 +19,7 @@ import { Language } from '../auth/enums';
 import { ContestSubmissionService } from '../contest/services';
 import { Judge0BatchResponse } from '../judge0/interfaces';
 import { Judge0Service } from '../judge0/judge0.service';
+import { NotificationEvent } from '../notifications/enums/notification-event.enum';
 import { NotificationType } from '../notifications/enums/notification-type.enum';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Problem } from '../problems/entities/problem.entity';
@@ -394,7 +395,7 @@ export class SubmissionsService {
           },
         ],
         metadata: {
-          event: 'problem_solved',
+          event: NotificationEvent.PROBLEM_SOLVED,
           problemId: submission.problem.id,
           problemSlug: submission.problem.slug,
           submissionId,

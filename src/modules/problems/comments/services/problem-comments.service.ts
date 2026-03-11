@@ -27,6 +27,7 @@ import { ProblemComment, ProblemCommentVote } from '../entities';
 import { VoteType } from '../enums';
 
 import { Language } from 'src/modules/auth/enums';
+import { NotificationEvent } from '../../../notifications/enums/notification-event.enum';
 import { NotificationType } from '../../../notifications/enums/notification-type.enum';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { VoteResponseDto } from '../dto';
@@ -206,7 +207,7 @@ export class ProblemCommentsService extends BaseCommentsService<
             },
           ],
           metadata: {
-            event: 'comment_reply',
+            event: NotificationEvent.PROBLEM_COMMENT_REPLY,
             problemId,
             commentId: createdComment.id,
             parentCommentId: dto.parentId,

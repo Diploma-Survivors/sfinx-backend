@@ -7,6 +7,7 @@ import { getAvatarUrl } from '../../../common';
 import { BaseCommentsService } from '../../comments-base/base-comments.service';
 import { BaseCreateCommentDto, VoteResponseDto } from '../../comments-base/dto';
 import { VoteType } from '../../comments-base/enums';
+import { NotificationEvent } from '../../notifications/enums/notification-event.enum';
 import { NotificationType } from '../../notifications/enums/notification-type.enum';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { StorageService } from '../../storage/storage.service';
@@ -148,7 +149,7 @@ export class SolutionCommentsService extends BaseCommentsService<
               },
             ],
             metadata: {
-              event: 'comment_reply',
+              event: NotificationEvent.SOLUTION_COMMENT_REPLY,
               solutionId,
               commentId: createdComment.id,
               parentCommentId: dto.parentId,
@@ -175,7 +176,7 @@ export class SolutionCommentsService extends BaseCommentsService<
               },
             ],
             metadata: {
-              event: 'solution_comment',
+              event: NotificationEvent.SOLUTION_COMMENT,
               solutionId,
               commentId: createdComment.id,
               problemId: solution?.problemId,

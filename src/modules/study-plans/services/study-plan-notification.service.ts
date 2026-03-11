@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Language } from 'src/modules/auth/enums/language.enum';
 import { NotificationsService } from 'src/modules/notifications/notifications.service';
+import { NotificationEvent } from 'src/modules/notifications/enums/notification-event.enum';
 import { NotificationType } from 'src/modules/notifications/enums/notification-type.enum';
 import { StudyPlanItem } from '../entities/study-plan-item.entity';
 import { StudyPlanTranslation } from '../entities/study-plan-translation.entity';
@@ -72,7 +73,7 @@ export class StudyPlanNotificationService {
       recipientId: ctx.userId,
       type: NotificationType.STUDY_PLAN,
       metadata: {
-        event: 'plan_completed',
+        event: NotificationEvent.STUDY_PLAN_COMPLETED,
         studyPlanId: ctx.planId,
         studyPlanSlug: plan.slug,
         totalProblems: ctx.totalProblems,
@@ -121,7 +122,7 @@ export class StudyPlanNotificationService {
       recipientId: ctx.userId,
       type: NotificationType.STUDY_PLAN,
       metadata: {
-        event: 'progress_milestone',
+        event: NotificationEvent.STUDY_PLAN_MILESTONE,
         studyPlanId: ctx.planId,
         studyPlanSlug: plan.slug,
         milestone: crossedMilestone,
@@ -189,7 +190,7 @@ export class StudyPlanNotificationService {
       recipientId: ctx.userId,
       type: NotificationType.STUDY_PLAN,
       metadata: {
-        event: 'day_completed',
+        event: NotificationEvent.STUDY_PLAN_DAY_COMPLETED,
         studyPlanId: ctx.planId,
         studyPlanSlug: plan.slug,
         dayNumber,

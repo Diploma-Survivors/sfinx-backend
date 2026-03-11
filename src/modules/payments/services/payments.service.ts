@@ -13,6 +13,7 @@ import { PaymentMethodEnum } from '../enums/payment-method.enum';
 import { PaymentProviderFactory } from '../providers/payment-provider.factory';
 import { ExchangeRateService } from './exchange-rate.service';
 
+import { NotificationEvent } from '../../notifications/enums/notification-event.enum';
 import { NotificationType } from '../../notifications/enums/notification-type.enum';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { CurrentPlanResponseDto } from '../dto/current-plan-response.dto';
@@ -190,7 +191,7 @@ export class PaymentsService {
           },
         ],
         metadata: {
-          event: 'payment_success',
+          event: NotificationEvent.PAYMENT_SUCCESS,
           transactionId: transaction.id,
         },
       });
