@@ -10,6 +10,7 @@ import { In, Repository } from 'typeorm';
 import { PaginatedResultDto, getAvatarUrl, getTimeAgo } from '../../../common';
 import { DEFAULT_AVATAR_URL } from '../../auth/constants/avatar.constants';
 import { VoteType } from '../../comments-base/enums';
+import { NotificationEvent } from '../../notifications/enums/notification-event.enum';
 import { NotificationType } from '../../notifications/enums/notification-type.enum';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { CreatePostDto, FilterPostDto, UpdatePostDto } from '../dto';
@@ -48,7 +49,7 @@ export class DiscussService {
 
     await this.notificationsService.create({
       recipientId: userId,
-      type: NotificationType.SYSTEM,
+      type: NotificationType.DISCUSS,
       translations: [
         {
           languageCode: Language.EN,
@@ -61,7 +62,10 @@ export class DiscussService {
           content: `Bài viết thảo luận "${dto.title}" của bạn đã được đăng thành công.`,
         },
       ],
-      link: `/discuss/${savedPost.id}`,
+      metadata: {
+        event: NotificationEvent.POST_PUBLISHED,
+        postId: savedPost.id,
+      },
     });
 
     return savedPost;

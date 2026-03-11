@@ -4,4 +4,8 @@ export enum NotificationType {
   REPLY = 'REPLY',
   CONTEST = 'CONTEST',
   MENTION = 'MENTION',
+  STUDY_PLAN = 'STUDY_PLAN',
+  PAYMENT = 'PAYMENT',
+  SUBMISSION = 'SUBMISSION',
+  DISCUSS = 'DISCUSS',
 }

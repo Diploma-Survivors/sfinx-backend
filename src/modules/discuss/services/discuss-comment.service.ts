@@ -9,6 +9,7 @@ import { DataSource, In, Repository } from 'typeorm';
 import { BaseCommentsService } from '../../comments-base/base-comments.service';
 import { BaseCommentResponseDto } from '../../comments-base/dto';
 import { VoteType } from '../../comments-base/enums';
+import { NotificationEvent } from '../../notifications/enums/notification-event.enum';
 import { NotificationType } from '../../notifications/enums/notification-type.enum';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { StorageService } from '../../storage/storage.service';
@@ -174,7 +175,12 @@ export class DiscussCommentService extends BaseCommentsService<
               content: `${createdComment.author?.username || 'Ai đó'} đã trả lời bình luận của bạn.`,
             },
           ],
-          link: `/discuss/${postId}`,
+          metadata: {
+            event: NotificationEvent.POST_COMMENT_REPLY,
+            postId,
+            commentId: createdComment.id,
+            parentCommentId: saved.parentId,
+          },
         });
       }
     } else {
@@ -199,7 +205,11 @@ export class DiscussCommentService extends BaseCommentsService<
               content: `${createdComment.author?.username || 'Ai đó'} đã bình luận trên bài viết "${post.title}" của bạn.`,
             },
           ],
-          link: `/discuss/${postId}`,
+          metadata: {
+            event: NotificationEvent.POST_COMMENT,
+            postId,
+            commentId: createdComment.id,
+          },
         });
       }
     }

@@ -7,6 +7,7 @@ import { getAvatarUrl } from '../../../common';
 import { BaseCommentsService } from '../../comments-base/base-comments.service';
 import { BaseCreateCommentDto, VoteResponseDto } from '../../comments-base/dto';
 import { VoteType } from '../../comments-base/enums';
+import { NotificationEvent } from '../../notifications/enums/notification-event.enum';
 import { NotificationType } from '../../notifications/enums/notification-type.enum';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { StorageService } from '../../storage/storage.service';
@@ -126,8 +127,6 @@ export class SolutionCommentsService extends BaseCommentsService<
         .getRepository(Solution)
         .findOne({ where: { id: solutionId }, relations: ['author'] });
 
-      const solutionLink = `/problems/${solution?.problemId}/solutions/${solutionId}`;
-
       if (dto.parentId) {
         const parentComment = await this.commentRepo.findOne({
           where: { id: dto.parentId },
@@ -149,7 +148,13 @@ export class SolutionCommentsService extends BaseCommentsService<
                 content: `${createdComment.author?.username || 'Ai đó'} đã trả lời bình luận của bạn trên một lời giải.`,
               },
             ],
-            link: solutionLink,
+            metadata: {
+              event: NotificationEvent.SOLUTION_COMMENT_REPLY,
+              solutionId,
+              commentId: createdComment.id,
+              parentCommentId: dto.parentId,
+              problemId: solution?.problemId,
+            },
           });
         }
       } else {
@@ -170,7 +175,12 @@ export class SolutionCommentsService extends BaseCommentsService<
                 content: `${createdComment.author?.username || 'Ai đó'} đã bình luận trên lời giải của bạn.`,
               },
             ],
-            link: solutionLink,
+            metadata: {
+              event: NotificationEvent.SOLUTION_COMMENT,
+              solutionId,
+              commentId: createdComment.id,
+              problemId: solution?.problemId,
+            },
           });
         }
       }

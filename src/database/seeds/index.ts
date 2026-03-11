@@ -10,6 +10,7 @@ import { CreateSubscriptionFeatures } from './8-create-subscription-features.see
 import { seedDiscuss } from './6-discuss.seed';
 import { seedPromptConfigs } from './7-prompt-configs.seed';
 import { seedPaymentMethods } from './10-payment-methods.seed';
+import { seedStudyPlans } from './11-study-plans.seed';
 
 // Load environment variables
 config();
@@ -33,6 +34,7 @@ async function runSeeds() {
     await seedDiscuss(dataSource);
     await seedPromptConfigs(dataSource);
     await seedPaymentMethods(dataSource);
+    await seedStudyPlans(dataSource);
 
     console.log('🎉 All seeds completed successfully!');
   } catch (error) {

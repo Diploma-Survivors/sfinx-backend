@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../auth/entities/user.entity';
 import { Language } from '../auth/enums';
+import { NotificationEvent } from '../notifications/enums/notification-event.enum';
 import { NotificationType } from '../notifications/enums/notification-type.enum';
 import { NotificationsService } from '../notifications/notifications.service';
 import { StorageService } from '../storage/storage.service';
@@ -54,7 +55,11 @@ export class ProblemReportsService {
                 'Một báo cáo sự cố mới đã được gửi liên quan đến một bài toán.',
             },
           ],
-          link: `/reports`,
+          metadata: {
+            event: NotificationEvent.NEW_PROBLEM_REPORT,
+            reportId: savedReport.id,
+            problemId: createDto.problemId,
+          },
         });
       }
     } catch (error) {

@@ -1,0 +1,1217 @@
+[
+  {
+    "slug": "data-structures-fundamentals",
+    "difficulty": "beginner",
+    "status": "published",
+    "estimatedDays": 14,
+    "isPremium": false,
+    "topicSlugs": [
+      "array",
+      "string",
+      "linked-list",
+      "stack",
+      "queue",
+      "hash-table"
+    ],
+    "tagSlugs": ["array", "string", "linked-list", "stack", "hash-table"],
+    "translations": {
+      "en": {
+        "name": "Data Structures Fundamentals",
+        "description": "Master the core data structures every programmer needs. This 14-day plan covers arrays, strings, linked lists, stacks, queues, and hash tables through carefully curated problems that build your understanding from the ground up."
+      },
+      "vi": {
+        "name": "Nền tảng Cấu trúc Dữ liệu",
+        "description": "Nắm vững các cấu trúc dữ liệu cốt lõi mà mọi lập trình viên cần biết. Kế hoạch 14 ngày này bao gồm mảng, chuỗi, danh sách liên kết, ngăn xếp, hàng đợi và bảng băm thông qua các bài tập được chọn lọc kỹ lưỡng giúp bạn xây dựng nền tảng vững chắc."
+      }
+    },
+    "items": [
+      {
+        "problemSlug": "two-sum",
+        "dayNumber": 1,
+        "orderIndex": 0,
+        "note": {
+          "en": "Classic hash table problem — learn to use maps for O(n) lookups",
+          "vi": "Bài toán bảng băm kinh điển — học cách dùng map để tra cứu O(n)"
+        }
+      },
+      {
+        "problemSlug": "contains-duplicate",
+        "dayNumber": 1,
+        "orderIndex": 1,
+        "note": {
+          "en": "Practice using sets for deduplication",
+          "vi": "Thực hành dùng set để loại bỏ trùng lặp"
+        }
+      },
+      {
+        "problemSlug": "best-time-to-buy-and-sell-stock",
+        "dayNumber": 2,
+        "orderIndex": 0,
+        "note": {
+          "en": "Track running minimum while iterating",
+          "vi": "Theo dõi giá trị nhỏ nhất khi duyệt"
+        }
+      },
+      {
+        "problemSlug": "product-of-array-except-self",
+        "dayNumber": 2,
+        "orderIndex": 1,
+        "note": {
+          "en": "Prefix/suffix product technique",
+          "vi": "Kỹ thuật tích tiền tố/hậu tố"
+        }
+      },
+      {
+        "problemSlug": "maximum-subarray",
+        "dayNumber": 3,
+        "orderIndex": 0,
+        "note": {
+          "en": "Kadane's algorithm — a must-know pattern",
+          "vi": "Thuật toán Kadane — mẫu phải biết"
+        }
+      },
+      {
+        "problemSlug": "longest-substring-without-repeating-characters",
+        "dayNumber": 4,
+        "orderIndex": 0,
+        "note": {
+          "en": "Sliding window with hash set",
+          "vi": "Cửa sổ trượt với hash set"
+        }
+      },
+      {
+        "problemSlug": "group-anagrams",
+        "dayNumber": 5,
+        "orderIndex": 0,
+        "note": {
+          "en": "Hash map grouping with sorted key",
+          "vi": "Nhóm bằng hash map với khóa đã sắp xếp"
+        }
+      },
+      {
+        "problemSlug": "valid-parentheses",
+        "dayNumber": 6,
+        "orderIndex": 0,
+        "note": {
+          "en": "Classic stack matching problem",
+          "vi": "Bài toán đối sánh stack kinh điển"
+        }
+      },
+      {
+        "problemSlug": "reverse-linked-list",
+        "dayNumber": 7,
+        "orderIndex": 0,
+        "note": {
+          "en": "Fundamental linked list operation — practice both iterative and recursive",
+          "vi": "Thao tác danh sách liên kết cơ bản — thực hành cả lặp và đệ quy"
+        }
+      },
+      {
+        "problemSlug": "merge-two-sorted-lists",
+        "dayNumber": 7,
+        "orderIndex": 1,
+        "note": {
+          "en": "Two-pointer merge technique",
+          "vi": "Kỹ thuật gộp hai con trỏ"
+        }
+      },
+      {
+        "problemSlug": "linked-list-cycle",
+        "dayNumber": 8,
+        "orderIndex": 0,
+        "note": {
+          "en": "Floyd's cycle detection (fast & slow pointers)",
+          "vi": "Phát hiện chu trình Floyd (con trỏ nhanh & chậm)"
+        }
+      },
+      {
+        "problemSlug": "longest-consecutive-sequence",
+        "dayNumber": 9,
+        "orderIndex": 0,
+        "note": {
+          "en": "Hash set for O(n) sequence detection",
+          "vi": "Hash set để phát hiện dãy liên tiếp O(n)"
+        }
+      },
+      {
+        "problemSlug": "merge-intervals",
+        "dayNumber": 10,
+        "orderIndex": 0,
+        "note": {
+          "en": "Sorting + greedy interval merge",
+          "vi": "Sắp xếp + gộp khoảng tham lam"
+        }
+      },
+      {
+        "problemSlug": "longest-palindromic-substring",
+        "dayNumber": 11,
+        "orderIndex": 0,
+        "note": {
+          "en": "Expand around center technique",
+          "vi": "Kỹ thuật mở rộng từ tâm"
+        }
+      },
+      {
+        "problemSlug": "3sum",
+        "dayNumber": 12,
+        "orderIndex": 0,
+        "note": {
+          "en": "Sort + two pointers — handle duplicates carefully",
+          "vi": "Sắp xếp + hai con trỏ — xử lý trùng lặp cẩn thận"
+        }
+      },
+      {
+        "problemSlug": "container-with-most-water",
+        "dayNumber": 13,
+        "orderIndex": 0,
+        "note": {
+          "en": "Two pointer shrink technique",
+          "vi": "Kỹ thuật thu hẹp hai con trỏ"
+        }
+      },
+      {
+        "problemSlug": "trapping-rain-water",
+        "dayNumber": 14,
+        "orderIndex": 0,
+        "note": {
+          "en": "Capstone: combine prefix max and two pointer ideas",
+          "vi": "Tổng hợp: kết hợp tiền tố max và hai con trỏ"
+        }
+      }
+    ],
+    "similarPlanSlugs": ["dynamic-programming-path", "tree-traversal-mastery"]
+  },
+  {
+    "slug": "dynamic-programming-path",
+    "difficulty": "intermediate",
+    "status": "published",
+    "estimatedDays": 10,
+    "isPremium": false,
+    "topicSlugs": ["dynamic-programming", "memoization", "array", "string"],
+    "tagSlugs": ["dynamic-programming", "memoization", "array"],
+    "translations": {
+      "en": {
+        "name": "Dynamic Programming Path",
+        "description": "A structured 10-day journey through dynamic programming. Start with classic 1D problems, progress to 2D DP, and tackle optimization challenges. Each day builds on the previous, helping you develop the intuition to recognize and solve DP problems."
+      },
+      "vi": {
+        "name": "Con đường Quy hoạch Động",
+        "description": "Hành trình 10 ngày có hệ thống qua quy hoạch động. Bắt đầu với các bài toán DP 1 chiều kinh điển, tiến tới DP 2 chiều và các thử thách tối ưu hóa. Mỗi ngày xây dựng trên kiến thức ngày trước, giúp bạn phát triển trực giác để nhận diện và giải quyết các bài toán DP."
+      }
+    },
+    "items": [
+      {
+        "problemSlug": "climbing-stairs",
+        "dayNumber": 1,
+        "orderIndex": 0,
+        "note": {
+          "en": "The simplest DP problem — understand overlapping subproblems",
+          "vi": "Bài DP đơn giản nhất — hiểu bài toán con chồng lấn"
+        }
+      },
+      {
+        "problemSlug": "maximum-subarray",
+        "dayNumber": 2,
+        "orderIndex": 0,
+        "note": {
+          "en": "Kadane's algorithm is DP in disguise",
+          "vi": "Thuật toán Kadane chính là DP ẩn"
+        }
+      },
+      {
+        "problemSlug": "best-time-to-buy-and-sell-stock",
+        "dayNumber": 3,
+        "orderIndex": 0,
+        "note": {
+          "en": "State tracking DP — keep track of min price seen",
+          "vi": "DP theo dõi trạng thái — ghi nhớ giá min đã thấy"
+        }
+      },
+      {
+        "problemSlug": "coin-change",
+        "dayNumber": 4,
+        "orderIndex": 0,
+        "note": {
+          "en": "Classic unbounded knapsack variant",
+          "vi": "Biến thể balo không giới hạn kinh điển"
+        }
+      },
+      {
+        "problemSlug": "longest-palindromic-substring",
+        "dayNumber": 5,
+        "orderIndex": 0,
+        "note": {
+          "en": "2D DP or expand-around-center approach",
+          "vi": "DP 2 chiều hoặc mở rộng từ tâm"
+        }
+      },
+      {
+        "problemSlug": "longest-consecutive-sequence",
+        "dayNumber": 6,
+        "orderIndex": 0,
+        "note": {
+          "en": "Think about optimal substructure with hash sets",
+          "vi": "Cấu trúc con tối ưu với hash set"
+        }
+      },
+      {
+        "problemSlug": "product-of-array-except-self",
+        "dayNumber": 7,
+        "orderIndex": 0,
+        "note": {
+          "en": "Prefix/suffix DP pattern",
+          "vi": "Mẫu DP tiền tố/hậu tố"
+        }
+      },
+      {
+        "problemSlug": "word-search",
+        "dayNumber": 8,
+        "orderIndex": 0,
+        "note": {
+          "en": "Backtracking with memoization potential",
+          "vi": "Quay lui với tiềm năng ghi nhớ"
+        }
+      },
+      {
+        "problemSlug": "merge-intervals",
+        "dayNumber": 9,
+        "orderIndex": 0,
+        "note": {
+          "en": "Greedy intervals — understand when greedy beats DP",
+          "vi": "Khoảng tham lam — hiểu khi nào tham lam tốt hơn DP"
+        }
+      },
+      {
+        "problemSlug": "trapping-rain-water",
+        "dayNumber": 10,
+        "orderIndex": 0,
+        "note": {
+          "en": "Capstone: prefix-max DP or two-pointer optimization",
+          "vi": "Tổng hợp: DP tiền tố-max hoặc tối ưu hai con trỏ"
+        }
+      }
+    ],
+    "similarPlanSlugs": [
+      "data-structures-fundamentals",
+      "advanced-algorithms-challenge"
+    ]
+  },
+  {
+    "slug": "tree-traversal-mastery",
+    "difficulty": "beginner",
+    "status": "published",
+    "estimatedDays": 7,
+    "isPremium": false,
+    "topicSlugs": [
+      "tree",
+      "binary-tree",
+      "binary-search-tree",
+      "depth-first-search",
+      "breadth-first-search"
+    ],
+    "tagSlugs": [
+      "binary-tree",
+      "depth-first-search",
+      "breadth-first-search",
+      "recursion"
+    ],
+    "translations": {
+      "en": {
+        "name": "Tree Traversal Mastery",
+        "description": "Become confident with tree problems in just 7 days. Cover inorder/preorder/postorder traversals, BFS level-order, tree properties, and recursive thinking patterns that apply to all tree-based questions."
+      },
+      "vi": {
+        "name": "Thành thạo Duyệt Cây",
+        "description": "Tự tin với các bài toán về cây chỉ trong 7 ngày. Bao gồm duyệt inorder/preorder/postorder, BFS theo tầng, các tính chất của cây và mẫu tư duy đệ quy áp dụng cho mọi câu hỏi liên quan đến cây."
+      }
+    },
+    "items": [
+      {
+        "problemSlug": "binary-tree-inorder-traversal",
+        "dayNumber": 1,
+        "orderIndex": 0,
+        "note": {
+          "en": "Foundation — understand the three DFS traversal orders",
+          "vi": "Nền tảng — hiểu ba thứ tự duyệt DFS"
+        }
+      },
+      {
+        "problemSlug": "maximum-depth-of-binary-tree",
+        "dayNumber": 2,
+        "orderIndex": 0,
+        "note": {
+          "en": "Simple recursion — base case + recursive case",
+          "vi": "Đệ quy đơn giản — trường hợp cơ sở + trường hợp đệ quy"
+        }
+      },
+      {
+        "problemSlug": "same-tree",
+        "dayNumber": 2,
+        "orderIndex": 1,
+        "note": {
+          "en": "Compare two trees node by node",
+          "vi": "So sánh hai cây từng nút"
+        }
+      },
+      {
+        "problemSlug": "invert-binary-tree",
+        "dayNumber": 3,
+        "orderIndex": 0,
+        "note": {
+          "en": "Recursive swap — elegant one-liner solution exists",
+          "vi": "Hoán đổi đệ quy — có lời giải một dòng"
+        }
+      },
+      {
+        "problemSlug": "symmetric-tree",
+        "dayNumber": 3,
+        "orderIndex": 1,
+        "note": {
+          "en": "Mirror comparison — variation of same-tree",
+          "vi": "So sánh đối xứng — biến thể của same-tree"
+        }
+      },
+      {
+        "problemSlug": "implement-trie",
+        "dayNumber": 5,
+        "orderIndex": 0,
+        "note": {
+          "en": "Design a trie — understand prefix tree structure",
+          "vi": "Thiết kế trie — hiểu cấu trúc cây tiền tố"
+        }
+      },
+      {
+        "problemSlug": "number-of-islands",
+        "dayNumber": 6,
+        "orderIndex": 0,
+        "note": {
+          "en": "Grid DFS/BFS — treat grid as implicit graph",
+          "vi": "DFS/BFS trên lưới — coi lưới như đồ thị ẩn"
+        }
+      },
+      {
+        "problemSlug": "rotting-oranges",
+        "dayNumber": 6,
+        "orderIndex": 1,
+        "note": {
+          "en": "Multi-source BFS on grid",
+          "vi": "BFS đa nguồn trên lưới"
+        }
+      },
+      {
+        "problemSlug": "course-schedule",
+        "dayNumber": 7,
+        "orderIndex": 0,
+        "note": {
+          "en": "Topological sort — cycle detection in directed graph",
+          "vi": "Sắp xếp topo — phát hiện chu trình trong đồ thị có hướng"
+        }
+      }
+    ],
+    "similarPlanSlugs": [
+      "data-structures-fundamentals",
+      "graph-algorithms-explorer"
+    ]
+  },
+  {
+    "slug": "graph-algorithms-explorer",
+    "difficulty": "intermediate",
+    "status": "published",
+    "estimatedDays": 7,
+    "isPremium": false,
+    "topicSlugs": [
+      "graph",
+      "depth-first-search",
+      "breadth-first-search",
+      "topological-sort",
+      "shortest-path",
+      "union-find"
+    ],
+    "tagSlugs": [
+      "graph",
+      "depth-first-search",
+      "breadth-first-search",
+      "topological-sort",
+      "union-find"
+    ],
+    "translations": {
+      "en": {
+        "name": "Graph Algorithms Explorer",
+        "description": "Explore fundamental graph algorithms in 7 focused days. From BFS/DFS traversals to topological sorting and connected components, this plan builds your graph problem-solving toolkit step by step."
+      },
+      "vi": {
+        "name": "Khám phá Thuật toán Đồ thị",
+        "description": "Khám phá các thuật toán đồ thị cơ bản trong 7 ngày tập trung. Từ duyệt BFS/DFS đến sắp xếp topo và thành phần liên thông, kế hoạch này xây dựng bộ công cụ giải bài toán đồ thị của bạn từng bước một."
+      }
+    },
+    "items": [
+      {
+        "problemSlug": "number-of-islands",
+        "dayNumber": 1,
+        "orderIndex": 0,
+        "note": {
+          "en": "Grid as graph — DFS flood fill",
+          "vi": "Lưới như đồ thị — DFS tô màu"
+        }
+      },
+      {
+        "problemSlug": "rotting-oranges",
+        "dayNumber": 1,
+        "orderIndex": 1,
+        "note": {
+          "en": "Multi-source BFS — track distance/time",
+          "vi": "BFS đa nguồn — theo dõi khoảng cách/thời gian"
+        }
+      },
+      {
+        "problemSlug": "course-schedule",
+        "dayNumber": 2,
+        "orderIndex": 0,
+        "note": {
+          "en": "Topological sort with cycle detection",
+          "vi": "Sắp xếp topo với phát hiện chu trình"
+        }
+      },
+      {
+        "problemSlug": "longest-consecutive-sequence",
+        "dayNumber": 3,
+        "orderIndex": 0,
+        "note": {
+          "en": "Union-Find approach for connected components",
+          "vi": "Union-Find cho thành phần liên thông"
+        }
+      },
+      {
+        "problemSlug": "word-search",
+        "dayNumber": 4,
+        "orderIndex": 0,
+        "note": {
+          "en": "Grid DFS with backtracking",
+          "vi": "DFS trên lưới với quay lui"
+        }
+      },
+      {
+        "problemSlug": "same-tree",
+        "dayNumber": 5,
+        "orderIndex": 0,
+        "note": {
+          "en": "Tree is a special graph — parallel DFS",
+          "vi": "Cây là đồ thị đặc biệt — DFS song song"
+        }
+      },
+      {
+        "problemSlug": "symmetric-tree",
+        "dayNumber": 5,
+        "orderIndex": 1,
+        "note": {
+          "en": "Mirror traversal pattern",
+          "vi": "Mẫu duyệt đối xứng"
+        }
+      },
+      {
+        "problemSlug": "implement-trie",
+        "dayNumber": 6,
+        "orderIndex": 0,
+        "note": {
+          "en": "Trie is a tree/graph hybrid — prefix searching",
+          "vi": "Trie là lai cây/đồ thị — tìm kiếm tiền tố"
+        }
+      },
+      {
+        "problemSlug": "find-median-from-data-stream",
+        "dayNumber": 7,
+        "orderIndex": 0,
+        "note": {
+          "en": "Capstone: advanced data structure design",
+          "vi": "Tổng hợp: thiết kế cấu trúc dữ liệu nâng cao"
+        }
+      }
+    ],
+    "similarPlanSlugs": [
+      "tree-traversal-mastery",
+      "advanced-algorithms-challenge"
+    ]
+  },
+  {
+    "slug": "advanced-algorithms-challenge",
+    "difficulty": "advanced",
+    "status": "published",
+    "estimatedDays": 14,
+    "isPremium": true,
+    "topicSlugs": [
+      "dynamic-programming",
+      "greedy",
+      "binary-search",
+      "two-pointers",
+      "sliding-window",
+      "divide-and-conquer"
+    ],
+    "tagSlugs": [
+      "dynamic-programming",
+      "greedy",
+      "binary-search",
+      "two-pointers",
+      "sliding-window"
+    ],
+    "translations": {
+      "en": {
+        "name": "Advanced Algorithms Challenge",
+        "description": "Push your competitive programming skills to the next level. This premium 14-day challenge features hard problems covering advanced DP, binary search on answer, greedy proofs, and complex two-pointer techniques. Recommended for interview preparation at top-tier companies."
+      },
+      "vi": {
+        "name": "Thử thách Thuật toán Nâng cao",
+        "description": "Đưa kỹ năng lập trình thi đấu của bạn lên tầm cao mới. Thử thách premium 14 ngày này bao gồm các bài khó về DP nâng cao, tìm kiếm nhị phân trên đáp án, chứng minh tham lam và kỹ thuật hai con trỏ phức tạp. Khuyến nghị cho việc chuẩn bị phỏng vấn tại các công ty hàng đầu."
+      }
+    },
+    "items": [
+      {
+        "problemSlug": "trapping-rain-water",
+        "dayNumber": 1,
+        "orderIndex": 0,
+        "note": {
+          "en": "Warm up with a classic hard — multiple approaches exist",
+          "vi": "Khởi động với bài khó kinh điển — nhiều cách giải"
+        }
+      },
+      {
+        "problemSlug": "find-median-from-data-stream",
+        "dayNumber": 2,
+        "orderIndex": 0,
+        "note": {
+          "en": "Two heaps technique for streaming median",
+          "vi": "Kỹ thuật hai heap cho trung vị luồng"
+        }
+      },
+      {
+        "problemSlug": "kth-largest-element-in-array",
+        "dayNumber": 2,
+        "orderIndex": 1,
+        "note": {
+          "en": "Quickselect vs heap — analyze trade-offs",
+          "vi": "Quickselect vs heap — phân tích đánh đổi"
+        }
+      },
+      {
+        "problemSlug": "coin-change",
+        "dayNumber": 3,
+        "orderIndex": 0,
+        "note": {
+          "en": "Revisit with optimized DP + BFS approach",
+          "vi": "Xem lại với DP tối ưu + cách BFS"
+        }
+      },
+      {
+        "problemSlug": "longest-palindromic-substring",
+        "dayNumber": 4,
+        "orderIndex": 0,
+        "note": {
+          "en": "Try Manacher's algorithm for O(n) solution",
+          "vi": "Thử thuật toán Manacher cho lời giải O(n)"
+        }
+      },
+      {
+        "problemSlug": "word-search",
+        "dayNumber": 5,
+        "orderIndex": 0,
+        "note": {
+          "en": "Optimize backtracking with pruning strategies",
+          "vi": "Tối ưu quay lui với chiến lược cắt tỉa"
+        }
+      },
+      {
+        "problemSlug": "3sum",
+        "dayNumber": 6,
+        "orderIndex": 0,
+        "note": {
+          "en": "Handle edge cases and optimize for large inputs",
+          "vi": "Xử lý trường hợp biên và tối ưu cho đầu vào lớn"
+        }
+      },
+      {
+        "problemSlug": "container-with-most-water",
+        "dayNumber": 7,
+        "orderIndex": 0,
+        "note": {
+          "en": "Prove the two-pointer greedy approach works",
+          "vi": "Chứng minh cách tiếp cận tham lam hai con trỏ"
+        }
+      },
+      {
+        "problemSlug": "merge-intervals",
+        "dayNumber": 8,
+        "orderIndex": 0,
+        "note": {
+          "en": "Extend to meeting rooms II variant",
+          "vi": "Mở rộng sang biến thể phòng họp II"
+        }
+      },
+      {
+        "problemSlug": "course-schedule",
+        "dayNumber": 9,
+        "orderIndex": 0,
+        "note": {
+          "en": "Extend to course-schedule-II — build the ordering",
+          "vi": "Mở rộng sang course-schedule-II — xây dựng thứ tự"
+        }
+      },
+      {
+        "problemSlug": "number-of-islands",
+        "dayNumber": 10,
+        "orderIndex": 0,
+        "note": {
+          "en": "Union-Find approach — compare with DFS",
+          "vi": "Cách Union-Find — so sánh với DFS"
+        }
+      },
+      {
+        "problemSlug": "implement-trie",
+        "dayNumber": 11,
+        "orderIndex": 0,
+        "note": {
+          "en": "Extend with wildcard search and auto-complete",
+          "vi": "Mở rộng với tìm kiếm ký tự đại diện và tự động hoàn thành"
+        }
+      },
+      {
+        "problemSlug": "longest-consecutive-sequence",
+        "dayNumber": 12,
+        "orderIndex": 0,
+        "note": {
+          "en": "Prove O(n) amortized time complexity",
+          "vi": "Chứng minh độ phức tạp O(n) phân bổ"
+        }
+      },
+      {
+        "problemSlug": "product-of-array-except-self",
+        "dayNumber": 13,
+        "orderIndex": 0,
+        "note": {
+          "en": "Space-optimize to O(1) extra space",
+          "vi": "Tối ưu không gian xuống O(1) bộ nhớ thêm"
+        }
+      },
+      {
+        "problemSlug": "maximum-subarray",
+        "dayNumber": 14,
+        "orderIndex": 0,
+        "note": {
+          "en": "Divide and conquer approach — compare with Kadane's",
+          "vi": "Cách chia để trị — so sánh với Kadane"
+        }
+      }
+    ],
+    "similarPlanSlugs": [
+      "dynamic-programming-path",
+      "graph-algorithms-explorer"
+    ]
+  },
+  {
+    "slug": "two-pointer-sliding-window",
+    "difficulty": "beginner",
+    "status": "published",
+    "estimatedDays": 7,
+    "isPremium": false,
+    "topicSlugs": ["two-pointers", "sliding-window", "array", "string"],
+    "tagSlugs": ["two-pointers", "sliding-window", "array", "string"],
+    "translations": {
+      "en": {
+        "name": "Two Pointers & Sliding Window",
+        "description": "Master two of the most versatile patterns in coding interviews. This 7-day plan teaches you when and how to apply two pointers and sliding window techniques through progressively harder problems."
+      },
+      "vi": {
+        "name": "Hai Con Trỏ & Cửa Sổ Trượt",
+        "description": "Thành thạo hai mẫu giải thuật linh hoạt nhất trong phỏng vấn lập trình. Kế hoạch 7 ngày này dạy bạn khi nào và cách áp dụng kỹ thuật hai con trỏ và cửa sổ trượt thông qua các bài tập tăng dần độ khó."
+      }
+    },
+    "items": [
+      {
+        "problemSlug": "two-sum",
+        "dayNumber": 1,
+        "orderIndex": 0,
+        "note": {
+          "en": "Sorted array variant uses two pointers",
+          "vi": "Biến thể mảng đã sắp xếp dùng hai con trỏ"
+        }
+      },
+      {
+        "problemSlug": "best-time-to-buy-and-sell-stock",
+        "dayNumber": 1,
+        "orderIndex": 1,
+        "note": {
+          "en": "Sliding minimum pattern",
+          "vi": "Mẫu cửa sổ trượt tìm min"
+        }
+      },
+      {
+        "problemSlug": "contains-duplicate",
+        "dayNumber": 2,
+        "orderIndex": 0,
+        "note": {
+          "en": "Sort + adjacent comparison approach",
+          "vi": "Sắp xếp + so sánh phần tử liền kề"
+        }
+      },
+      {
+        "problemSlug": "3sum",
+        "dayNumber": 3,
+        "orderIndex": 0,
+        "note": {
+          "en": "Sort + two-pointer scan — handle duplicates",
+          "vi": "Sắp xếp + quét hai con trỏ — xử lý trùng lặp"
+        }
+      },
+      {
+        "problemSlug": "container-with-most-water",
+        "dayNumber": 4,
+        "orderIndex": 0,
+        "note": {
+          "en": "Shrink from both ends — greedy two pointers",
+          "vi": "Thu hẹp từ hai đầu — hai con trỏ tham lam"
+        }
+      },
+      {
+        "problemSlug": "longest-substring-without-repeating-characters",
+        "dayNumber": 5,
+        "orderIndex": 0,
+        "note": {
+          "en": "Variable-size sliding window with hash set",
+          "vi": "Cửa sổ trượt kích thước thay đổi với hash set"
+        }
+      },
+      {
+        "problemSlug": "merge-intervals",
+        "dayNumber": 6,
+        "orderIndex": 0,
+        "note": {
+          "en": "Sort + sweep technique",
+          "vi": "Kỹ thuật sắp xếp + quét"
+        }
+      },
+      {
+        "problemSlug": "trapping-rain-water",
+        "dayNumber": 7,
+        "orderIndex": 0,
+        "note": {
+          "en": "Two-pointer from both ends — track left/right max",
+          "vi": "Hai con trỏ từ hai đầu — theo dõi max trái/phải"
+        }
+      }
+    ],
+    "similarPlanSlugs": [
+      "data-structures-fundamentals",
+      "dynamic-programming-path"
+    ]
+  },
+  {
+    "slug": "binary-search-deep-dive",
+    "difficulty": "intermediate",
+    "status": "published",
+    "estimatedDays": 5,
+    "isPremium": false,
+    "topicSlugs": ["binary-search", "array", "sorting", "divide-and-conquer"],
+    "tagSlugs": ["binary-search", "sorting", "array"],
+    "translations": {
+      "en": {
+        "name": "Binary Search Deep Dive",
+        "description": "Go beyond basic binary search. This 5-day plan covers search in rotated arrays, binary search on answer space, and advanced applications. Learn to identify when binary search applies even in non-obvious scenarios."
+      },
+      "vi": {
+        "name": "Tìm kiếm Nhị phân Chuyên sâu",
+        "description": "Đi xa hơn tìm kiếm nhị phân cơ bản. Kế hoạch 5 ngày này bao gồm tìm kiếm trong mảng xoay, tìm nhị phân trên không gian đáp án và các ứng dụng nâng cao. Học cách nhận diện khi nào tìm nhị phân áp dụng được ngay cả trong các tình huống không rõ ràng."
+      }
+    },
+    "items": [
+      {
+        "problemSlug": "binary-tree-inorder-traversal",
+        "dayNumber": 1,
+        "orderIndex": 0,
+        "note": {
+          "en": "BST inorder gives sorted order — foundation concept",
+          "vi": "Duyệt inorder BST cho thứ tự sắp xếp — khái niệm nền tảng"
+        }
+      },
+      {
+        "problemSlug": "kth-largest-element-in-array",
+        "dayNumber": 2,
+        "orderIndex": 0,
+        "note": {
+          "en": "Quickselect or binary search on value range",
+          "vi": "Quickselect hoặc tìm nhị phân trên miền giá trị"
+        }
+      },
+      {
+        "problemSlug": "find-median-from-data-stream",
+        "dayNumber": 3,
+        "orderIndex": 0,
+        "note": {
+          "en": "Binary search insertion in sorted list approach",
+          "vi": "Chèn tìm nhị phân trong danh sách đã sắp xếp"
+        }
+      },
+      {
+        "problemSlug": "merge-intervals",
+        "dayNumber": 4,
+        "orderIndex": 0,
+        "note": {
+          "en": "Binary search for insertion point in sorted intervals",
+          "vi": "Tìm nhị phân điểm chèn trong khoảng đã sắp xếp"
+        }
+      },
+      {
+        "problemSlug": "longest-consecutive-sequence",
+        "dayNumber": 5,
+        "orderIndex": 0,
+        "note": {
+          "en": "Compare sort+binary search vs hash set approach",
+          "vi": "So sánh sắp xếp+tìm nhị phân vs hash set"
+        }
+      }
+    ],
+    "similarPlanSlugs": [
+      "two-pointer-sliding-window",
+      "advanced-algorithms-challenge"
+    ]
+  },
+  {
+    "slug": "interview-prep-essentials",
+    "difficulty": "intermediate",
+    "status": "published",
+    "estimatedDays": 21,
+    "isPremium": true,
+    "topicSlugs": [
+      "array",
+      "string",
+      "linked-list",
+      "tree",
+      "graph",
+      "dynamic-programming",
+      "hash-table",
+      "stack",
+      "queue",
+      "binary-search"
+    ],
+    "tagSlugs": [
+      "array",
+      "string",
+      "dynamic-programming",
+      "binary-tree",
+      "graph",
+      "hash-table",
+      "two-pointers"
+    ],
+    "translations": {
+      "en": {
+        "name": "Interview Prep Essentials",
+        "description": "The ultimate 21-day interview preparation plan. Covers all major categories — arrays, strings, trees, graphs, DP, and system design patterns. Each week focuses on a theme, with difficulty ramping up progressively. Complete this plan to be confident in any technical interview."
+      },
+      "vi": {
+        "name": "Chuẩn bị Phỏng vấn Toàn diện",
+        "description": "Kế hoạch chuẩn bị phỏng vấn tối ưu trong 21 ngày. Bao phủ tất cả các chủ đề chính — mảng, chuỗi, cây, đồ thị, quy hoạch động và các mẫu thiết kế hệ thống. Mỗi tuần tập trung vào một chủ đề, với độ khó tăng dần. Hoàn thành kế hoạch này để tự tin trong mọi buổi phỏng vấn kỹ thuật."
+      }
+    },
+    "items": [
+      {
+        "problemSlug": "two-sum",
+        "dayNumber": 1,
+        "orderIndex": 0,
+        "note": {
+          "en": "Week 1: Arrays & Strings",
+          "vi": "Tuần 1: Mảng & Chuỗi"
+        }
+      },
+      {
+        "problemSlug": "best-time-to-buy-and-sell-stock",
+        "dayNumber": 1,
+        "orderIndex": 1
+      },
+      {
+        "problemSlug": "contains-duplicate",
+        "dayNumber": 2,
+        "orderIndex": 0
+      },
+      {
+        "problemSlug": "product-of-array-except-self",
+        "dayNumber": 2,
+        "orderIndex": 1
+      },
+      {
+        "problemSlug": "maximum-subarray",
+        "dayNumber": 3,
+        "orderIndex": 0
+      },
+      {
+        "problemSlug": "longest-substring-without-repeating-characters",
+        "dayNumber": 3,
+        "orderIndex": 1
+      },
+      {
+        "problemSlug": "group-anagrams",
+        "dayNumber": 4,
+        "orderIndex": 0
+      },
+      {
+        "problemSlug": "3sum",
+        "dayNumber": 4,
+        "orderIndex": 1
+      },
+      {
+        "problemSlug": "container-with-most-water",
+        "dayNumber": 5,
+        "orderIndex": 0
+      },
+      {
+        "problemSlug": "longest-palindromic-substring",
+        "dayNumber": 5,
+        "orderIndex": 1
+      },
+      {
+        "problemSlug": "valid-parentheses",
+        "dayNumber": 6,
+        "orderIndex": 0,
+        "note": {
+          "en": "Week 1 finish: Stack",
+          "vi": "Kết thúc tuần 1: Stack"
+        }
+      },
+      {
+        "problemSlug": "merge-intervals",
+        "dayNumber": 7,
+        "orderIndex": 0
+      },
+      {
+        "problemSlug": "reverse-linked-list",
+        "dayNumber": 8,
+        "orderIndex": 0,
+        "note": {
+          "en": "Week 2: Linked Lists & Trees",
+          "vi": "Tuần 2: Danh sách liên kết & Cây"
+        }
+      },
+      {
+        "problemSlug": "merge-two-sorted-lists",
+        "dayNumber": 8,
+        "orderIndex": 1
+      },
+      {
+        "problemSlug": "linked-list-cycle",
+        "dayNumber": 9,
+        "orderIndex": 0
+      },
+      {
+        "problemSlug": "binary-tree-inorder-traversal",
+        "dayNumber": 10,
+        "orderIndex": 0
+      },
+      {
+        "problemSlug": "maximum-depth-of-binary-tree",
+        "dayNumber": 10,
+        "orderIndex": 1
+      },
+      {
+        "problemSlug": "same-tree",
+        "dayNumber": 11,
+        "orderIndex": 0
+      },
+      {
+        "problemSlug": "invert-binary-tree",
+        "dayNumber": 11,
+        "orderIndex": 1
+      },
+      {
+        "problemSlug": "symmetric-tree",
+        "dayNumber": 12,
+        "orderIndex": 0
+      },
+      {
+        "problemSlug": "implement-trie",
+        "dayNumber": 13,
+        "orderIndex": 0
+      },
+      {
+        "problemSlug": "kth-largest-element-in-array",
+        "dayNumber": 14,
+        "orderIndex": 0
+      },
+      {
+        "problemSlug": "number-of-islands",
+        "dayNumber": 15,
+        "orderIndex": 0,
+        "note": {
+          "en": "Week 3: Graphs & DP",
+          "vi": "Tuần 3: Đồ thị & DP"
+        }
+      },
+      {
+        "problemSlug": "rotting-oranges",
+        "dayNumber": 15,
+        "orderIndex": 1
+      },
+      {
+        "problemSlug": "course-schedule",
+        "dayNumber": 16,
+        "orderIndex": 0
+      },
+      {
+        "problemSlug": "climbing-stairs",
+        "dayNumber": 17,
+        "orderIndex": 0
+      },
+      {
+        "problemSlug": "coin-change",
+        "dayNumber": 17,
+        "orderIndex": 1
+      },
+      {
+        "problemSlug": "longest-consecutive-sequence",
+        "dayNumber": 18,
+        "orderIndex": 0
+      },
+      {
+        "problemSlug": "word-search",
+        "dayNumber": 19,
+        "orderIndex": 0
+      },
+      {
+        "problemSlug": "find-median-from-data-stream",
+        "dayNumber": 20,
+        "orderIndex": 0
+      },
+      {
+        "problemSlug": "trapping-rain-water",
+        "dayNumber": 21,
+        "orderIndex": 0,
+        "note": {
+          "en": "Final challenge — combine everything you learned",
+          "vi": "Thử thách cuối — kết hợp mọi thứ đã học"
+        }
+      }
+    ],
+    "similarPlanSlugs": [
+      "data-structures-fundamentals",
+      "advanced-algorithms-challenge"
+    ]
+  },
+  {
+    "slug": "stack-queue-mastery",
+    "difficulty": "beginner",
+    "status": "published",
+    "estimatedDays": 5,
+    "isPremium": false,
+    "topicSlugs": [
+      "stack",
+      "queue",
+      "monotonic-stack",
+      "monotonic-queue",
+      "design"
+    ],
+    "tagSlugs": ["stack", "queue", "monotonic-stack", "design"],
+    "translations": {
+      "en": {
+        "name": "Stack & Queue Mastery",
+        "description": "Deep dive into stack and queue patterns in 5 days. Learn classic matching problems, monotonic stack techniques, and queue-based BFS. These patterns appear frequently in interviews and competitions."
+      },
+      "vi": {
+        "name": "Thành thạo Stack & Queue",
+        "description": "Đi sâu vào các mẫu stack và queue trong 5 ngày. Học các bài toán đối sánh kinh điển, kỹ thuật monotonic stack và BFS dựa trên queue. Các mẫu này xuất hiện thường xuyên trong phỏng vấn và thi đấu."
+      }
+    },
+    "items": [
+      {
+        "problemSlug": "valid-parentheses",
+        "dayNumber": 1,
+        "orderIndex": 0,
+        "note": {
+          "en": "Classic stack matching — foundation problem",
+          "vi": "Đối sánh stack kinh điển — bài nền tảng"
+        }
+      },
+      {
+        "problemSlug": "reverse-linked-list",
+        "dayNumber": 2,
+        "orderIndex": 0,
+        "note": {
+          "en": "Stack can reverse sequences — think LIFO",
+          "vi": "Stack có thể đảo ngược dãy — nghĩ LIFO"
+        }
+      },
+      {
+        "problemSlug": "rotting-oranges",
+        "dayNumber": 3,
+        "orderIndex": 0,
+        "note": {
+          "en": "Queue-based BFS — level order processing",
+          "vi": "BFS dựa trên queue — xử lý theo tầng"
+        }
+      },
+      {
+        "problemSlug": "trapping-rain-water",
+        "dayNumber": 4,
+        "orderIndex": 0,
+        "note": {
+          "en": "Monotonic stack approach for water trapping",
+          "vi": "Monotonic stack cho bẫy nước mưa"
+        }
+      },
+      {
+        "problemSlug": "find-median-from-data-stream",
+        "dayNumber": 5,
+        "orderIndex": 0,
+        "note": {
+          "en": "Priority queue (heap) for streaming median",
+          "vi": "Hàng đợi ưu tiên (heap) cho trung vị luồng"
+        }
+      }
+    ],
+    "similarPlanSlugs": [
+      "data-structures-fundamentals",
+      "two-pointer-sliding-window"
+    ]
+  },
+  {
+    "slug": "weekly-warmup-sprint",
+    "difficulty": "beginner",
+    "status": "draft",
+    "estimatedDays": 5,
+    "isPremium": false,
+    "topicSlugs": ["array", "string", "math"],
+    "tagSlugs": ["array", "string", "math"],
+    "translations": {
+      "en": {
+        "name": "Weekly Warmup Sprint",
+        "description": "A quick 5-day warmup to keep your problem-solving skills sharp. Solve one easy-medium problem per day across different categories. Perfect for maintaining consistency."
+      },
+      "vi": {
+        "name": "Sprint Khởi động Hàng tuần",
+        "description": "Khởi động nhanh 5 ngày để giữ kỹ năng giải bài luôn sắc bén. Giải một bài dễ-trung bình mỗi ngày qua các chủ đề khác nhau. Hoàn hảo để duy trì sự nhất quán."
+      }
+    },
+    "items": [
+      {
+        "problemSlug": "two-sum",
+        "dayNumber": 1,
+        "orderIndex": 0
+      },
+      {
+        "problemSlug": "valid-parentheses",
+        "dayNumber": 2,
+        "orderIndex": 0
+      },
+      {
+        "problemSlug": "climbing-stairs",
+        "dayNumber": 3,
+        "orderIndex": 0
+      },
+      {
+        "problemSlug": "maximum-depth-of-binary-tree",
+        "dayNumber": 4,
+        "orderIndex": 0
+      },
+      {
+        "problemSlug": "contains-duplicate",
+        "dayNumber": 5,
+        "orderIndex": 0
+      }
+    ],
+    "similarPlanSlugs": ["data-structures-fundamentals"]
+  }
+]

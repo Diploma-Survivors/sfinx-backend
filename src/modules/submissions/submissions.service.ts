@@ -19,6 +19,7 @@ import { Language } from '../auth/enums';
 import { ContestSubmissionService } from '../contest/services';
 import { Judge0BatchResponse } from '../judge0/interfaces';
 import { Judge0Service } from '../judge0/judge0.service';
+import { NotificationEvent } from '../notifications/enums/notification-event.enum';
 import { NotificationType } from '../notifications/enums/notification-type.enum';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Problem } from '../problems/entities/problem.entity';
@@ -380,7 +381,7 @@ export class SubmissionsService {
     if (isNewlySolved) {
       await this.notificationsService.create({
         recipientId: submission.user.id,
-        type: NotificationType.SYSTEM,
+        type: NotificationType.SUBMISSION,
         translations: [
           {
             languageCode: Language.EN,
@@ -393,7 +394,12 @@ export class SubmissionsService {
             content: `Chúc mừng! Bạn đã giải thành công bài "${submission.problem.title}".`,
           },
         ],
-        link: `/problems/${submission.problem.id}`,
+        metadata: {
+          event: NotificationEvent.PROBLEM_SOLVED,
+          problemId: submission.problem.id,
+          problemSlug: submission.problem.slug,
+          submissionId,
+        },
       });
 
       this.eventEmitter.emit(

@@ -27,6 +27,7 @@ import { ProblemComment, ProblemCommentVote } from '../entities';
 import { VoteType } from '../enums';
 
 import { Language } from 'src/modules/auth/enums';
+import { NotificationEvent } from '../../../notifications/enums/notification-event.enum';
 import { NotificationType } from '../../../notifications/enums/notification-type.enum';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { VoteResponseDto } from '../dto';
@@ -205,7 +206,12 @@ export class ProblemCommentsService extends BaseCommentsService<
               content: `${createdComment.author?.username || 'Ai đó'} đã trả lời bình luận của bạn trên một bài toán.`,
             },
           ],
-          link: `/problems/${problemId}`,
+          metadata: {
+            event: NotificationEvent.PROBLEM_COMMENT_REPLY,
+            problemId,
+            commentId: createdComment.id,
+            parentCommentId: dto.parentId,
+          },
         });
       }
     }

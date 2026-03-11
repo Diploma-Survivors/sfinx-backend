@@ -13,6 +13,7 @@ import { PaymentMethodEnum } from '../enums/payment-method.enum';
 import { PaymentProviderFactory } from '../providers/payment-provider.factory';
 import { ExchangeRateService } from './exchange-rate.service';
 
+import { NotificationEvent } from '../../notifications/enums/notification-event.enum';
 import { NotificationType } from '../../notifications/enums/notification-type.enum';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { CurrentPlanResponseDto } from '../dto/current-plan-response.dto';
@@ -174,7 +175,7 @@ export class PaymentsService {
 
       await this.notificationsService.create({
         recipientId: transaction.user.id,
-        type: NotificationType.SYSTEM,
+        type: NotificationType.PAYMENT,
         translations: [
           {
             languageCode: Language.EN,
@@ -189,7 +190,10 @@ export class PaymentsService {
               'Thanh toán của bạn đã thành công. Hãy tận hưởng các tính năng premium!',
           },
         ],
-        link: '/settings?tab=billing',
+        metadata: {
+          event: NotificationEvent.PAYMENT_SUCCESS,
+          transactionId: transaction.id,
+        },
       });
 
       return { success: true };
