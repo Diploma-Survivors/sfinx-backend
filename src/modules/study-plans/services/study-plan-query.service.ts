@@ -166,20 +166,28 @@ export class StudyPlanQueryService {
       return [];
     }
 
-    const similarPlans = await this.studyPlanRepository.find({
-      where: {
+    const similarPlans = await this.studyPlanRepository
+      .createQueryBuilder('sp')
+      .leftJoinAndSelect('sp.translations', 'spt')
+      .where({
         id: In(plan.similarPlanIds),
         status: StudyPlanStatus.PUBLISHED,
-      },
-      relations: ['translations'],
-    });
+      })
+      .loadRelationCountAndMap('sp.totalProblems', 'sp.items')
+      .getMany();
 
-    return similarPlans.map((p) => this.mapPlanCard(p, lang));
+    return similarPlans.map((p: StudyPlan & { totalProblems?: number }) => ({
+      ...this.mapPlanCard(p, lang),
+      totalProblems: p.totalProblems ?? 0,
+    }));
   }
 
   // ─── Shared helpers (used by other services too) ──────────────────
 
-  mapPlanCard(plan: StudyPlan, lang: string): StudyPlanCardResponseDto {
+  mapPlanCard(
+    plan: StudyPlan & { totalProblems?: number },
+    lang: string,
+  ): StudyPlanCardResponseDto {
     const translation = this.getTranslation(plan, lang);
 
     return {
@@ -192,6 +200,7 @@ export class StudyPlanQueryService {
         : null,
       estimatedDays: plan.estimatedDays,
       isPremium: plan.isPremium,
+      totalProblems: plan.totalProblems ?? 0,
     };
   }
 

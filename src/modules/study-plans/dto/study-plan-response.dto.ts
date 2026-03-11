@@ -29,14 +29,14 @@ export class StudyPlanCardResponseDto {
 
   @ApiProperty({ description: 'Whether plan requires premium' })
   isPremium: boolean;
+
+  @ApiProperty({ description: 'Total number of problems in the plan' })
+  totalProblems: number;
 }
 
 // ─── Public list item ─────────────────────────────────────────────────
 
 export class StudyPlanListItemResponseDto extends StudyPlanCardResponseDto {
-  @ApiProperty({ description: 'Total number of problems in the plan' })
-  totalProblems: number;
-
   @ApiProperty({ description: 'Whether current user is enrolled' })
   isEnrolled: boolean;
 
@@ -64,9 +64,6 @@ export class StudyPlanDetailResponseDto extends StudyPlanCardResponseDto {
 
   @ApiProperty({ description: 'Associated tags', type: () => [Tag] })
   tags: Tag[];
-
-  @ApiProperty({ description: 'Total number of problems' })
-  totalProblems: number;
 
   @ApiProperty({ description: 'Whether current user is enrolled' })
   isEnrolled: boolean;
@@ -131,9 +128,6 @@ export class EnrolledPlanResponseDto extends StudyPlanCardResponseDto {
   @ApiProperty({ description: 'Current day the user is on' })
   currentDay: number;
 
-  @ApiProperty({ description: 'Total number of problems in the plan' })
-  totalProblems: number;
-
   @ApiProperty({ description: 'Number of problems solved' })
   solvedCount: number;
 
@@ -158,9 +152,6 @@ export class StudyPlanProgressResponseDto extends StudyPlanCardResponseDto {
 
   @ApiProperty({ description: 'Number of problems solved' })
   solvedCount: number;
-
-  @ApiProperty({ description: 'Total number of problems' })
-  totalProblems: number;
 
   @ApiProperty({ description: 'Progress percentage (0-100)' })
   progressPercentage: number;
