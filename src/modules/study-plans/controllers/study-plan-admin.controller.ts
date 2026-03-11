@@ -33,7 +33,7 @@ import { AddStudyPlanItemDto } from '../dto/add-study-plan-item.dto';
 import { CreateStudyPlanDto } from '../dto/create-study-plan.dto';
 import { FilterStudyPlanDto } from '../dto/filter-study-plan.dto';
 import { ReorderItemsDto } from '../dto/reorder-items.dto';
-import { StudyPlanSummaryResponseDto } from '../dto/study-plan-response.dto';
+import { AdminStudyPlanResponseDto } from '../dto/study-plan-response.dto';
 import { UpdateStudyPlanDto } from '../dto/update-study-plan.dto';
 import { StudyPlanItem } from '../entities/study-plan-item.entity';
 import { StudyPlan } from '../entities/study-plan.entity';
@@ -65,7 +65,7 @@ export class StudyPlanAdminController {
   @Get()
   @CheckAbility({ action: Action.Read, subject: 'StudyPlan' })
   @ApiOperation({ summary: 'List all study plans (including drafts)' })
-  @ApiPaginatedResponse(StudyPlanSummaryResponseDto)
+  @ApiPaginatedResponse(AdminStudyPlanResponseDto)
   findAll(@Query() query: FilterStudyPlanDto, @Language() lang: string) {
     return this.studyPlanService.findAllAdmin(query, lang);
   }

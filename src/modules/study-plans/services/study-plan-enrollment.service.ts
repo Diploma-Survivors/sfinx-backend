@@ -98,20 +98,12 @@ export class StudyPlanEnrollmentService {
   ): Promise<EnrolledPlanResponseDto[]> {
     const enrollments = await this.enrollmentRepository.find({
       where: { userId },
-      relations: [
-        'studyPlan',
-        'studyPlan.translations',
-        'studyPlan.topics',
-        'studyPlan.tags',
-      ],
+      relations: ['studyPlan', 'studyPlan.translations'],
       order: { enrolledAt: 'DESC' },
     });
 
     return enrollments.map((e): EnrolledPlanResponseDto => {
-      const summary = this.queryService.mapPlanWithTranslation(
-        e.studyPlan,
-        lang,
-      );
+      const summary = this.queryService.mapPlanCard(e.studyPlan, lang);
       return {
         ...summary,
         enrollmentStatus: e.status,
@@ -131,12 +123,7 @@ export class StudyPlanEnrollmentService {
   ): Promise<StudyPlanProgressResponseDto> {
     const enrollment = await this.enrollmentRepository.findOne({
       where: { studyPlanId: planId, userId },
-      relations: [
-        'studyPlan',
-        'studyPlan.translations',
-        'studyPlan.topics',
-        'studyPlan.tags',
-      ],
+      relations: ['studyPlan', 'studyPlan.translations'],
     });
     if (!enrollment) {
       throw new NotFoundException('Not enrolled in this plan');
@@ -162,7 +149,7 @@ export class StudyPlanEnrollmentService {
     }
 
     const days = this.queryService.groupItemsByDay(items, progressMap);
-    const summary = this.queryService.mapPlanWithTranslation(plan, lang);
+    const summary = this.queryService.mapPlanCard(plan, lang);
     const totalProblems = items.length;
     const progressPercentage =
       totalProblems > 0

@@ -11,11 +11,12 @@ import { StorageService } from 'src/modules/storage/storage.service';
 import { User } from 'src/modules/auth/entities/user.entity';
 import { FilterStudyPlanDto } from '../dto/filter-study-plan.dto';
 import {
+  AdminStudyPlanResponseDto,
+  StudyPlanCardResponseDto,
   StudyPlanDayResponseDto,
   StudyPlanDetailResponseDto,
   StudyPlanItemResponseDto,
   StudyPlanListItemResponseDto,
-  StudyPlanSummaryResponseDto,
 } from '../dto/study-plan-response.dto';
 import { StudyPlan } from '../entities/study-plan.entity';
 import { StudyPlanItem } from '../entities/study-plan-item.entity';
@@ -65,10 +66,10 @@ export class StudyPlanQueryService {
 
     const mapped: StudyPlanListItemResponseDto[] = data.map(
       (plan: StudyPlan & { totalProblems?: number }) => {
-        const summary = this.mapPlanWithTranslation(plan, lang);
+        const card = this.mapPlanCard(plan, lang);
         const enrollment = enrollmentMap.get(plan.id);
         return {
-          ...summary,
+          ...card,
           totalProblems: plan.totalProblems ?? 0,
           isEnrolled: !!enrollment,
           solvedCount: enrollment?.solvedCount ?? 0,
@@ -134,10 +135,14 @@ export class StudyPlanQueryService {
     }
 
     const days = this.groupItemsByDay(items, progressMap);
-    const summary = this.mapPlanWithTranslation(plan, lang);
+    const card = this.mapPlanCard(plan, lang);
 
     return {
-      ...summary,
+      ...card,
+      description: this.getTranslation(plan, lang)?.description ?? null,
+      enrollmentCount: plan.enrollmentCount,
+      topics: plan.topics ?? [],
+      tags: plan.tags ?? [],
       totalProblems: items.length,
       isEnrolled: !!enrollment,
       solvedCount: enrollment?.solvedCount ?? 0,
@@ -149,7 +154,7 @@ export class StudyPlanQueryService {
   async getSimilarPlans(
     planId: number,
     lang: string = 'en',
-  ): Promise<StudyPlanSummaryResponseDto[]> {
+  ): Promise<StudyPlanCardResponseDto[]> {
     const plan = await this.studyPlanRepository.findOne({
       where: { id: planId },
     });
@@ -166,35 +171,38 @@ export class StudyPlanQueryService {
         id: In(plan.similarPlanIds),
         status: StudyPlanStatus.PUBLISHED,
       },
-      relations: ['translations', 'topics', 'tags'],
+      relations: ['translations'],
     });
 
-    return this.mapPlansWithTranslation(similarPlans, lang);
+    return similarPlans.map((p) => this.mapPlanCard(p, lang));
   }
 
   // ─── Shared helpers (used by other services too) ──────────────────
 
-  mapPlanWithTranslation(
-    plan: StudyPlan,
-    lang: string,
-  ): StudyPlanSummaryResponseDto {
-    const translation =
-      plan.translations?.find((t) => t.languageCode === lang) ||
-      plan.translations?.find((t) => t.languageCode === 'en') ||
-      plan.translations?.[0];
+  mapPlanCard(plan: StudyPlan, lang: string): StudyPlanCardResponseDto {
+    const translation = this.getTranslation(plan, lang);
 
     return {
       id: plan.id,
       slug: plan.slug,
       name: translation?.name ?? '',
-      description: translation?.description ?? null,
       difficulty: plan.difficulty,
-      status: plan.status,
-      estimatedDays: plan.estimatedDays,
       coverImageUrl: plan.coverImageKey
         ? this.storageService.getCloudFrontUrl(plan.coverImageKey)
         : null,
+      estimatedDays: plan.estimatedDays,
       isPremium: plan.isPremium,
+    };
+  }
+
+  mapPlanForAdmin(plan: StudyPlan, lang: string): AdminStudyPlanResponseDto {
+    const card = this.mapPlanCard(plan, lang);
+    const translation = this.getTranslation(plan, lang);
+
+    return {
+      ...card,
+      description: translation?.description ?? null,
+      status: plan.status,
       enrollmentCount: plan.enrollmentCount,
       similarPlanIds: plan.similarPlanIds ?? [],
       topics: plan.topics ?? [],
@@ -204,11 +212,11 @@ export class StudyPlanQueryService {
     };
   }
 
-  mapPlansWithTranslation(
+  mapPlansForAdmin(
     plans: StudyPlan[],
     lang: string,
-  ): StudyPlanSummaryResponseDto[] {
-    return plans.map((plan) => this.mapPlanWithTranslation(plan, lang));
+  ): AdminStudyPlanResponseDto[] {
+    return plans.map((plan) => this.mapPlanForAdmin(plan, lang));
   }
 
   groupItemsByDay(
@@ -236,7 +244,15 @@ export class StudyPlanQueryService {
       .map(([dayNumber, dayItems]) => ({ dayNumber, items: dayItems }));
   }
 
-  // ─── Private filter/sort helpers ──────────────────────────────────
+  // ─── Private helpers ───────────────────────────────────────────────
+
+  private getTranslation(plan: StudyPlan, lang: string) {
+    return (
+      plan.translations?.find((t) => t.languageCode === lang) ||
+      plan.translations?.find((t) => t.languageCode === 'en') ||
+      plan.translations?.[0]
+    );
+  }
 
   applyFilters(
     qb: SelectQueryBuilder<StudyPlan>,

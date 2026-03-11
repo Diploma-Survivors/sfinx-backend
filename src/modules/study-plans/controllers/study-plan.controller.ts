@@ -24,10 +24,10 @@ import { FilterStudyPlanDto } from '../dto/filter-study-plan.dto';
 import {
   EnrolledPlanResponseDto,
   LeaderboardEntryResponseDto,
+  StudyPlanCardResponseDto,
   StudyPlanDetailResponseDto,
   StudyPlanListItemResponseDto,
   StudyPlanProgressResponseDto,
-  StudyPlanSummaryResponseDto,
 } from '../dto/study-plan-response.dto';
 import { StudyPlanQueryService } from '../services/study-plan-query.service';
 import { StudyPlanEnrollmentService } from '../services/study-plan-enrollment.service';
@@ -113,7 +113,7 @@ export class StudyPlanController {
   @Get(':id/similar')
   @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get similar study plans' })
-  @ApiResponse({ status: 200, type: [StudyPlanSummaryResponseDto] })
+  @ApiResponse({ status: 200, type: [StudyPlanCardResponseDto] })
   getSimilarPlans(
     @Param('id', ParseIntPipe) planId: number,
     @Language() lang: string,

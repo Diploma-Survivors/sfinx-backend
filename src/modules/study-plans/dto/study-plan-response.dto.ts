@@ -6,7 +6,9 @@ import { StudyPlanDifficulty } from '../enums/study-plan-difficulty.enum';
 import { StudyPlanStatus } from '../enums/study-plan-status.enum';
 import { EnrollmentStatus } from '../enums/enrollment-status.enum';
 
-export class StudyPlanSummaryResponseDto {
+// ─── Lightweight base (shared by all public endpoints) ────────────────
+
+export class StudyPlanCardResponseDto {
   @ApiProperty({ description: 'Plan ID' })
   id: number;
 
@@ -16,44 +18,22 @@ export class StudyPlanSummaryResponseDto {
   @ApiProperty({ description: 'Translated plan name' })
   name: string;
 
-  @ApiPropertyOptional({ description: 'Translated plan description' })
-  description: string | null;
-
   @ApiProperty({ description: 'Difficulty level', enum: StudyPlanDifficulty })
   difficulty: StudyPlanDifficulty;
-
-  @ApiProperty({ description: 'Plan status', enum: StudyPlanStatus })
-  status: StudyPlanStatus;
-
-  @ApiProperty({ description: 'Estimated days to complete' })
-  estimatedDays: number;
 
   @ApiPropertyOptional({ description: 'Cover image URL via CloudFront' })
   coverImageUrl: string | null;
 
+  @ApiProperty({ description: 'Estimated days to complete' })
+  estimatedDays: number;
+
   @ApiProperty({ description: 'Whether plan requires premium' })
   isPremium: boolean;
-
-  @ApiProperty({ description: 'Number of enrolled users' })
-  enrollmentCount: number;
-
-  @ApiProperty({ description: 'IDs of similar study plans', type: [Number] })
-  similarPlanIds: number[];
-
-  @ApiProperty({ description: 'Associated topics', type: () => [Topic] })
-  topics: Topic[];
-
-  @ApiProperty({ description: 'Associated tags', type: () => [Tag] })
-  tags: Tag[];
-
-  @ApiProperty({ description: 'Creation timestamp' })
-  createdAt: Date;
-
-  @ApiProperty({ description: 'Last update timestamp' })
-  updatedAt: Date;
 }
 
-export class StudyPlanListItemResponseDto extends StudyPlanSummaryResponseDto {
+// ─── Public list item ─────────────────────────────────────────────────
+
+export class StudyPlanListItemResponseDto extends StudyPlanCardResponseDto {
   @ApiProperty({ description: 'Total number of problems in the plan' })
   totalProblems: number;
 
@@ -69,6 +49,45 @@ export class StudyPlanListItemResponseDto extends StudyPlanSummaryResponseDto {
   })
   enrollmentStatus: EnrollmentStatus | null;
 }
+
+// ─── Public detail ────────────────────────────────────────────────────
+
+export class StudyPlanDetailResponseDto extends StudyPlanCardResponseDto {
+  @ApiPropertyOptional({ description: 'Translated plan description' })
+  description: string | null;
+
+  @ApiProperty({ description: 'Number of enrolled users' })
+  enrollmentCount: number;
+
+  @ApiProperty({ description: 'Associated topics', type: () => [Topic] })
+  topics: Topic[];
+
+  @ApiProperty({ description: 'Associated tags', type: () => [Tag] })
+  tags: Tag[];
+
+  @ApiProperty({ description: 'Total number of problems' })
+  totalProblems: number;
+
+  @ApiProperty({ description: 'Whether current user is enrolled' })
+  isEnrolled: boolean;
+
+  @ApiProperty({ description: 'Number of problems solved by current user' })
+  solvedCount: number;
+
+  @ApiPropertyOptional({
+    description: 'Enrollment status',
+    enum: EnrollmentStatus,
+  })
+  enrollmentStatus: EnrollmentStatus | null;
+
+  @ApiProperty({
+    description: 'Problems grouped by day',
+    type: () => [StudyPlanDayResponseDto],
+  })
+  days: StudyPlanDayResponseDto[];
+}
+
+// ─── Items & Days ─────────────────────────────────────────────────────
 
 export class StudyPlanItemResponseDto {
   @ApiProperty({ description: 'Item ID' })
@@ -103,30 +122,31 @@ export class StudyPlanDayResponseDto {
   items: StudyPlanItemResponseDto[];
 }
 
-export class StudyPlanDetailResponseDto extends StudyPlanSummaryResponseDto {
-  @ApiProperty({ description: 'Total number of problems' })
-  totalProblems: number;
+// ─── Enrolled plans list ──────────────────────────────────────────────
 
-  @ApiProperty({ description: 'Whether current user is enrolled' })
-  isEnrolled: boolean;
+export class EnrolledPlanResponseDto extends StudyPlanCardResponseDto {
+  @ApiProperty({ description: 'Enrollment status', enum: EnrollmentStatus })
+  enrollmentStatus: EnrollmentStatus;
 
-  @ApiProperty({ description: 'Number of problems solved by current user' })
+  @ApiProperty({ description: 'Current day the user is on' })
+  currentDay: number;
+
+  @ApiProperty({ description: 'Number of problems solved' })
   solvedCount: number;
 
-  @ApiPropertyOptional({
-    description: 'Enrollment status',
-    enum: EnrollmentStatus,
-  })
-  enrollmentStatus: EnrollmentStatus | null;
+  @ApiPropertyOptional({ description: 'Last activity timestamp' })
+  lastActivityAt: Date | null;
 
-  @ApiProperty({
-    description: 'Problems grouped by day',
-    type: [StudyPlanDayResponseDto],
-  })
-  days: StudyPlanDayResponseDto[];
+  @ApiPropertyOptional({ description: 'Completion timestamp' })
+  completedAt: Date | null;
+
+  @ApiProperty({ description: 'Enrollment timestamp' })
+  enrolledAt: Date;
 }
 
-export class StudyPlanProgressResponseDto extends StudyPlanSummaryResponseDto {
+// ─── Progress detail ──────────────────────────────────────────────────
+
+export class StudyPlanProgressResponseDto extends StudyPlanCardResponseDto {
   @ApiProperty({ description: 'Enrollment status', enum: EnrollmentStatus })
   enrollmentStatus: EnrollmentStatus;
 
@@ -150,30 +170,40 @@ export class StudyPlanProgressResponseDto extends StudyPlanSummaryResponseDto {
 
   @ApiProperty({
     description: 'Problems grouped by day',
-    type: [StudyPlanDayResponseDto],
+    type: () => [StudyPlanDayResponseDto],
   })
   days: StudyPlanDayResponseDto[];
 }
 
-export class EnrolledPlanResponseDto extends StudyPlanSummaryResponseDto {
-  @ApiProperty({ description: 'Enrollment status', enum: EnrollmentStatus })
-  enrollmentStatus: EnrollmentStatus;
+// ─── Admin list ───────────────────────────────────────────────────────
 
-  @ApiProperty({ description: 'Current day the user is on' })
-  currentDay: number;
+export class AdminStudyPlanResponseDto extends StudyPlanCardResponseDto {
+  @ApiPropertyOptional({ description: 'Translated plan description' })
+  description: string | null;
 
-  @ApiProperty({ description: 'Number of problems solved' })
-  solvedCount: number;
+  @ApiProperty({ description: 'Plan status', enum: StudyPlanStatus })
+  status: StudyPlanStatus;
 
-  @ApiPropertyOptional({ description: 'Last activity timestamp' })
-  lastActivityAt: Date | null;
+  @ApiProperty({ description: 'Number of enrolled users' })
+  enrollmentCount: number;
 
-  @ApiPropertyOptional({ description: 'Completion timestamp' })
-  completedAt: Date | null;
+  @ApiProperty({ description: 'IDs of similar study plans', type: [Number] })
+  similarPlanIds: number[];
 
-  @ApiProperty({ description: 'Enrollment timestamp' })
-  enrolledAt: Date;
+  @ApiProperty({ description: 'Associated topics', type: () => [Topic] })
+  topics: Topic[];
+
+  @ApiProperty({ description: 'Associated tags', type: () => [Tag] })
+  tags: Tag[];
+
+  @ApiProperty({ description: 'Creation timestamp' })
+  createdAt: Date;
+
+  @ApiProperty({ description: 'Last update timestamp' })
+  updatedAt: Date;
 }
+
+// ─── Leaderboard ──────────────────────────────────────────────────────
 
 export class LeaderboardEntryResponseDto {
   @ApiProperty({ description: 'Rank position' })

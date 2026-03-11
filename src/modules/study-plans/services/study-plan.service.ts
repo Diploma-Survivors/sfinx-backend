@@ -14,7 +14,7 @@ import { AddStudyPlanItemDto } from '../dto/add-study-plan-item.dto';
 import { CreateStudyPlanDto } from '../dto/create-study-plan.dto';
 import { FilterStudyPlanDto } from '../dto/filter-study-plan.dto';
 import { ReorderItemsDto } from '../dto/reorder-items.dto';
-import { StudyPlanSummaryResponseDto } from '../dto/study-plan-response.dto';
+import { AdminStudyPlanResponseDto } from '../dto/study-plan-response.dto';
 import { UpdateStudyPlanDto } from '../dto/update-study-plan.dto';
 import { StudyPlanItem } from '../entities/study-plan-item.entity';
 import { StudyPlanTranslation } from '../entities/study-plan-translation.entity';
@@ -213,7 +213,7 @@ export class StudyPlanService {
   async findAllAdmin(
     query: FilterStudyPlanDto,
     lang: string = 'en',
-  ): Promise<PaginatedResultDto<StudyPlanSummaryResponseDto>> {
+  ): Promise<PaginatedResultDto<AdminStudyPlanResponseDto>> {
     const qb = this.studyPlanRepository
       .createQueryBuilder('sp')
       .leftJoinAndSelect('sp.translations', 'spt')
@@ -227,7 +227,7 @@ export class StudyPlanService {
     const [data, total] = await qb.getManyAndCount();
 
     return PaginatedResultDto.fromFindAndCount(
-      [this.queryService.mapPlansWithTranslation(data, lang), total],
+      [this.queryService.mapPlansForAdmin(data, lang), total],
       { page: query.page ?? 1, limit: query.limit ?? 20 },
     );
   }
