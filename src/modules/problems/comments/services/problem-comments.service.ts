@@ -205,7 +205,12 @@ export class ProblemCommentsService extends BaseCommentsService<
               content: `${createdComment.author?.username || 'Ai đó'} đã trả lời bình luận của bạn trên một bài toán.`,
             },
           ],
-          link: `/problems/${problemId}`,
+          metadata: {
+            event: 'comment_reply',
+            problemId,
+            commentId: createdComment.id,
+            parentCommentId: dto.parentId,
+          },
         });
       }
     }

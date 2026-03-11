@@ -131,6 +131,9 @@ export class EnrolledPlanResponseDto extends StudyPlanCardResponseDto {
   @ApiProperty({ description: 'Current day the user is on' })
   currentDay: number;
 
+  @ApiProperty({ description: 'Total number of problems in the plan' })
+  totalProblems: number;
+
   @ApiProperty({ description: 'Number of problems solved' })
   solvedCount: number;
 

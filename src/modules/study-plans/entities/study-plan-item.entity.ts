@@ -33,9 +33,15 @@ export class StudyPlanItem {
   @Column({ name: 'order_index', type: 'int', default: 0 })
   orderIndex: number;
 
-  @ApiPropertyOptional({ description: 'Optional note for this item' })
-  @Column({ type: 'text', nullable: true })
-  note: string | null;
+  @ApiPropertyOptional({
+    description: 'Translatable note for this item',
+    example: {
+      en: 'Classic hash table problem',
+      vi: 'Bài toán bảng băm kinh điển',
+    },
+  })
+  @Column({ type: 'jsonb', nullable: true })
+  note: Record<string, string> | null;
 
   @ApiProperty({ description: 'Study plan', type: () => StudyPlan })
   @ManyToOne(() => StudyPlan, (plan) => plan.items, { onDelete: 'CASCADE' })

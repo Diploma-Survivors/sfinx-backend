@@ -48,7 +48,7 @@ export class DiscussService {
 
     await this.notificationsService.create({
       recipientId: userId,
-      type: NotificationType.SYSTEM,
+      type: NotificationType.DISCUSS,
       translations: [
         {
           languageCode: Language.EN,
@@ -61,7 +61,10 @@ export class DiscussService {
           content: `Bài viết thảo luận "${dto.title}" của bạn đã được đăng thành công.`,
         },
       ],
-      link: `/discuss/${savedPost.id}`,
+      metadata: {
+        event: 'post_published',
+        postId: savedPost.id,
+      },
     });
 
     return savedPost;

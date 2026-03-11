@@ -50,13 +50,6 @@ export class Notification {
   })
   type: NotificationType;
 
-  @ApiProperty({
-    description: 'Target URL to redirect when clicked',
-    required: false,
-  })
-  @Column({ type: 'varchar', nullable: true, length: 255 })
-  link: string | null;
-
   @ApiProperty({ description: 'Whether the notification has been read' })
   @Column({ name: 'is_read', default: false })
   isRead: boolean;

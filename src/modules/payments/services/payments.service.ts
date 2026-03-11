@@ -174,7 +174,7 @@ export class PaymentsService {
 
       await this.notificationsService.create({
         recipientId: transaction.user.id,
-        type: NotificationType.SYSTEM,
+        type: NotificationType.PAYMENT,
         translations: [
           {
             languageCode: Language.EN,
@@ -189,7 +189,10 @@ export class PaymentsService {
               'Thanh toán của bạn đã thành công. Hãy tận hưởng các tính năng premium!',
           },
         ],
-        link: '/settings?tab=billing',
+        metadata: {
+          event: 'payment_success',
+          transactionId: transaction.id,
+        },
       });
 
       return { success: true };

@@ -15,7 +15,7 @@ interface StudyPlanItemData {
   problemSlug: string;
   dayNumber: number;
   orderIndex: number;
-  note?: string;
+  note?: Record<string, string>;
 }
 
 interface StudyPlanTranslationData {

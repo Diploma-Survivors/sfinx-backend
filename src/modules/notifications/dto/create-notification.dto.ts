@@ -7,7 +7,6 @@ import {
   IsInt,
   IsNotEmpty,
   IsOptional,
-  IsString,
   ValidateNested,
 } from 'class-validator';
 import { NotificationType } from '../enums/notification-type.enum';
@@ -42,11 +41,6 @@ export class CreateNotificationDto {
   @ValidateNested({ each: true })
   @Type(() => NotificationTranslationDto)
   translations: NotificationTranslationDto[];
-
-  @ApiPropertyOptional({ example: '/problems/1' })
-  @IsOptional()
-  @IsString()
-  link?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

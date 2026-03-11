@@ -134,7 +134,7 @@ export class StudyPlanQueryService {
       });
     }
 
-    const days = this.groupItemsByDay(items, progressMap);
+    const days = this.groupItemsByDay(items, progressMap, lang);
     const card = this.mapPlanCard(plan, lang);
 
     return {
@@ -222,6 +222,7 @@ export class StudyPlanQueryService {
   groupItemsByDay(
     items: StudyPlanItem[],
     progressMap: Map<number, string>,
+    lang: string = 'en',
   ): StudyPlanDayResponseDto[] {
     const dayMap = new Map<number, StudyPlanItemResponseDto[]>();
 
@@ -233,7 +234,7 @@ export class StudyPlanQueryService {
         id: item.id,
         dayNumber: item.dayNumber,
         orderIndex: item.orderIndex,
-        note: item.note,
+        note: this.resolveNote(item.note, lang),
         problem: item.problem,
         progressStatus: progressMap.get(item.problemId) ?? null,
       });
@@ -245,6 +246,14 @@ export class StudyPlanQueryService {
   }
 
   // ─── Private helpers ───────────────────────────────────────────────
+
+  private resolveNote(
+    note: Record<string, string> | null,
+    lang: string,
+  ): string | null {
+    if (!note) return null;
+    return note[lang] ?? note['en'] ?? Object.values(note)[0] ?? null;
+  }
 
   private getTranslation(plan: StudyPlan, lang: string) {
     return (

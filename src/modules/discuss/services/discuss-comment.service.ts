@@ -174,7 +174,12 @@ export class DiscussCommentService extends BaseCommentsService<
               content: `${createdComment.author?.username || 'Ai đó'} đã trả lời bình luận của bạn.`,
             },
           ],
-          link: `/discuss/${postId}`,
+          metadata: {
+            event: 'comment_reply',
+            postId,
+            commentId: createdComment.id,
+            parentCommentId: saved.parentId,
+          },
         });
       }
     } else {
@@ -199,7 +204,11 @@ export class DiscussCommentService extends BaseCommentsService<
               content: `${createdComment.author?.username || 'Ai đó'} đã bình luận trên bài viết "${post.title}" của bạn.`,
             },
           ],
-          link: `/discuss/${postId}`,
+          metadata: {
+            event: 'post_comment',
+            postId,
+            commentId: createdComment.id,
+          },
         });
       }
     }

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsInt, IsObject, IsOptional, Min } from 'class-validator';
 
 export class AddStudyPlanItemDto {
   @ApiProperty({ description: 'Problem ID', example: 1 })
@@ -21,11 +21,13 @@ export class AddStudyPlanItemDto {
   orderIndex?: number;
 
   @ApiPropertyOptional({
-    description: 'Optional note for this item',
-    maxLength: 500,
+    description: 'Translatable note for this item',
+    example: {
+      en: 'Classic hash table problem',
+      vi: 'Bài toán bảng băm kinh điển',
+    },
   })
   @IsOptional()
-  @IsString()
-  @MaxLength(500)
-  note?: string;
+  @IsObject()
+  note?: Record<string, string>;
 }

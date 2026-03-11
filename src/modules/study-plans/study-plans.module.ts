@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { Problem } from '../problems/entities/problem.entity';
 import { Tag } from '../problems/entities/tag.entity';
 import { Topic } from '../problems/entities/topic.entity';
@@ -13,6 +14,7 @@ import { StudyPlan } from './entities/study-plan.entity';
 import { StudyPlanProgressListener } from './listeners/study-plan-progress.listener';
 import { StudyPlanEnrollmentService } from './services/study-plan-enrollment.service';
 import { StudyPlanLeaderboardService } from './services/study-plan-leaderboard.service';
+import { StudyPlanNotificationService } from './services/study-plan-notification.service';
 import { StudyPlanQueryService } from './services/study-plan-query.service';
 import { StudyPlanService } from './services/study-plan.service';
 
@@ -28,6 +30,7 @@ import { StudyPlanService } from './services/study-plan.service';
       Tag,
     ]),
     StorageModule,
+    NotificationsModule,
   ],
   controllers: [StudyPlanController, StudyPlanAdminController],
   providers: [
@@ -35,6 +38,7 @@ import { StudyPlanService } from './services/study-plan.service';
     StudyPlanQueryService,
     StudyPlanEnrollmentService,
     StudyPlanLeaderboardService,
+    StudyPlanNotificationService,
     StudyPlanProgressListener,
   ],
   exports: [StudyPlanService, StudyPlanEnrollmentService],

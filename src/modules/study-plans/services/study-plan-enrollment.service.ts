@@ -17,6 +17,7 @@ import { StudyPlanItem } from '../entities/study-plan-item.entity';
 import { StudyPlan } from '../entities/study-plan.entity';
 import { EnrollmentStatus } from '../enums/enrollment-status.enum';
 import { StudyPlanStatus } from '../enums/study-plan-status.enum';
+import { StudyPlanNotificationService } from './study-plan-notification.service';
 import { StudyPlanQueryService } from './study-plan-query.service';
 
 @Injectable()
@@ -31,6 +32,7 @@ export class StudyPlanEnrollmentService {
     @InjectRepository(StudyPlanEnrollment)
     private readonly enrollmentRepository: Repository<StudyPlanEnrollment>,
     private readonly queryService: StudyPlanQueryService,
+    private readonly notificationService: StudyPlanNotificationService,
   ) {}
 
   async enroll(planId: number, user: User): Promise<StudyPlanEnrollment> {
@@ -102,12 +104,29 @@ export class StudyPlanEnrollmentService {
       order: { enrolledAt: 'DESC' },
     });
 
+    if (!enrollments.length) return [];
+
+    // Batch count items per plan to avoid N+1
+    const planIds = enrollments.map((e) => e.studyPlanId);
+    const counts: { study_plan_id: number; count: string }[] =
+      await this.itemRepository.manager.query(
+        `SELECT study_plan_id, COUNT(*)::text as count
+         FROM study_plan_items
+         WHERE study_plan_id = ANY($1)
+         GROUP BY study_plan_id`,
+        [planIds],
+      );
+    const totalProblemsMap = new Map(
+      counts.map((c) => [c.study_plan_id, parseInt(c.count, 10)]),
+    );
+
     return enrollments.map((e): EnrolledPlanResponseDto => {
-      const summary = this.queryService.mapPlanCard(e.studyPlan, lang);
+      const card = this.queryService.mapPlanCard(e.studyPlan, lang);
       return {
-        ...summary,
+        ...card,
         enrollmentStatus: e.status,
         currentDay: e.currentDay,
+        totalProblems: totalProblemsMap.get(e.studyPlanId) ?? 0,
         solvedCount: e.solvedCount,
         lastActivityAt: e.lastActivityAt,
         completedAt: e.completedAt,
@@ -148,7 +167,7 @@ export class StudyPlanEnrollmentService {
       progressMap = new Map(progressRows.map((r) => [r.problem_id, r.status]));
     }
 
-    const days = this.queryService.groupItemsByDay(items, progressMap);
+    const days = this.queryService.groupItemsByDay(items, progressMap, lang);
     const summary = this.queryService.mapPlanCard(plan, lang);
     const totalProblems = items.length;
     const progressPercentage =
@@ -171,7 +190,11 @@ export class StudyPlanEnrollmentService {
 
   // ─── Progress sync (called by event listener) ──────────────────────
 
-  async syncEnrollmentProgress(planId: number, userId: number): Promise<void> {
+  async syncEnrollmentProgress(
+    planId: number,
+    userId: number,
+    problemId?: number,
+  ): Promise<void> {
     const enrollment = await this.enrollmentRepository.findOne({
       where: { studyPlanId: planId, userId },
     });
@@ -186,6 +209,7 @@ export class StudyPlanEnrollmentService {
     if (!items.length) return;
 
     const problemIds = items.map((i) => i.problemId);
+    const previousSolvedCount = enrollment.solvedCount;
 
     const result: { count: string }[] = await this.itemRepository.manager.query(
       `SELECT COUNT(*) as count FROM user_problem_progress
@@ -197,12 +221,26 @@ export class StudyPlanEnrollmentService {
     enrollment.solvedCount = solvedCount;
     enrollment.lastActivityAt = new Date();
 
-    if (solvedCount >= items.length) {
+    const isCompleted = solvedCount >= items.length;
+    if (isCompleted) {
       enrollment.status = EnrollmentStatus.COMPLETED;
       enrollment.completedAt = new Date();
     }
 
     await this.enrollmentRepository.save(enrollment);
+
+    // Send notification if progress changed and problemId is known
+    if (problemId && solvedCount > previousSolvedCount) {
+      await this.notificationService.notifyProgressUpdate({
+        userId,
+        planId,
+        problemId,
+        previousSolvedCount,
+        newSolvedCount: solvedCount,
+        totalProblems: items.length,
+        isCompleted,
+      });
+    }
   }
 
   async syncProgressForProblem(
@@ -222,7 +260,11 @@ export class StudyPlanEnrollmentService {
       .getMany();
 
     for (const enrollment of enrollments) {
-      await this.syncEnrollmentProgress(enrollment.studyPlanId, userId);
+      await this.syncEnrollmentProgress(
+        enrollment.studyPlanId,
+        userId,
+        problemId,
+      );
     }
   }
 }

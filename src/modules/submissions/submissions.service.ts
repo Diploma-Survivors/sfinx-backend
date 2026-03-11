@@ -380,7 +380,7 @@ export class SubmissionsService {
     if (isNewlySolved) {
       await this.notificationsService.create({
         recipientId: submission.user.id,
-        type: NotificationType.SYSTEM,
+        type: NotificationType.SUBMISSION,
         translations: [
           {
             languageCode: Language.EN,
@@ -393,7 +393,12 @@ export class SubmissionsService {
             content: `Chúc mừng! Bạn đã giải thành công bài "${submission.problem.title}".`,
           },
         ],
-        link: `/problems/${submission.problem.id}`,
+        metadata: {
+          event: 'problem_solved',
+          problemId: submission.problem.id,
+          problemSlug: submission.problem.slug,
+          submissionId,
+        },
       });
 
       this.eventEmitter.emit(

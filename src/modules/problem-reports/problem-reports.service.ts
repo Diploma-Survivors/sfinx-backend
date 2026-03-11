@@ -54,7 +54,11 @@ export class ProblemReportsService {
                 'Một báo cáo sự cố mới đã được gửi liên quan đến một bài toán.',
             },
           ],
-          link: `/reports`,
+          metadata: {
+            event: 'new_problem_report',
+            reportId: savedReport.id,
+            problemId: createDto.problemId,
+          },
         });
       }
     } catch (error) {
