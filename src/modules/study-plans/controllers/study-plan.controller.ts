@@ -1,6 +1,5 @@
 import {
   Controller,
-  DefaultValuePipe,
   Delete,
   Get,
   Param,
@@ -12,15 +11,16 @@ import {
 import {
   ApiBearerAuth,
   ApiOperation,
-  ApiQuery,
+  ApiParam,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { ApiPaginatedResponse, GetUser, Language } from 'src/common';
+import { User } from 'src/modules/auth/entities/user.entity';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from 'src/modules/auth/guards/optional-jwt-auth.guard';
-import { User } from 'src/modules/auth/entities/user.entity';
 import { FilterStudyPlanDto } from '../dto/filter-study-plan.dto';
+import { QueryLeaderboardDto } from '../dto/query-leaderboard.dto';
 import {
   EnrolledPlanResponseDto,
   LeaderboardEntryResponseDto,
@@ -29,9 +29,9 @@ import {
   StudyPlanListItemResponseDto,
   StudyPlanProgressResponseDto,
 } from '../dto/study-plan-response.dto';
-import { StudyPlanQueryService } from '../services/study-plan-query.service';
 import { StudyPlanEnrollmentService } from '../services/study-plan-enrollment.service';
 import { StudyPlanLeaderboardService } from '../services/study-plan-leaderboard.service';
+import { StudyPlanQueryService } from '../services/study-plan-query.service';
 
 @ApiTags('Study Plans')
 @Controller('study-plans')
@@ -123,12 +123,12 @@ export class StudyPlanController {
 
   @Get(':id/leaderboard')
   @ApiOperation({ summary: 'Get leaderboard for a study plan' })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiParam({ name: 'id', type: Number })
   @ApiResponse({ status: 200, type: [LeaderboardEntryResponseDto] })
   getLeaderboard(
     @Param('id', ParseIntPipe) planId: number,
-    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query() query: QueryLeaderboardDto,
   ) {
-    return this.leaderboardService.getLeaderboard(planId, limit);
+    return this.leaderboardService.getLeaderboard(planId, query.limit);
   }
 }

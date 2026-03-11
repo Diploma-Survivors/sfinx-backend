@@ -7,6 +7,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
   Min,
   ValidateNested,
@@ -23,6 +24,10 @@ export class CreateStudyPlanDto {
   })
   @IsString()
   @MaxLength(255)
+  @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
+    message:
+      'Slug must contain only lowercase letters, numbers, and hyphens, and not start or end with a hyphen.',
+  })
   slug: string;
 
   @ApiProperty({
