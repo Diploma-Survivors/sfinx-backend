@@ -11,6 +11,9 @@ import { StorageService } from 'src/modules/storage/storage.service';
 import { User } from 'src/modules/auth/entities/user.entity';
 import { FilterStudyPlanDto } from '../dto/filter-study-plan.dto';
 import {
+  AdminStudyPlanDetailResponseDto,
+  AdminStudyPlanDayResponseDto,
+  AdminStudyPlanItemResponseDto,
   AdminStudyPlanResponseDto,
   StudyPlanCardResponseDto,
   StudyPlanDayResponseDto,
@@ -219,6 +222,43 @@ export class StudyPlanQueryService {
       createdAt: plan.createdAt,
       updatedAt: plan.updatedAt,
     };
+  }
+
+  mapPlanForAdminDetail(
+    plan: StudyPlan,
+    items: StudyPlanItem[],
+    lang: string,
+  ): AdminStudyPlanDetailResponseDto {
+    const base = this.mapPlanForAdmin(plan, lang);
+    const days = this.groupItemsByDayAdmin(items);
+    const translations = (plan.translations ?? []).map((t) => ({
+      languageCode: t.languageCode,
+      name: t.name,
+      description: t.description ?? null,
+    }));
+
+    return { ...base, totalProblems: items.length, translations, days };
+  }
+
+  groupItemsByDayAdmin(items: StudyPlanItem[]): AdminStudyPlanDayResponseDto[] {
+    const dayMap = new Map<number, AdminStudyPlanItemResponseDto[]>();
+
+    for (const item of items) {
+      if (!dayMap.has(item.dayNumber)) {
+        dayMap.set(item.dayNumber, []);
+      }
+      dayMap.get(item.dayNumber)!.push({
+        id: item.id,
+        dayNumber: item.dayNumber,
+        orderIndex: item.orderIndex,
+        note: item.note,
+        problem: item.problem,
+      });
+    }
+
+    return Array.from(dayMap.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([dayNumber, dayItems]) => ({ dayNumber, items: dayItems }));
   }
 
   mapPlansForAdmin(

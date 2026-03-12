@@ -6,7 +6,7 @@ import {
 } from '../constants/cover-image.constants';
 
 export function CoverImageInterceptor() {
-  return FileInterceptor('file', {
+  return FileInterceptor('coverImage', {
     limits: {
       fileSize: COVER_IMAGE_MAX_SIZE_BYTES,
     },

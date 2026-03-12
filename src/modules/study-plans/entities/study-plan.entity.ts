@@ -53,7 +53,7 @@ export class StudyPlan {
     description: 'Estimated number of days to complete',
     example: 14,
   })
-  @Column({ name: 'estimated_days', type: 'int' })
+  @Column({ name: 'estimated_days', type: 'int', default: 0 })
   estimatedDays: number;
 
   @ApiPropertyOptional({ description: 'Cover image S3 key' })

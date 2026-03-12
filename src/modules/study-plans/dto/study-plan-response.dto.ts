@@ -1,10 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Problem } from 'src/modules/problems/entities/problem.entity';
 import { Tag } from 'src/modules/problems/entities/tag.entity';
 import { Topic } from 'src/modules/problems/entities/topic.entity';
-import { Problem } from 'src/modules/problems/entities/problem.entity';
+import { EnrollmentStatus } from '../enums/enrollment-status.enum';
 import { StudyPlanDifficulty } from '../enums/study-plan-difficulty.enum';
 import { StudyPlanStatus } from '../enums/study-plan-status.enum';
-import { EnrollmentStatus } from '../enums/enrollment-status.enum';
+import { StudyPlanTranslationDto } from './study-plan-translation.dto';
 
 // ─── Lightweight base (shared by all public endpoints) ────────────────
 
@@ -169,6 +170,39 @@ export class StudyPlanProgressResponseDto extends StudyPlanCardResponseDto {
   days: StudyPlanDayResponseDto[];
 }
 
+// ─── Admin item (raw note, not language-resolved) ─────────────────────
+
+export class AdminStudyPlanItemResponseDto {
+  @ApiProperty({ description: 'Item ID' })
+  id: number;
+
+  @ApiProperty({ description: 'Day number in the plan' })
+  dayNumber: number;
+
+  @ApiProperty({ description: 'Display order within the day' })
+  orderIndex: number;
+
+  @ApiPropertyOptional({
+    description: 'Translatable note (raw JSONB, all languages)',
+    example: { en: 'Classic DP', vi: 'Quy hoạch động kinh điển' },
+  })
+  note: Record<string, string> | null;
+
+  @ApiProperty({ description: 'Problem details', type: () => Problem })
+  problem: Problem;
+}
+
+export class AdminStudyPlanDayResponseDto {
+  @ApiProperty({ description: 'Day number' })
+  dayNumber: number;
+
+  @ApiProperty({
+    description: 'Items for this day',
+    type: [AdminStudyPlanItemResponseDto],
+  })
+  items: AdminStudyPlanItemResponseDto[];
+}
+
 // ─── Admin list ───────────────────────────────────────────────────────
 
 export class AdminStudyPlanResponseDto extends StudyPlanCardResponseDto {
@@ -195,6 +229,25 @@ export class AdminStudyPlanResponseDto extends StudyPlanCardResponseDto {
 
   @ApiProperty({ description: 'Last update timestamp' })
   updatedAt: Date;
+}
+
+// ─── Admin detail (with items grouped by day) ─────────────────────────
+
+export class AdminStudyPlanDetailResponseDto extends AdminStudyPlanResponseDto {
+  @ApiProperty({
+    description: 'All translations (raw, all languages)',
+    type: 'array',
+    example: [
+      { languageCode: 'en', name: 'DP Mastery', description: 'Master DP' },
+    ],
+  })
+  translations: StudyPlanTranslationDto[];
+
+  @ApiProperty({
+    description: 'Items grouped by day (raw notes, all languages)',
+    type: () => [AdminStudyPlanDayResponseDto],
+  })
+  days: AdminStudyPlanDayResponseDto[];
 }
 
 // ─── Leaderboard ──────────────────────────────────────────────────────

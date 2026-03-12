@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsString, MinLength } from 'class-validator';
 
 export class StudyPlanTranslationDto {
   @ApiProperty({ example: 'en', description: 'Language code (en, vi)' })
@@ -20,6 +20,6 @@ export class StudyPlanTranslationDto {
     description: 'Plan description in the specified language',
   })
   @IsString()
-  @IsNotEmpty()
+  @MinLength(3)
   description: string;
 }

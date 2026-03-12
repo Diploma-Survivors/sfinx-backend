@@ -3,6 +3,7 @@ import { plainToInstance, Transform } from 'class-transformer';
 
 export function JsonTransformToInstance<T>(
   classContructor: new () => T,
+  description: string,
 ): PropertyDecorator {
   return Transform(({ value }) => {
     if (typeof value === 'string') {
@@ -11,14 +12,10 @@ export function JsonTransformToInstance<T>(
         return plainToInstance(classContructor, parsedValue);
       } catch (err) {
         Logger.error(err);
-        throw new BadRequestException(
-          'Invalid JSON format for testcaseSamples',
-        );
+        throw new BadRequestException(description);
       }
     }
 
-    throw new BadRequestException(
-      'testcaseSamples must be a JSON array string',
-    );
+    throw new BadRequestException(description);
   });
 }

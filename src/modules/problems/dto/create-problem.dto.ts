@@ -140,7 +140,10 @@ export class CreateProblemDto {
     type: () => [SampleTestcaseDto],
   })
   @IsOptional()
-  @JsonTransformToInstance(SampleTestcaseDto)
+  @JsonTransformToInstance(
+    SampleTestcaseDto,
+    'Invalid JSON format for sampleTestcases',
+  )
   @IsArray()
   @ValidateNested({ each: true })
   sampleTestcases?: SampleTestcaseDto[];
@@ -151,7 +154,10 @@ export class CreateProblemDto {
     example: [{ order: 1, content: 'Think about using a hash map' }],
   })
   @IsOptional()
-  @JsonTransformToInstance(CreateProblemHintDto)
+  @JsonTransformToInstance(
+    CreateProblemHintDto,
+    'Invalid JSON format for hints',
+  )
   @IsArray()
   @ValidateNested({ each: true })
   hints?: CreateProblemHintDto[];
