@@ -268,5 +268,25 @@
     "resource": "solution_comment",
     "action": "vote",
     "description": "Vote on solution comments"
+  },
+  {
+    "resource": "study_plan",
+    "action": "create",
+    "description": "Create study plans"
+  },
+  {
+    "resource": "study_plan",
+    "action": "read",
+    "description": "View study plans"
+  },
+  {
+    "resource": "study_plan",
+    "action": "update",
+    "description": "Edit, publish, and archive study plans"
+  },
+  {
+    "resource": "study_plan",
+    "action": "delete",
+    "description": "Delete study plans"
   }
 ]

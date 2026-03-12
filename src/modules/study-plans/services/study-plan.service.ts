@@ -14,7 +14,10 @@ import { AddStudyPlanItemDto } from '../dto/add-study-plan-item.dto';
 import { CreateStudyPlanDto } from '../dto/create-study-plan.dto';
 import { FilterStudyPlanDto } from '../dto/filter-study-plan.dto';
 import { ReorderItemsDto } from '../dto/reorder-items.dto';
-import { AdminStudyPlanResponseDto } from '../dto/study-plan-response.dto';
+import {
+  AdminStudyPlanDetailResponseDto,
+  AdminStudyPlanResponseDto,
+} from '../dto/study-plan-response.dto';
 import { UpdateStudyPlanDto } from '../dto/update-study-plan.dto';
 import { StudyPlanItem } from '../entities/study-plan-item.entity';
 import { StudyPlanTranslation } from '../entities/study-plan-translation.entity';
@@ -47,7 +50,7 @@ export class StudyPlanService {
     userId: number,
     dto: CreateStudyPlanDto,
     file?: Express.Multer.File,
-  ): Promise<StudyPlan> {
+  ): Promise<AdminStudyPlanDetailResponseDto> {
     const existingSlug = await this.studyPlanRepository.findOne({
       where: { slug: dto.slug },
     });
@@ -58,7 +61,6 @@ export class StudyPlanService {
     const plan = this.studyPlanRepository.create({
       slug: dto.slug,
       difficulty: dto.difficulty,
-      estimatedDays: dto.estimatedDays,
       isPremium: dto.isPremium ?? false,
       similarPlanIds: dto.similarPlanIds ?? [],
       createdById: userId,
@@ -101,7 +103,7 @@ export class StudyPlanService {
     id: number,
     dto: UpdateStudyPlanDto,
     file?: Express.Multer.File,
-  ): Promise<StudyPlan> {
+  ): Promise<AdminStudyPlanDetailResponseDto> {
     const plan = await this.studyPlanRepository.findOne({
       where: { id },
       relations: ['translations', 'topics', 'tags'],
@@ -112,7 +114,6 @@ export class StudyPlanService {
 
     if (dto.slug !== undefined) plan.slug = dto.slug;
     if (dto.difficulty !== undefined) plan.difficulty = dto.difficulty;
-    if (dto.estimatedDays !== undefined) plan.estimatedDays = dto.estimatedDays;
     if (dto.isPremium !== undefined) plan.isPremium = dto.isPremium;
     if (dto.status !== undefined) plan.status = dto.status;
     if (dto.similarPlanIds !== undefined)
@@ -166,7 +167,7 @@ export class StudyPlanService {
     }
   }
 
-  async publish(id: number): Promise<StudyPlan> {
+  async publish(id: number): Promise<AdminStudyPlanDetailResponseDto> {
     const plan = await this.studyPlanRepository.findOne({
       where: { id },
       relations: ['items'],
@@ -182,7 +183,7 @@ export class StudyPlanService {
     return this.findOneAdmin(id);
   }
 
-  async archive(id: number): Promise<StudyPlan> {
+  async archive(id: number): Promise<AdminStudyPlanDetailResponseDto> {
     const plan = await this.studyPlanRepository.findOne({ where: { id } });
     if (!plan) {
       throw new NotFoundException(`Study plan ${id} not found`);
@@ -192,22 +193,22 @@ export class StudyPlanService {
     return this.findOneAdmin(id);
   }
 
-  async findOneAdmin(id: number): Promise<StudyPlan> {
+  async findOneAdmin(id: number): Promise<AdminStudyPlanDetailResponseDto> {
     const plan = await this.studyPlanRepository.findOne({
       where: { id },
-      relations: [
-        'translations',
-        'items',
-        'items.problem',
-        'topics',
-        'tags',
-        'createdBy',
-      ],
+      relations: ['translations', 'topics', 'tags'],
     });
     if (!plan) {
       throw new NotFoundException(`Study plan ${id} not found`);
     }
-    return plan;
+
+    const items = await this.itemRepository.find({
+      where: { studyPlanId: id },
+      relations: ['problem', 'problem.topics', 'problem.tags'],
+      order: { dayNumber: 'ASC', orderIndex: 'ASC' },
+    });
+
+    return this.queryService.mapPlanForAdminDetail(plan, items, 'en');
   }
 
   async findAllAdmin(
@@ -221,6 +222,7 @@ export class StudyPlanService {
       .leftJoinAndSelect('sp.tags', 'tags');
 
     this.queryService.applyFilters(qb, query, lang);
+    qb.loadRelationCountAndMap('sp.totalProblems', 'sp.items');
     this.queryService.applySorting(qb, query, lang);
     qb.skip(query.skip).take(query.take);
 
@@ -269,7 +271,9 @@ export class StudyPlanService {
       note: dto.note ?? null,
     });
 
-    return this.itemRepository.save(item);
+    const saved = await this.itemRepository.save(item);
+    await this.syncEstimatedDays(planId);
+    return saved;
   }
 
   async removeItem(planId: number, itemId: number): Promise<void> {
@@ -280,6 +284,7 @@ export class StudyPlanService {
     if (result.affected === 0) {
       throw new NotFoundException(`Item ${itemId} not found in plan ${planId}`);
     }
+    await this.syncEstimatedDays(planId);
   }
 
   async reorderItems(planId: number, dto: ReorderItemsDto): Promise<void> {
@@ -290,6 +295,27 @@ export class StudyPlanService {
       throw new NotFoundException(`Study plan ${planId} not found`);
     }
 
+    const itemIds = dto.items.map((i) => i.id);
+
+    // Validate all item IDs belong to this plan
+    const existingItems = await this.itemRepository.find({
+      where: { studyPlanId: planId },
+      select: ['id'],
+    });
+    const planItemIds = new Set(existingItems.map((i) => i.id));
+    const foreignIds = itemIds.filter((id) => !planItemIds.has(id));
+    if (foreignIds.length) {
+      throw new BadRequestException(
+        `Items not found in this plan: ${foreignIds.join(', ')}`,
+      );
+    }
+
+    // Validate no duplicate item IDs in the request
+    const uniqueIds = new Set(itemIds);
+    if (uniqueIds.size !== itemIds.length) {
+      throw new BadRequestException('Duplicate item IDs in reorder request');
+    }
+
     await this.itemRepository.manager.query(
       `UPDATE study_plan_items AS spi
        SET day_number = v.day_number, order_index = v.order_index
@@ -298,15 +324,30 @@ export class StudyPlanService {
                     unnest($3::int[]) AS order_index) AS v
        WHERE spi.id = v.id AND spi.study_plan_id = $4`,
       [
-        dto.items.map((i) => i.id),
+        itemIds,
         dto.items.map((i) => i.dayNumber),
         dto.items.map((i) => i.orderIndex),
         planId,
       ],
     );
+
+    await this.syncEstimatedDays(planId);
   }
 
   // ─── Private helpers ────────────────────────────────────────────────
+
+  private async syncEstimatedDays(planId: number): Promise<void> {
+    await this.studyPlanRepository.manager.query(
+      `UPDATE study_plans
+       SET estimated_days = (
+         SELECT COALESCE(MAX(day_number), 0)
+         FROM study_plan_items
+         WHERE study_plan_id = $1
+       )
+       WHERE id = $1`,
+      [planId],
+    );
+  }
 
   private async uploadCoverImage(
     plan: StudyPlan,

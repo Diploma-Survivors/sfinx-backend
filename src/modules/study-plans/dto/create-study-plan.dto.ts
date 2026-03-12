@@ -9,7 +9,6 @@ import {
   IsString,
   Matches,
   MaxLength,
-  Min,
   ValidateNested,
 } from 'class-validator';
 import { JsonTransformToInstance, JsonTransformToObject } from 'src/common';
@@ -38,15 +37,6 @@ export class CreateStudyPlanDto {
   @IsEnum(StudyPlanDifficulty)
   difficulty: StudyPlanDifficulty;
 
-  @ApiProperty({
-    description: 'Estimated number of days to complete',
-    example: 14,
-  })
-  @IsInt()
-  @Min(1)
-  @Type(() => Number)
-  estimatedDays: number;
-
   @ApiPropertyOptional({
     description: 'Whether plan requires premium subscription',
     default: false,
@@ -74,7 +64,10 @@ export class CreateStudyPlanDto {
   })
   @IsArray()
   @ValidateNested({ each: true })
-  @JsonTransformToInstance(StudyPlanTranslationDto)
+  @JsonTransformToInstance(
+    StudyPlanTranslationDto,
+    'Invalid JSON format for translations',
+  )
   @Type(() => StudyPlanTranslationDto)
   translations: StudyPlanTranslationDto[];
 

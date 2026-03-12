@@ -27,7 +27,6 @@ interface StudyPlanSeedData {
   slug: string;
   difficulty: string;
   status: string;
-  estimatedDays: number;
   isPremium: boolean;
   topicSlugs: string[];
   tagSlugs: string[];
@@ -101,7 +100,6 @@ export async function seedStudyPlans(dataSource: DataSource) {
       slug: planData.slug,
       difficulty: planData.difficulty as StudyPlanDifficulty,
       status: planData.status as StudyPlanStatus,
-      estimatedDays: planData.estimatedDays,
       isPremium: planData.isPremium,
       similarPlanIds: [],
       topics,
@@ -153,7 +151,17 @@ export async function seedStudyPlans(dataSource: DataSource) {
     );
   }
 
-  // Second pass: resolve similarPlanIds now that all plans exist
+  // Second pass: sync estimatedDays = max(dayNumber) for each plan
+  await dataSource.query(`
+    UPDATE study_plans sp
+    SET estimated_days = (
+      SELECT COALESCE(MAX(spi.day_number), 0)
+      FROM study_plan_items spi
+      WHERE spi.study_plan_id = sp.id
+    )
+  `);
+
+  // Third pass: resolve similarPlanIds now that all plans exist
   let linkedCount = 0;
   for (const planData of plansData) {
     if (!planData.similarPlanSlugs?.length) continue;

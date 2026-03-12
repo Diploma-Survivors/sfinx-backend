@@ -33,10 +33,12 @@ import { AddStudyPlanItemDto } from '../dto/add-study-plan-item.dto';
 import { CreateStudyPlanDto } from '../dto/create-study-plan.dto';
 import { FilterStudyPlanDto } from '../dto/filter-study-plan.dto';
 import { ReorderItemsDto } from '../dto/reorder-items.dto';
-import { AdminStudyPlanResponseDto } from '../dto/study-plan-response.dto';
+import {
+  AdminStudyPlanDetailResponseDto,
+  AdminStudyPlanResponseDto,
+} from '../dto/study-plan-response.dto';
 import { UpdateStudyPlanDto } from '../dto/update-study-plan.dto';
 import { StudyPlanItem } from '../entities/study-plan-item.entity';
-import { StudyPlan } from '../entities/study-plan.entity';
 import { StudyPlanService } from '../services/study-plan.service';
 
 @ApiTags('Admin - Study Plans')
@@ -53,7 +55,7 @@ export class StudyPlanAdminController {
   @ApiOperation({
     summary: 'Create a new study plan (with optional cover image)',
   })
-  @ApiResponse({ status: 201, type: StudyPlan })
+  @ApiResponse({ status: 201, type: AdminStudyPlanDetailResponseDto })
   create(
     @GetUser('id') userId: number,
     @Body() dto: CreateStudyPlanDto,
@@ -72,8 +74,8 @@ export class StudyPlanAdminController {
 
   @Get(':id')
   @CheckAbility({ action: Action.Read, subject: 'StudyPlan' })
-  @ApiOperation({ summary: 'Get study plan detail for editing' })
-  @ApiResponse({ status: 200, type: StudyPlan })
+  @ApiOperation({ summary: 'Get study plan detail with items grouped by day' })
+  @ApiResponse({ status: 200, type: AdminStudyPlanDetailResponseDto })
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.studyPlanService.findOneAdmin(id);
   }
@@ -85,7 +87,7 @@ export class StudyPlanAdminController {
   @ApiOperation({
     summary: 'Update study plan (with optional cover image)',
   })
-  @ApiResponse({ status: 200, type: StudyPlan })
+  @ApiResponse({ status: 200, type: AdminStudyPlanDetailResponseDto })
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateStudyPlanDto,
@@ -105,7 +107,7 @@ export class StudyPlanAdminController {
   @Post(':id/publish')
   @CheckAbility({ action: Action.Update, subject: 'StudyPlan' })
   @ApiOperation({ summary: 'Publish a draft study plan' })
-  @ApiResponse({ status: 200, type: StudyPlan })
+  @ApiResponse({ status: 200, type: AdminStudyPlanDetailResponseDto })
   publish(@Param('id', ParseIntPipe) id: number) {
     return this.studyPlanService.publish(id);
   }
@@ -113,7 +115,7 @@ export class StudyPlanAdminController {
   @Post(':id/archive')
   @CheckAbility({ action: Action.Update, subject: 'StudyPlan' })
   @ApiOperation({ summary: 'Archive a study plan' })
-  @ApiResponse({ status: 200, type: StudyPlan })
+  @ApiResponse({ status: 200, type: AdminStudyPlanDetailResponseDto })
   archive(@Param('id', ParseIntPipe) id: number) {
     return this.studyPlanService.archive(id);
   }

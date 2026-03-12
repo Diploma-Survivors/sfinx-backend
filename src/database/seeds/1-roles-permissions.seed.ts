@@ -54,11 +54,15 @@ export async function seedRolesAndPermissions(dataSource: DataSource) {
       'comment:create',
       'payment:create',
       'language:read',
+      'study_plan:read',
     ].includes(`${p.resource}:${p.action}`),
   );
 
   // Admin role
-  let adminRole = await roleRepository.findOne({ where: { slug: 'admin' } });
+  let adminRole = await roleRepository.findOne({
+    where: { slug: 'admin' },
+    relations: ['permissions'],
+  });
   if (!adminRole) {
     adminRole = roleRepository.create({
       name: 'Admin',
@@ -70,10 +74,17 @@ export async function seedRolesAndPermissions(dataSource: DataSource) {
     });
     await roleRepository.save(adminRole);
     console.log('✅ Created Admin role');
+  } else {
+    adminRole.permissions = adminPermissions;
+    await roleRepository.save(adminRole);
+    console.log('✅ Updated Admin role permissions');
   }
 
   // User role
-  let userRole = await roleRepository.findOne({ where: { slug: 'user' } });
+  let userRole = await roleRepository.findOne({
+    where: { slug: 'user' },
+    relations: ['permissions'],
+  });
   if (!userRole) {
     userRole = roleRepository.create({
       name: 'User',
@@ -85,6 +96,10 @@ export async function seedRolesAndPermissions(dataSource: DataSource) {
     });
     await roleRepository.save(userRole);
     console.log('✅ Created User role');
+  } else {
+    userRole.permissions = userPermissions;
+    await roleRepository.save(userRole);
+    console.log('✅ Updated User role permissions');
   }
 
   console.log('✅ Roles and permissions seeded successfully\n');
