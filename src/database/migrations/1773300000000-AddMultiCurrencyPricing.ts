@@ -39,10 +39,10 @@ export class AddMultiCurrencyPricing1773300000000 implements MigrationInterface 
       ALTER TABLE "subscription_plans"
         ADD COLUMN "base_price" numeric(15,2)
     `);
-    // Migrate existing USD prices to VND (multiplier = 26,293)
+    // Migrate existing USD prices to VND (multiplier = 27000)
     await queryRunner.query(`
       UPDATE "subscription_plans"
-        SET "base_price" = "price_usd" * 26,293
+        SET "base_price" = "price_usd" * 27000
     `);
     await queryRunner.query(`
       ALTER TABLE "subscription_plans"
@@ -113,13 +113,13 @@ export class AddMultiCurrencyPricing1773300000000 implements MigrationInterface 
     await queryRunner.query(`
       ALTER TABLE "payment_transactions"
         ADD COLUMN "amount_vnd" numeric(15,2) DEFAULT 0,
-        ADD COLUMN "exchange_rate" numeric(10,2) DEFAULT 26,293
+        ADD COLUMN "exchange_rate" numeric(10,2) DEFAULT 27000
     `);
     await queryRunner.query(`
       UPDATE "payment_transactions"
         SET "amount_vnd" = "amount",
-            "amount" = "base_price_snapshot" / 26,293,
-            "exchange_rate" = 26,293,
+            "amount" = "base_price_snapshot" / 27000,
+            "exchange_rate" = 27000,
             "currency" = 'USD'
     `);
     await queryRunner.query(`
@@ -140,7 +140,7 @@ export class AddMultiCurrencyPricing1773300000000 implements MigrationInterface 
     `);
     await queryRunner.query(`
       UPDATE "subscription_plans"
-        SET "price_usd" = "base_price" / 26,293
+        SET "price_usd" = "base_price" / 27000
     `);
     await queryRunner.query(`
       ALTER TABLE "subscription_plans"
