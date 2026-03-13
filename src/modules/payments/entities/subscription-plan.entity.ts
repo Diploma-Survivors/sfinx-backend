@@ -31,9 +31,12 @@ export class SubscriptionPlan {
   })
   type: SubscriptionType;
 
-  @ApiProperty({ description: 'Price in USD', example: 9.99 })
-  @Column({ name: 'price_usd', type: 'decimal', precision: 10, scale: 2 })
-  priceUsd: number;
+  @ApiProperty({
+    description: 'Base price in VND (before fees)',
+    example: 299000,
+  })
+  @Column({ name: 'base_price', type: 'decimal', precision: 15, scale: 2 })
+  basePrice: number;
 
   @ApiProperty({ description: 'Duration in months', example: 1 })
   @Column({ name: 'duration_months' })

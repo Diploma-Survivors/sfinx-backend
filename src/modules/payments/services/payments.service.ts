@@ -11,7 +11,8 @@ import {
 import { SubscriptionPlan } from '../entities/subscription-plan.entity';
 import { PaymentMethodEnum } from '../enums/payment-method.enum';
 import { PaymentProviderFactory } from '../providers/payment-provider.factory';
-import { ExchangeRateService } from './exchange-rate.service';
+import { CurrencyService } from './currency.service';
+import { FeeConfigService } from './fee-config.service';
 
 import { NotificationEvent } from '../../notifications/enums/notification-event.enum';
 import { NotificationType } from '../../notifications/enums/notification-type.enum';
@@ -60,7 +61,8 @@ export class PaymentsService {
     private readonly planRepo: Repository<SubscriptionPlan>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
-    private readonly exchangeRateService: ExchangeRateService,
+    private readonly currencyService: CurrencyService,
+    private readonly feeConfigService: FeeConfigService,
     private readonly paymentProviderFactory: PaymentProviderFactory,
     private readonly mailService: MailService,
     private readonly notificationsService: NotificationsService,
@@ -82,18 +84,21 @@ export class PaymentsService {
 
     const provider = this.paymentProviderFactory.getProvider(paymentMethod);
 
-    const rate = await this.exchangeRateService.getExchangeRate();
-    const amountVnd = Math.ceil(plan.priceUsd * rate);
+    // Compute final VND amount server-side (base price + all active fees)
+    const totalFeePercentage =
+      await this.feeConfigService.getTotalFeePercentage();
+    const basePrice = Number(plan.basePrice);
+    const finalVnd = Math.ceil(basePrice * (1 + totalFeePercentage));
 
     const transaction = this.transactionRepo.create({
       user,
       plan,
       userId: user.id,
       planId: plan.id,
-      amount: plan.priceUsd,
-      amountVnd: amountVnd,
-      exchangeRate: rate,
-      currency: 'USD',
+      amount: finalVnd,
+      basePriceSnapshot: basePrice,
+      totalFeePercentage,
+      currency: 'VND',
       provider: PaymentMethodEnum[paymentMethod],
       status: PaymentStatus.PENDING,
       description: `Payment for ${plan.type} subscription`,
@@ -161,7 +166,7 @@ export class PaymentsService {
           name: transaction.user.fullName || transaction.user.username,
           planName: planName,
           amount: transaction.amount,
-          currency: transaction.currency,
+          currency: 'VND',
           transactionId: transaction.transactionId || String(transaction.id),
           paymentDate: transaction.paymentDate.toISOString().split('T')[0],
         });
@@ -309,11 +314,30 @@ export class PaymentsService {
       Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
     );
 
+    // Compute current prices for display
+    const [totalFeePercentage, currencies] = await Promise.all([
+      this.feeConfigService.getTotalFeePercentage(),
+      this.currencyService.getActiveCurrencies(),
+    ]);
+
+    const basePrice = Number(plan.basePrice);
+    const finalVnd = Math.ceil(basePrice * (1 + totalFeePercentage));
+    const prices: Record<string, number> = {};
+    for (const curr of currencies) {
+      const rate = Number(curr.rateToVnd);
+      if (rate === 1) {
+        prices[curr.code] = finalVnd;
+      } else {
+        prices[curr.code] = Math.round((finalVnd / rate) * 100) / 100;
+      }
+    }
+
     return {
       planId: plan.id,
       name: planName,
       description: planDesc,
-      price: plan.priceUsd,
+      basePrice: basePrice,
+      prices,
       type: plan.type,
       startDate: user.premiumStartedAt || lastTransaction.createdAt,
       expiresAt: expiresAt,
@@ -378,8 +402,9 @@ export class PaymentsService {
         userId: tx.userId,
         username: tx.user?.username,
         planName: planName,
-        amount: Number(tx.amount), // Ensure number
-        amountVnd: Number(tx.amountVnd),
+        amount: Number(tx.amount),
+        basePriceSnapshot: Number(tx.basePriceSnapshot),
+        totalFeePercentage: Number(tx.totalFeePercentage),
         currency: tx.currency,
         provider: tx.provider,
         status: tx.status,

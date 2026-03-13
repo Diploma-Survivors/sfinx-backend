@@ -10,6 +10,9 @@ import { CreateSubscriptionPlanDto } from '../dto/create-subscription-plan.dto';
 import { UpdateSubscriptionPlanDto } from '../dto/update-subscription-plan.dto';
 import { SubscriptionPlanTranslation } from '../entities/subscription-plan-translation.entity';
 import { Language } from '../../auth/enums';
+import { CurrencyService } from './currency.service';
+import { FeeConfigService } from './fee-config.service';
+import { Currency } from '../entities/currency.entity';
 
 @Injectable()
 export class SubscriptionPlansService {
@@ -22,6 +25,8 @@ export class SubscriptionPlansService {
     private readonly featureRepo: Repository<SubscriptionFeature>,
     @InjectRepository(SubscriptionPlanTranslation)
     private readonly translationRepo: Repository<SubscriptionPlanTranslation>,
+    private readonly currencyService: CurrencyService,
+    private readonly feeConfigService: FeeConfigService,
   ) {}
 
   /**
@@ -48,11 +53,16 @@ export class SubscriptionPlansService {
     const plans = await this.planRepo.find({
       where,
       relations: ['translations'],
-      order: { priceUsd: 'ASC' },
+      order: { basePrice: 'ASC' },
     });
 
+    const [totalFeePercentage, currencies] = await Promise.all([
+      this.feeConfigService.getTotalFeePercentage(),
+      this.currencyService.getActiveCurrencies(),
+    ]);
+
     const mappedPlans = plans.map((plan) =>
-      this.mapPlanWithTranslation(plan, lang),
+      this.mapPlanWithTranslation(plan, lang, totalFeePercentage, currencies),
     );
 
     return plainToInstance(SubscriptionPlanDto, mappedPlans);
@@ -78,7 +88,17 @@ export class SubscriptionPlansService {
       throw new NotFoundException(`Subscription plan ${id} not found`);
     }
 
-    const mappedPlan = this.mapPlanWithTranslation(plan, lang);
+    const [totalFeePercentage, currencies] = await Promise.all([
+      this.feeConfigService.getTotalFeePercentage(),
+      this.currencyService.getActiveCurrencies(),
+    ]);
+
+    const mappedPlan = this.mapPlanWithTranslation(
+      plan,
+      lang,
+      totalFeePercentage,
+      currencies,
+    );
     return plainToInstance(SubscriptionPlanDto, mappedPlan);
   }
 
@@ -112,7 +132,7 @@ export class SubscriptionPlansService {
   async create(dto: CreateSubscriptionPlanDto): Promise<SubscriptionPlan> {
     const plan = this.planRepo.create({
       type: dto.type,
-      priceUsd: dto.priceUsd,
+      basePrice: dto.basePrice,
       durationMonths: dto.durationMonths,
       isActive: dto.isActive ?? true,
     });
@@ -165,7 +185,7 @@ export class SubscriptionPlansService {
     }
 
     if (dto.type) plan.type = dto.type;
-    if (dto.priceUsd !== undefined) plan.priceUsd = dto.priceUsd;
+    if (dto.basePrice !== undefined) plan.basePrice = dto.basePrice;
     if (dto.durationMonths !== undefined)
       plan.durationMonths = dto.durationMonths;
     if (dto.isActive !== undefined) plan.isActive = dto.isActive;
@@ -228,6 +248,8 @@ export class SubscriptionPlansService {
   private mapPlanWithTranslation(
     plan: SubscriptionPlan,
     lang: string,
+    totalFeePercentage: number,
+    currencies: Currency[],
   ): SubscriptionPlanDto {
     // Find translation for requested language, or fallback to 'en', or first available
     const translation =
@@ -254,10 +276,28 @@ export class SubscriptionPlansService {
       };
     });
 
+    // Compute final VND price (after all fees)
+    const basePrice = Number(plan.basePrice);
+    const finalVnd = Math.ceil(basePrice * (1 + totalFeePercentage));
+
+    // Build prices map for all active currencies
+    const prices: Record<string, number> = {};
+    for (const currency of currencies) {
+      const rate = Number(currency.rateToVnd);
+      if (rate === 1) {
+        // VND — always integer
+        prices[currency.code] = finalVnd;
+      } else {
+        // Foreign currency — round to 2 decimals
+        prices[currency.code] = Math.round((finalVnd / rate) * 100) / 100;
+      }
+    }
+
     return {
       id: plan.id,
       type: plan.type,
-      priceUsd: plan.priceUsd,
+      basePrice: basePrice,
+      prices,
       durationMonths: plan.durationMonths,
       isActive: plan.isActive,
       name: translation ? translation.name : 'Unknown Plan',

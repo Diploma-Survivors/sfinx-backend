@@ -71,8 +71,6 @@ export const environmentValidation = Joi.object({
   VNPAY_IPN_URL: Joi.string().uri().required(),
 
   // Payment
-  EXCHANGE_RATE_API_URL: Joi.string().uri().optional(),
-  EXCHANGE_RATE_API_KEY: Joi.string().optional(),
   PAYMENT_CRON_SCHEDULE: Joi.string().default('0 0 * * *'),
   PAYMENT_CRON_ENABLED: Joi.boolean().default(false),
   PAYMENT_WARNING_DAYS_BEFORE: Joi.number().default(3),

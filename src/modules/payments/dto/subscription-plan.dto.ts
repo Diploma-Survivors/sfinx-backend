@@ -21,8 +21,18 @@ export class SubscriptionPlanDto {
   description: string;
 
   @Expose()
-  @ApiProperty()
-  priceUsd: number;
+  @ApiProperty({
+    description: 'Base price in VND (before fees)',
+    example: 299000,
+  })
+  basePrice: number;
+
+  @Expose()
+  @ApiProperty({
+    description: 'Final price per currency (fees included)',
+    example: { VND: 323000, USD: 12.67 },
+  })
+  prices: Record<string, number>;
 
   @Expose()
   @ApiProperty()
@@ -34,5 +44,5 @@ export class SubscriptionPlanDto {
 
   @Expose()
   @ApiProperty()
-  features: any[]; // Using any[] for now, or define SubscriptionFeatureDto
+  features: any[];
 }

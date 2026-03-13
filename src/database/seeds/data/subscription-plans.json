@@ -1,7 +1,7 @@
 [
   {
     "type": "MONTHLY",
-    "priceUsd": 5.0,
+    "basePrice": 125000,
     "durationMonths": 1,
     "isActive": true,
     "featureKeys": ["unlimited_submissions", "ai_analysis", "premium_problems"],
@@ -18,7 +18,7 @@
   },
   {
     "type": "YEARLY",
-    "priceUsd": 50.0,
+    "basePrice": 1250000,
     "durationMonths": 12,
     "isActive": true,
     "featureKeys": ["unlimited_submissions", "ai_analysis", "premium_problems"],

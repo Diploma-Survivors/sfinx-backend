@@ -11,8 +11,14 @@ export class CurrentPlanResponseDto {
   @ApiProperty({ description: 'Plan Description' })
   description: string;
 
-  @ApiProperty({ description: 'Price in USD' })
-  price: number;
+  @ApiProperty({ description: 'Base price in VND' })
+  basePrice: number;
+
+  @ApiProperty({
+    description: 'Final price per currency (fees included)',
+    example: { VND: 323000, USD: 12.67 },
+  })
+  prices: Record<string, number>;
 
   @ApiProperty({ description: 'Plan Type (MONTHLY/YEARLY)' })
   type: string;
