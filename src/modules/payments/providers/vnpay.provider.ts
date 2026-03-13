@@ -40,7 +40,7 @@ export class VnPayProvider implements PaymentProvider {
     const vnpParams = this.buildVnpParams(
       config,
       orderId,
-      transaction.amountVnd * 100,
+      transaction.amount * 100,
       clientIp,
       createDate,
       transaction.description,

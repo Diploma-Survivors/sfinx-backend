@@ -31,20 +31,40 @@ export class PaymentTransaction {
   @Column({ name: 'plan_id' })
   planId: number;
 
-  @ApiProperty({ description: 'Amount in USD', example: 9.99 })
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @ApiProperty({
+    description: 'Final amount in VND (after fees, sent to VNPAY)',
+    example: 323000,
+  })
+  @Column({ type: 'decimal', precision: 15, scale: 2 })
   amount: number;
 
-  @ApiProperty({ description: 'Amount in VND', example: 250000 })
-  @Column({ name: 'amount_vnd', type: 'decimal', precision: 15, scale: 2 })
-  amountVnd: number;
+  @ApiProperty({
+    description: 'Base price in VND (before fees)',
+    example: 299000,
+  })
+  @Column({
+    name: 'base_price_snapshot',
+    type: 'decimal',
+    precision: 15,
+    scale: 2,
+  })
+  basePriceSnapshot: number;
 
-  @ApiProperty({ description: 'Exchange rate used', example: 25400 })
-  @Column({ name: 'exchange_rate', type: 'decimal', precision: 10, scale: 2 })
-  exchangeRate: number;
+  @ApiProperty({
+    description: 'Total fee percentage snapshot at payment time (e.g. 0.096)',
+    example: 0.096,
+  })
+  @Column({
+    name: 'total_fee_percentage',
+    type: 'decimal',
+    precision: 10,
+    scale: 6,
+    default: 0,
+  })
+  totalFeePercentage: number;
 
-  @ApiProperty({ description: 'Currency code', example: 'USD' })
-  @Column({ length: 3, default: 'USD' })
+  @ApiProperty({ description: 'Currency code', example: 'VND' })
+  @Column({ length: 3, default: 'VND' })
   currency: string;
 
   @ApiProperty({ description: 'Payment provider', example: 'VNPAY' })

@@ -7,21 +7,28 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { PaymentsController } from './controllers/payments.controller';
 import { SubscriptionFeaturesController } from './controllers/subscription-features.controller';
 import { SubscriptionPlansController } from './controllers/subscription-plans.controller';
+import { CurrenciesController } from './controllers/currencies.controller';
+import { FeeConfigsController } from './controllers/fee-configs.controller';
 import { PaymentMethodTranslation } from './entities/payment-method-translation.entity';
 import { PaymentMethod } from './entities/payment-method.entity';
 import { PaymentTransaction } from './entities/payment-transaction.entity';
+import { Currency } from './entities/currency.entity';
+import { CurrencyTranslation } from './entities/currency-translation.entity';
+import { FeeConfig } from './entities/fee-config.entity';
+import { FeeConfigTranslation } from './entities/fee-config-translation.entity';
 import { SubscriptionFeatureTranslation } from './entities/subscription-feature-translation.entity';
 import { SubscriptionFeature } from './entities/subscription-feature.entity';
 import { SubscriptionPlanTranslation } from './entities/subscription-plan-translation.entity';
 import { SubscriptionPlan } from './entities/subscription-plan.entity';
 import { PaymentProviderFactory } from './providers/payment-provider.factory';
 import { VnPayProvider } from './providers/vnpay.provider';
-import { ExchangeRateService } from './services/exchange-rate.service';
 import { PaymentMethodService } from './services/payment-method.service';
 import { PaymentSubscriptionService } from './services/payment-subscription.service';
 import { PaymentsService } from './services/payments.service';
 import { SubscriptionFeatureService } from './services/subscription-feature.service';
 import { SubscriptionPlansService } from './services/subscription-plans.service';
+import { CurrencyService } from './services/currency.service';
+import { FeeConfigService } from './services/fee-config.service';
 
 @Module({
   imports: [
@@ -33,6 +40,10 @@ import { SubscriptionPlansService } from './services/subscription-plans.service'
       SubscriptionPlanTranslation,
       SubscriptionFeature,
       SubscriptionFeatureTranslation,
+      Currency,
+      CurrencyTranslation,
+      FeeConfig,
+      FeeConfigTranslation,
       User,
     ]),
     ConfigModule,
@@ -43,16 +54,19 @@ import { SubscriptionPlansService } from './services/subscription-plans.service'
     PaymentsController,
     SubscriptionPlansController,
     SubscriptionFeaturesController,
+    CurrenciesController,
+    FeeConfigsController,
   ],
   providers: [
     PaymentsService,
-    ExchangeRateService,
     VnPayProvider,
     PaymentProviderFactory,
     PaymentMethodService,
     PaymentSubscriptionService,
     SubscriptionPlansService,
     SubscriptionFeatureService,
+    CurrencyService,
+    FeeConfigService,
   ],
 
   exports: [PaymentsService],

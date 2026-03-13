@@ -20,10 +20,10 @@ export class CreateSubscriptionPlanDto {
   @IsNotEmpty()
   type: SubscriptionType;
 
-  @ApiProperty({ example: 9.99, description: 'Price in USD' })
+  @ApiProperty({ example: 299000, description: 'Base price in VND' })
   @IsNumber()
   @Min(0)
-  priceUsd: number;
+  basePrice: number;
 
   @ApiProperty({ example: 1, description: 'Duration in months' })
   @IsInt()

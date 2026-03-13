@@ -16,7 +16,7 @@ interface SubscriptionPlanTranslationData {
 
 interface SubscriptionPlanData {
   type: SubscriptionType;
-  priceUsd: number;
+  basePrice: number;
   durationMonths: number;
   isActive: boolean;
   featureKeys?: string[];
@@ -37,7 +37,7 @@ export const CreateSubscriptionPlans = async (dataSource: DataSource) => {
     if (!plan) {
       plan = planRepo.create({
         type: data.type,
-        priceUsd: data.priceUsd,
+        basePrice: data.basePrice,
         durationMonths: data.durationMonths,
         isActive: data.isActive,
       });
