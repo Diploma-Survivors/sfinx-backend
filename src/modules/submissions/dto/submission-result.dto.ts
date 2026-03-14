@@ -35,11 +35,11 @@ export class TestResultDto {
   })
   memory: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Submission token in judge0 container',
     example: 'd85cd024-1548-4165-96c7-7bc88673f194',
   })
-  token: string;
+  token?: string;
 
   @ApiProperty({
     description: 'Submission status',

@@ -18,7 +18,10 @@ import { Judge0Service } from '../../judge0/judge0.service';
 import { ProgrammingLanguageService } from '../../programming-language/programming-language.service';
 import { ProblemsService } from '../../problems/problems.service';
 import { Judge0PayloadBuilderService } from '../../submissions/services/judge0-payload-builder.service';
+import { PackedProtocolService } from '../../submissions/services/packed-protocol.service';
 import { SubmissionTrackerService } from '../../submissions/services/submission-tracker.service';
+import { SubmissionStatus } from '../../submissions/enums/submission-status.enum';
+import { judge0StatusMap } from '../../submissions/enums/submission-status.enum';
 import { Judge0Response } from '../../judge0/interfaces';
 
 interface Judge0EvaluationContext {
@@ -63,6 +66,7 @@ export class AiInterviewService {
     private readonly languagesService: ProgrammingLanguageService,
     private readonly problemsService: ProblemsService,
     private readonly payloadBuilder: Judge0PayloadBuilderService,
+    private readonly packedProtocol: PackedProtocolService,
     private readonly submissionTracker: SubmissionTrackerService,
   ) {}
 
@@ -121,119 +125,114 @@ export class AiInterviewService {
   }
 
   /**
-   * Execute code against all test cases synchronously
+   * Execute code against all test cases synchronously (single harness submission).
+   * With the batched harness architecture, all testcases are packed into ONE
+   * Judge0 submission; results are decoded from the harness packed stdout.
    */
   private async executeCodeSync(
     problemId: number,
     sourceCode: string,
     judge0LanguageId: number,
+    languageSlug: string,
+    harnessCode: string | null,
   ): Promise<Judge0EvaluationContext> {
     const problem = await this.problemsService.findProblemEntityById(problemId);
 
     if (!problem.testcaseFileKey) {
-      return {
-        passedTestcases: 0,
-        totalTestcases: 0,
-        status: 'REJECTED',
-      };
+      return { passedTestcases: 0, totalTestcases: 0, status: 'REJECTED' };
     }
 
-    // Generate submission ID
     const submissionId = 'interview-' + Date.now();
 
-    // Build payloads for all test cases
-    const payloads = await this.payloadBuilder.buildPayloadsForSubmit(
-      submissionId,
-      sourceCode,
-      judge0LanguageId,
-      problem,
-    );
+    // Build single packed payload for all testcases
+    const { payloads, testcaseCount } =
+      await this.payloadBuilder.buildPayloadsForSubmit(
+        submissionId,
+        sourceCode,
+        judge0LanguageId,
+        problem,
+        harnessCode,
+        languageSlug,
+      );
 
-    if (payloads.length === 0) {
-      return {
-        passedTestcases: 0,
-        totalTestcases: 0,
-        status: 'REJECTED',
-      };
+    if (payloads.length === 0 || testcaseCount === 0) {
+      return { passedTestcases: 0, totalTestcases: 0, status: 'REJECTED' };
     }
 
-    // Initialize tracking in Redis with problemId
-    await this.submissionTracker.initializeTracking(
-      submissionId,
-      payloads.length,
-      problem.id,
-    );
-
-    // Submit batch to Judge0
+    // Submit single payload to Judge0
     const batchResponse =
       await this.judge0Service.createSubmissionBatch(payloads);
 
-    // Wait for all results with timeout
-    const maxWaitTime = 30000; // 30 seconds
-    const pollInterval = 500; // 500ms
+    // Poll for the single result
+    const maxWaitTime = 30000;
+    const pollInterval = 500;
     const startTime = Date.now();
 
-    const tokens = batchResponse.map((r) => r.token);
-    const results: Judge0Response[] = [];
-    let pendingTokens = [...tokens];
+    let judge0Result: Judge0Response | null = null;
+    let pendingToken = batchResponse[0]?.token;
 
-    while (pendingTokens.length > 0 && Date.now() - startTime < maxWaitTime) {
-      const batchResults =
-        await this.judge0Service.getSubmissionsBatch(pendingTokens);
-
-      for (let i = 0; i < batchResults.length; i++) {
-        const result = batchResults[i];
-        if (result.status.id !== 1 && result.status.id !== 2) {
-          // Not In Queue or Processing
-          results.push(result);
-          pendingTokens = pendingTokens.filter((t) => t !== result.token);
-        }
-      }
-
-      if (pendingTokens.length > 0) {
+    while (pendingToken && Date.now() - startTime < maxWaitTime) {
+      const [result] = await this.judge0Service.getSubmissionsBatch([
+        pendingToken,
+      ]);
+      if (result && result.status.id !== 1 && result.status.id !== 2) {
+        judge0Result = result;
+        pendingToken = '';
+      } else {
         await new Promise((resolve) => setTimeout(resolve, pollInterval));
       }
     }
 
-    // Process results
-    let passedCount = 0;
-    const failedTestCases: Judge0EvaluationContext['failedTestCases'] = [];
-    let totalRuntime = 0;
-    let totalMemory = 0;
-
-    for (const result of results) {
-      const isAccepted = result.status.id === 3; // Accepted
-
-      if (isAccepted) {
-        passedCount++;
-      } else {
-        failedTestCases.push({
-          input: result.stdin || '',
-          expectedOutput: result.expected_output || '',
-          actualOutput:
-            result.stdout || result.stderr || result.compile_output || '',
-          error: result.status.description,
-        });
-      }
-
-      if (result.time) totalRuntime += result.time * 1000;
-      if (result.memory) totalMemory += result.memory;
+    if (!judge0Result) {
+      return {
+        passedTestcases: 0,
+        totalTestcases: testcaseCount,
+        status: 'REJECTED',
+      };
     }
 
-    const totalTestcases = payloads.length;
+    // Decode per-testcase results from harness packed stdout
+    const submissionStatus =
+      judge0StatusMap[judge0Result.status.id] ?? SubmissionStatus.UNKNOWN_ERROR;
+    const failedTestCases: Judge0EvaluationContext['failedTestCases'] = [];
+    let passedCount = 0;
+
+    if (submissionStatus === SubmissionStatus.ACCEPTED && judge0Result.stdout) {
+      try {
+        const harnessResults = this.packedProtocol.decodeStdoutBase64(
+          judge0Result.stdout,
+        );
+        for (const r of harnessResults) {
+          if (r.status === 'AC') {
+            passedCount++;
+          } else {
+            failedTestCases.push({
+              input: r.input,
+              expectedOutput: r.expected,
+              actualOutput: r.stdout,
+            });
+          }
+        }
+      } catch {
+        // Failed to decode — treat as all failed
+      }
+    }
+
+    const totalMemory = judge0Result.memory ?? 0;
+    const totalRuntime = Number(judge0Result.time ?? 0) * 1000;
 
     return {
       passedTestcases: passedCount,
-      totalTestcases,
+      totalTestcases: testcaseCount,
       status:
-        passedCount === totalTestcases
+        passedCount === testcaseCount
           ? 'ACCEPTED'
           : passedCount > 0
             ? 'PARTIAL'
             : 'REJECTED',
-      runtimeMs: Math.round(totalRuntime / results.length) || undefined,
-      memoryKb: Math.round(totalMemory / results.length) || undefined,
-      failedTestCases: failedTestCases.slice(0, 3), // Limit to first 3 failures
+      runtimeMs: totalRuntime > 0 ? Math.round(totalRuntime) : undefined,
+      memoryKb: totalMemory > 0 ? Math.round(totalMemory) : undefined,
+      failedTestCases: failedTestCases.slice(0, 3),
     };
   }
 
@@ -303,6 +302,8 @@ export class AiInterviewService {
           interview.problemId,
           sourceCode,
           language.judge0Id,
+          language.slug,
+          language.harnessCode,
         );
       } catch (error) {
         console.error('Judge0 execution error:', error);

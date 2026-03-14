@@ -34,49 +34,71 @@ export class ResultDescriptionGeneratorService {
           message: 'Wrong answer',
           stdin: firstFailedTest.stdin || 'N/A',
           expectedOutput: firstFailedTest.expectedOutput || 'N/A',
-          stdout: firstFailedTest.stdout || 'N/A',
+          stdout: firstFailedTest.stdout || '(empty)',
           compileOutput: firstFailedTest.compileOutput,
         };
 
-      case SubmissionStatus.TIME_LIMIT_EXCEEDED:
+      case SubmissionStatus.TIME_LIMIT_EXCEEDED: {
+        const tleSuffix = firstFailedTest.stderr
+          ? `\n${firstFailedTest.stderr}`
+          : ' — check for infinite loops or O(n²) algorithms on large inputs.';
         return {
-          message: `Time limit exceeded${firstFailedTest.stderr ? `\n${firstFailedTest.stderr}` : ''}`,
+          message: `Time limit exceeded${tleSuffix}`,
           stdin: firstFailedTest.stdin,
           expectedOutput: firstFailedTest.expectedOutput,
           stdout: firstFailedTest.stdout,
           compileOutput: firstFailedTest.compileOutput,
+          stderr: firstFailedTest.stderr,
         };
+      }
 
-      case SubmissionStatus.MEMORY_LIMIT_EXCEEDED:
+      case SubmissionStatus.MEMORY_LIMIT_EXCEEDED: {
+        const mleSuffix = firstFailedTest.stderr
+          ? `\n${firstFailedTest.stderr}`
+          : ' — check for large allocations, unbounded recursion, or memory leaks.';
         return {
-          message: `Memory limit exceeded${firstFailedTest.stderr ? `\n${firstFailedTest.stderr}` : ''}`,
+          message: `Memory limit exceeded${mleSuffix}`,
           stderr: firstFailedTest.stderr,
           stdin: firstFailedTest.stdin,
           expectedOutput: firstFailedTest.expectedOutput,
           stdout: firstFailedTest.stdout,
           compileOutput: firstFailedTest.compileOutput,
         };
+      }
 
-      case SubmissionStatus.RUNTIME_ERROR:
+      case SubmissionStatus.RUNTIME_ERROR: {
+        const errorDetail = firstFailedTest.stderr || firstFailedTest.stdout;
+        const reSuffix = errorDetail
+          ? `:\n${errorDetail}`
+          : ' — your program crashed. Common causes: null/undefined access, array index out of bounds, division by zero, or stack overflow.';
         return {
-          message: `Runtime error${firstFailedTest.stderr || firstFailedTest.stdout ? `\n${firstFailedTest.stderr || firstFailedTest.stdout}` : ''}`,
+          message: `Runtime error${reSuffix}`,
           stderr: firstFailedTest.stderr || firstFailedTest.stdout,
           stdin: firstFailedTest.stdin,
           expectedOutput: firstFailedTest.expectedOutput,
           compileOutput: firstFailedTest.compileOutput,
         };
+      }
 
-      case SubmissionStatus.COMPILATION_ERROR:
+      case SubmissionStatus.COMPILATION_ERROR: {
+        // compile_output holds the actual compiler errors; stderr may be empty
+        const compileDetail =
+          firstFailedTest.compileOutput || firstFailedTest.stderr;
         return {
-          message: `Compilation error${firstFailedTest.stderr ? `\n${firstFailedTest.stderr}` : ''}`,
+          message: `Compilation error${compileDetail ? `:\n${compileDetail}` : ''}`,
           stderr: firstFailedTest.stderr,
           compileOutput: firstFailedTest.compileOutput || '',
         };
+      }
 
-      default:
+      default: {
+        const unknownDetail = firstFailedTest.stderr || firstFailedTest.stdout;
         return {
-          message: 'Unknown error occurred',
+          message: `An unexpected error occurred${unknownDetail ? `:\n${unknownDetail}` : '. Please try again or report the issue.'}`,
+          stderr: firstFailedTest.stderr,
+          compileOutput: firstFailedTest.compileOutput,
         };
+      }
     }
   }
 
@@ -88,7 +110,7 @@ export class ResultDescriptionGeneratorService {
   ): Promise<TestResultDto> {
     try {
       const detailedResult = await this.judge0Service.getSubmissionDetails(
-        failedTest.token,
+        failedTest.token ?? '',
       );
 
       return {

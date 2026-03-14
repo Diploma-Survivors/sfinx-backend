@@ -15,8 +15,15 @@ export class SubmissionStatsCalculatorService {
    * Calculate submission statistics from test results
    * Includes time and memory limit checking and status determination
    */
-  calculateStats(results: TestResultDto[], problem: Problem): SubmissionStats {
-    const totalTests = results.length;
+  calculateStats(
+    results: TestResultDto[],
+    problem: Problem,
+    totalTestcasesOverride?: number,
+  ): SubmissionStats {
+    // With fail-fast harness, results.length may be < total testcases.
+    // Use the override (from Redis meta) when provided so stats reflect the
+    // true denominator rather than only the executed subset.
+    const totalTests = totalTestcasesOverride ?? results.length;
     let passedTests = 0;
     let sumRuntime = 0;
     let sumMemory = 0;

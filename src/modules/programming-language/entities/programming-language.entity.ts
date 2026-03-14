@@ -52,6 +52,13 @@ export class ProgrammingLanguage {
   @Column({ name: 'starter_code', type: 'text', nullable: true })
   starterCode: string;
 
+  @ApiProperty({
+    description: 'Harness code template for batched testcase execution',
+    required: false,
+  })
+  @Column({ name: 'harness_code', type: 'text', nullable: true })
+  harnessCode: string | null;
+
   @ApiProperty({ description: 'Creation timestamp' })
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

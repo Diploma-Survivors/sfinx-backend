@@ -26,7 +26,9 @@ import { CronRebuildRankingJob } from './jobs/cron-rebuild-ranking.job';
 import { SubmissionFinalizeProcessor } from './processors/submission-finalize.processor';
 import {
   CallbackProcessorService,
+  HarnessInjectorService,
   Judge0PayloadBuilderService,
+  PackedProtocolService,
   ResultDescriptionGeneratorService,
   SubmissionAnalysisService,
   SubmissionQueryBuilderService,
@@ -112,6 +114,8 @@ import { RankingAdminController } from './controllers/ranking-admin.controller';
     SubmissionStatsCalculatorService,
     ResultDescriptionGeneratorService,
     Judge0PayloadBuilderService,
+    PackedProtocolService,
+    HarnessInjectorService,
     SubmissionTrackerService,
     TestcaseReaderService,
     UserProgressService,
@@ -134,6 +138,7 @@ import { RankingAdminController } from './controllers/ranking-admin.controller';
     SubmissionRetrievalService,
     SubmissionAnalysisService,
     Judge0PayloadBuilderService,
+    PackedProtocolService,
     SubmissionTrackerService,
   ],
 })

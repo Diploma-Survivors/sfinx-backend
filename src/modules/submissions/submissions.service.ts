@@ -101,6 +101,8 @@ export class SubmissionsService {
     return this.submitToJudge0(
       submissionId,
       language.judge0Id,
+      language.slug,
+      language.harnessCode,
       sourceCode,
       problem,
       false,
@@ -150,6 +152,8 @@ export class SubmissionsService {
     return this.submitToJudge0(
       submission.id.toString(),
       language.judge0Id,
+      language.slug,
+      language.harnessCode,
       sourceCode,
       problem,
       true,
@@ -204,6 +208,8 @@ export class SubmissionsService {
     await this.submitToJudge0(
       submission.id.toString(),
       language.judge0Id,
+      language.slug,
+      language.harnessCode,
       sourceCode,
       problem,
       true,
@@ -245,11 +251,15 @@ export class SubmissionsService {
   }
 
   /**
-   * Submit batch to Judge0 and initialize tracking
+   * Submit to Judge0 and initialize tracking.
+   * With the batched harness approach, exactly ONE Judge0 submission is created
+   * regardless of testcase count.
    */
   private async submitToJudge0(
     submissionId: string,
     judge0LanguageId: number,
+    languageSlug: string,
+    harnessCode: string | null,
     sourceCode: string,
     problem: Problem,
     isSubmit: boolean,
@@ -263,12 +273,14 @@ export class SubmissionsService {
       throw new BadRequestException('testCases required for run mode');
     }
 
-    const items = isSubmit
+    const { payloads, testcaseCount } = isSubmit
       ? await this.payloadBuilder.buildPayloadsForSubmit(
           submissionId,
           sourceCode,
           judge0LanguageId,
           problem,
+          harnessCode,
+          languageSlug,
         )
       : this.payloadBuilder.buildPayloadsForTest(
           submissionId,
@@ -276,24 +288,26 @@ export class SubmissionsService {
           judge0LanguageId,
           problem,
           testcases!,
+          harnessCode,
+          languageSlug,
         );
 
-    if (items.length === 0) {
+    if (payloads.length === 0) {
       throw new BadRequestException('No testcases found');
     }
 
     const judge0BatchResponse: Judge0BatchResponse =
-      await this.judge0Service.createSubmissionBatch(items);
+      await this.judge0Service.createSubmissionBatch(payloads);
 
-    if (judge0BatchResponse.length !== items.length) {
+    if (judge0BatchResponse.length !== payloads.length) {
       throw new InternalServerErrorException(
-        `Judge0 token count mismatch: expected ${items.length}, got ${judge0BatchResponse.length}`,
+        `Judge0 token count mismatch: expected ${payloads.length}, got ${judge0BatchResponse.length}`,
       );
     }
 
     await this.submissionTracker.initializeTracking(
       submissionId,
-      items.length,
+      testcaseCount,
       problem.id,
     );
 

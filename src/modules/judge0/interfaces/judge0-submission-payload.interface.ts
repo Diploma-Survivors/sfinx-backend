@@ -9,6 +9,7 @@ export interface Judge0SubmissionPayload {
   expected_output?: string;
   additional_files?: string;
   cpu_time_limit?: number;
+  compile_timeout?: number;
   memory_limit?: number;
   redirect_stderr_to_stdout?: boolean;
   callback_url?: string;

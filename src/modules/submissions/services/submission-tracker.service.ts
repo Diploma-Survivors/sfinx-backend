@@ -12,8 +12,11 @@ export class SubmissionTrackerService {
   constructor(private readonly redisService: RedisService) {}
 
   /**
-   * Initialize Redis keys for submission tracking
-   * Sets up metadata, results hash, and seen set with TTL
+   * Initialize Redis keys for submission tracking.
+   *
+   * With the batched harness approach, each user submission maps to exactly
+   * ONE Judge0 submission (total=1), while totalTestcases tracks how many
+   * testcases are packed inside for result building.
    */
   async initializeTracking(
     submissionId: string,
@@ -30,9 +33,12 @@ export class SubmissionTrackerService {
       const client = this.redisService.getClient();
       const tx = client.multi();
 
-      // Set metadata hash
+      // Set metadata hash.
+      // total=1 because one Judge0 submission is sent regardless of testcase count.
+      // totalTestcases=N is the actual number of testcases inside the packed payload.
       tx.hset(metaKey, {
-        total: String(testcaseCount),
+        total: '1',
+        totalTestcases: String(testcaseCount),
         received: '0',
         problemId: String(problemId),
       });

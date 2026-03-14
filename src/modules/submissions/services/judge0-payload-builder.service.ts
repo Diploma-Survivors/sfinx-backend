@@ -10,22 +10,37 @@ import { Judge0SubmissionPayload } from '../../judge0/interfaces';
 import { Judge0Service } from '../../judge0/judge0.service';
 import { Problem } from '../../problems/entities/problem.entity';
 import { CreateTestcaseDto } from '../dto/create-submission.dto';
-
+import { HarnessInjectorService } from './harness-injector.service';
+import { PackedProtocolService } from './packed-protocol.service';
 import { TestcaseReaderService } from './testcase-reader.service';
 
-/** Maximum number of testcases to process */
-const MAX_TESTCASES = 10000;
+/** Maximum number of testcases to process in a single submission */
+const MAX_TESTCASES = 10_000;
+
+/** Languages with slow JVM/compiler startup that need extra compile time (seconds) */
+const SLOW_COMPILE_LANGUAGES = new Set(['kotlin', 'java', 'scala', 'groovy']);
+const SLOW_COMPILE_TIMEOUT_SECONDS = 30;
 
 /** Error messages */
 const ERROR_MESSAGES = {
   NO_TESTCASE_FILE: 'Problem has no testcase file key',
   STREAM_FAILED: 'Failed to stream testcases',
-  PARSE_FAILED: 'Failed to parse testcase',
   MAX_TESTCASES_EXCEEDED: 'Maximum testcase limit exceeded',
 } as const;
 
+export interface BuiltPayloads {
+  /** Always contains exactly 1 Judge0 payload (all testcases combined) */
+  payloads: Judge0SubmissionPayload[];
+  /** Actual number of testcases packed into the single payload */
+  testcaseCount: number;
+}
+
 /**
- * Service responsible for building Judge0 submission payloads
+ * Service responsible for building Judge0 submission payloads.
+ *
+ * New architecture: ALL testcases are packed into a SINGLE Judge0 submission
+ * using the prefixed-length protocol. The harness code (stored per language)
+ * is injected with user code and handles per-testcase I/O redirection.
  */
 @Injectable()
 export class Judge0PayloadBuilderService {
@@ -34,80 +49,75 @@ export class Judge0PayloadBuilderService {
   constructor(
     private readonly judge0Service: Judge0Service,
     private readonly testcaseReaderService: TestcaseReaderService,
+    private readonly packedProtocol: PackedProtocolService,
+    private readonly harnessInjector: HarnessInjectorService,
   ) {}
 
   /**
-   * Build Judge0 payloads for submission (from problem testcase file)
-   * Streams testcases from S3 or local file using TestcaseReaderService
+   * Build a single Judge0 payload for a full submission (from problem testcase file).
+   * Streams all testcases, packs them, and injects user code into the harness.
    */
   async buildPayloadsForSubmit(
     submissionId: string,
     sourceCode: string,
     judge0LanguageId: number,
     problem: Problem,
-  ): Promise<Judge0SubmissionPayload[]> {
+    harnessCode: string | null,
+    languageSlug: string,
+  ): Promise<BuiltPayloads> {
     if (!problem.testcaseFileKey) {
       throw new NotFoundException(ERROR_MESSAGES.NO_TESTCASE_FILE);
     }
 
-    const payloads: Judge0SubmissionPayload[] = [];
-    let testcaseIndex = 0;
+    const testcases: Array<{ input: string; expectedOutput: string }> = [];
 
     try {
-      // Use async generator to stream testcases from NDJSON file
-      for await (const testcase of this.testcaseReaderService.readTestcases(
+      for await (const tc of this.testcaseReaderService.readTestcases(
         problem.testcaseFileKey,
       )) {
-        // Check max testcase limit
-        if (testcaseIndex >= MAX_TESTCASES) {
+        if (testcases.length >= MAX_TESTCASES) {
           throw new Error(
             `${ERROR_MESSAGES.MAX_TESTCASES_EXCEEDED}: ${MAX_TESTCASES}`,
           );
         }
-
-        // Build Judge0 payload for this testcase
-        const payload = this.buildPayload(
-          sourceCode,
-          judge0LanguageId,
-          problem,
-          submissionId,
-          testcase.id ?? testcaseIndex,
-          testcase.input,
-          testcase.output,
-          true,
-        );
-
-        payloads.push(payload);
-        testcaseIndex++;
+        testcases.push({ input: tc.input, expectedOutput: tc.output });
       }
-
-      this.logger.debug(
-        `Built ${payloads.length} payloads for submission ${submissionId}`,
-      );
-
-      return payloads;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `Failed to build payloads for submission ${submissionId}: ${message}`,
+        `Failed to stream testcases for submission ${submissionId}: ${message}`,
       );
-
-      // Re-throw if it's already an HTTP exception
       if (
         error instanceof NotFoundException ||
         error instanceof InternalServerErrorException
       ) {
         throw error;
       }
-
       throw new InternalServerErrorException(
         `${ERROR_MESSAGES.STREAM_FAILED}: ${message}`,
       );
     }
+
+    this.logger.debug(
+      `Packed ${testcases.length} testcases into single payload for ${submissionId}`,
+    );
+
+    const payload = this.buildSinglePayload(
+      sourceCode,
+      judge0LanguageId,
+      problem,
+      submissionId,
+      testcases,
+      harnessCode,
+      languageSlug,
+      true,
+    );
+
+    return { payloads: [payload], testcaseCount: testcases.length };
   }
 
   /**
-   * Build Judge0 payloads for test run (from DTO testcases)
+   * Build a single Judge0 payload for a test run (from DTO testcases).
    */
   buildPayloadsForTest(
     submissionId: string,
@@ -115,51 +125,63 @@ export class Judge0PayloadBuilderService {
     judge0LanguageId: number,
     problem: Problem,
     testCases: CreateTestcaseDto[],
-  ): Judge0SubmissionPayload[] {
-    return testCases.map((testCase, index) =>
-      this.buildPayload(
-        sourceCode,
-        judge0LanguageId,
-        problem,
-        submissionId,
-        index,
-        testCase.input,
-        testCase.output,
-        false, // isSubmit = false
-      ),
+    harnessCode: string | null,
+    languageSlug: string,
+  ): BuiltPayloads {
+    const testcases = testCases.map((tc) => ({
+      input: tc.input,
+      // Use NO_CHECK sentinel when no expected output is provided
+      expectedOutput: tc.output?.trim()
+        ? tc.output
+        : PackedProtocolService.NO_CHECK_SENTINEL,
+    }));
+
+    const payload = this.buildSinglePayload(
+      sourceCode,
+      judge0LanguageId,
+      problem,
+      submissionId,
+      testcases,
+      harnessCode,
+      languageSlug,
+      false,
     );
+
+    return { payloads: [payload], testcaseCount: testcases.length };
   }
 
-  private buildPayload(
+  private buildSinglePayload(
     sourceCode: string,
     judge0LanguageId: number,
     problem: Problem,
     submissionId: string,
-    index: number,
-    stdinRaw: string | undefined,
-    expectedOutput: string | undefined,
+    testcases: Array<{ input: string; expectedOutput: string }>,
+    harnessCode: string | null,
+    languageSlug: string,
     isSubmit: boolean,
   ): Judge0SubmissionPayload {
-    const encodedSource = encodeBase64(sourceCode);
-    if (!encodedSource) {
-      this.logger.error(
-        `Encoded source code is empty! Original length: ${sourceCode.length}`,
-      );
-    }
+    const injectedCode = this.harnessInjector.inject(
+      harnessCode,
+      sourceCode,
+      languageSlug,
+    );
+
+    const packedStdinBase64 = this.packedProtocol.encodeStdinBase64(testcases);
 
     return {
       language_id: judge0LanguageId,
-      source_code: encodedSource,
-      stdin: stdinRaw ? encodeBase64(stdinRaw) : undefined,
-      expected_output: expectedOutput
-        ? encodeBase64(expectedOutput)
-        : undefined,
-      redirect_stderr_to_stdout: true,
+      source_code: encodeBase64(injectedCode),
+      stdin: packedStdinBase64,
+      // No expected_output — harness handles comparison internally
+      redirect_stderr_to_stdout: false,
       cpu_time_limit: msToSeconds(problem.timeLimitMs),
+      ...(SLOW_COMPILE_LANGUAGES.has(languageSlug) && {
+        compile_timeout: SLOW_COMPILE_TIMEOUT_SECONDS,
+      }),
       memory_limit: problem.memoryLimitKb,
       callback_url: this.judge0Service.getCallbackUrl(
         submissionId,
-        String(index),
+        '0', // always index 0 — one submission for all testcases
         isSubmit,
       ),
     };

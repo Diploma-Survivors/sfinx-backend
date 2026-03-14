@@ -166,8 +166,15 @@ export class CallbackProcessorService implements OnModuleInit {
       // Clean up Redis keys
       await this.cleanupRedisKeys([metaKey, resultsIKey, seenKey]);
 
-      // Aggregate test results
-      const testResults = this.resultBuilder.aggregateTestResults(results);
+      // With batched harness architecture, there is always exactly ONE Judge0
+      // submission (stored at index '0'). Unpack per-testcase results from it.
+      const totalTestcases = Number.parseInt(meta.totalTestcases);
+      const judge0Response = JSON.parse(results['0']) as Judge0Response;
+      const testResults = this.resultBuilder.buildResultsFromHarnessResponse(
+        judge0Response,
+        totalTestcases,
+      );
+
       let finalResult: SubmissionResultDto;
 
       if (isSubmit) {
@@ -176,6 +183,7 @@ export class CallbackProcessorService implements OnModuleInit {
           await this.resultBuilder.buildSubmissionResultForSubmitMode(
             testResults,
             Number.parseInt(meta.problemId),
+            totalTestcases,
           );
 
         // Attach the submission ID so the frontend can query performance stats
@@ -196,6 +204,7 @@ export class CallbackProcessorService implements OnModuleInit {
         finalResult = await this.resultBuilder.buildSubmissionResultForRunMode(
           testResults,
           Number.parseInt(meta.problemId),
+          totalTestcases,
         );
       }
 

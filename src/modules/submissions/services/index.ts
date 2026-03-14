@@ -1,5 +1,7 @@
 export * from './callback-processor.service';
+export * from './harness-injector.service';
 export * from './judge0-payload-builder.service';
+export * from './packed-protocol.service';
 export * from './result-description-generator.service';
 export * from './submission-analysis.service';
 export * from './submission-query-builder.service';

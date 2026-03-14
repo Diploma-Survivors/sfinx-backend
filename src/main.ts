@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import express, { Response } from 'express';
 
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -20,7 +20,13 @@ import { AppConfig } from './config';
 async function bootstrap() {
   initializeTransactionalContext({ storageDriver: StorageDriver.AUTO });
 
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bodyParser: false, // disabled so we can set a higher limit below
+  });
+
+  // Judge0 callbacks carry all testcase outputs packed in one payload — raise the limit
+  app.use(express.json({ limit: '20mb' }));
+  app.use(express.urlencoded({ limit: '20mb', extended: true }));
   const configService = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
 
