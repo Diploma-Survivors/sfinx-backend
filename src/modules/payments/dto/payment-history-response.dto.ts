@@ -11,6 +11,18 @@ export class PaymentHistoryResponseDto {
   @ApiProperty({ description: 'Currency Code' })
   currency: string;
 
+  @ApiProperty({ description: 'Amount user paid to the gateway' })
+  userPaidAmount: number;
+
+  @ApiProperty({ description: 'Currency user paid with at gateway' })
+  userPaidCurrency: string;
+
+  @ApiProperty({ description: 'Estimated amount system received' })
+  systemReceivedAmount: number;
+
+  @ApiProperty({ description: 'Currency of estimated received amount' })
+  systemReceivedCurrency: string;
+
   @ApiProperty({ description: 'Payment Provider' })
   provider: string;
 

@@ -17,6 +17,9 @@ export class SubscriptionPlanStatsDto {
 }
 
 export class RevenueStatsResponseDto {
+  @ApiProperty({ description: 'Currency used for returned revenue amounts' })
+  displayCurrency: string;
+
   @ApiProperty()
   totalRevenue: number;
 

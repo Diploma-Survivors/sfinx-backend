@@ -1,22 +1,25 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class RevenueMetricsDto {
+  @ApiProperty({ description: 'Display currency for all revenue amounts' })
+  displayCurrency: string;
+
   @ApiProperty({ description: 'Total premium users (active subscriptions)' })
   totalPremiumUsers: number;
 
   @ApiProperty({ description: 'Premium conversion rate (percentage)' })
   premiumConversionRate: number;
 
-  @ApiProperty({ description: 'Total revenue (USD)' })
+  @ApiProperty({ description: 'Total revenue (display currency)' })
   totalRevenue: number;
 
-  @ApiProperty({ description: 'Revenue today (USD)' })
+  @ApiProperty({ description: 'Revenue today (display currency)' })
   revenueToday: number;
 
-  @ApiProperty({ description: 'Revenue this week (USD)' })
+  @ApiProperty({ description: 'Revenue this week (display currency)' })
   revenueThisWeek: number;
 
-  @ApiProperty({ description: 'Revenue this month (USD)' })
+  @ApiProperty({ description: 'Revenue this month (display currency)' })
   revenueThisMonth: number;
 
   @ApiProperty({ description: 'New premium subscriptions today' })
@@ -28,7 +31,9 @@ export class RevenueMetricsDto {
   @ApiProperty({ description: 'New premium subscriptions this month' })
   newPremiumThisMonth: number;
 
-  @ApiProperty({ description: 'Average revenue per user (ARPU) in USD' })
+  @ApiProperty({
+    description: 'Average revenue per user (ARPU) in display currency',
+  })
   averageRevenuePerUser: number;
 }
 
@@ -95,6 +100,9 @@ export class TimeSeriesDataPointDto {
 }
 
 export class TimeSeriesMetricsDto {
+  @ApiProperty({ description: 'Display currency for revenue data points' })
+  displayCurrency: string;
+
   @ApiProperty({
     description: 'Daily new user registrations (last 30 days)',
     type: [TimeSeriesDataPointDto],
@@ -114,7 +122,7 @@ export class TimeSeriesMetricsDto {
   dailyActiveUsers: TimeSeriesDataPointDto[];
 
   @ApiProperty({
-    description: 'Daily revenue in USD (last 30 days)',
+    description: 'Daily revenue in display currency (last 30 days)',
     type: [TimeSeriesDataPointDto],
   })
   dailyRevenue: TimeSeriesDataPointDto[];

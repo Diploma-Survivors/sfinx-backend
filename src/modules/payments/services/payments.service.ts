@@ -27,6 +27,8 @@ import {
 } from '../dto/revenue-stats-response.dto';
 import { TransactionFilterDto } from '../dto/transaction-filter.dto';
 import { SubscriptionStatus } from '../enums/subscription-status.enum';
+import { CurrencyCode } from '../enums/currency-code.enum';
+import { FeeConfigCode } from '../enums/fee-config-code.enum';
 
 export interface TotalRevenueResult {
   totalRevenue: string;
@@ -84,21 +86,52 @@ export class PaymentsService {
 
     const provider = this.paymentProviderFactory.getProvider(paymentMethod);
 
-    // Compute final VND amount server-side (base price + all active fees)
-    const totalFeePercentage =
-      await this.feeConfigService.getTotalFeePercentage();
+    // Compute final prices at payment creation time
+    const [totalFeePercentage, usdRateToVnd, gatewayFeePercentage] =
+      await Promise.all([
+        this.feeConfigService.getTotalFeePercentage(),
+        this.getUsdRateToVnd(),
+        this.getGatewayFeePercentage(),
+      ]);
     const basePrice = Number(plan.basePrice);
     const finalVnd = Math.ceil(basePrice * (1 + totalFeePercentage));
+    const finalUsd = Math.round((finalVnd / usdRateToVnd) * 100) / 100;
+
+    const userPaidCurrency = this.getPaymentCurrency(paymentMethod);
+    const userPaidAmount =
+      userPaidCurrency === String(CurrencyCode.USD) ? finalUsd : finalVnd;
+
+    const systemReceivedAmount =
+      Math.round(userPaidAmount * (1 - gatewayFeePercentage) * 100) / 100;
+
+    // Calculate both VND and USD amounts based on which currency the user paid
+    const systemReceivedAmountUsd =
+      userPaidCurrency === String(CurrencyCode.USD)
+        ? systemReceivedAmount
+        : Math.round((systemReceivedAmount / usdRateToVnd) * 100) / 100;
+
+    const systemReceivedAmountVnd =
+      userPaidCurrency === String(CurrencyCode.USD)
+        ? Math.round(systemReceivedAmount * usdRateToVnd * 100) / 100
+        : systemReceivedAmount;
 
     const transaction = this.transactionRepo.create({
       user,
       plan,
       userId: user.id,
       planId: plan.id,
-      amount: finalVnd,
+      amount: userPaidAmount,
       basePriceSnapshot: basePrice,
       totalFeePercentage,
-      currency: 'VND',
+      currency: userPaidCurrency,
+      planPriceVnd: finalVnd,
+      planPriceUsd: finalUsd,
+      userPaidAmount,
+      userPaidCurrency,
+      systemReceivedAmount,
+      systemReceivedCurrency: userPaidCurrency,
+      systemReceivedAmountVnd,
+      systemReceivedAmountUsd,
       provider: PaymentMethodEnum[paymentMethod],
       status: PaymentStatus.PENDING,
       description: `Payment for ${plan.type} subscription`,
@@ -165,8 +198,8 @@ export class PaymentsService {
         await this.mailService.sendPaymentSuccessEmail(transaction.user.email, {
           name: transaction.user.fullName || transaction.user.username,
           planName: planName,
-          amount: transaction.amount,
-          currency: 'VND',
+          amount: Number(transaction.userPaidAmount ?? transaction.amount),
+          currency: transaction.userPaidCurrency ?? transaction.currency,
           transactionId: transaction.transactionId || String(transaction.id),
           paymentDate: transaction.paymentDate.toISOString().split('T')[0],
         });
@@ -262,8 +295,12 @@ export class PaymentsService {
 
       return {
         id: tx.id,
-        amount: tx.amount,
-        currency: tx.currency,
+        amount: Number(tx.userPaidAmount ?? tx.amount ?? 0),
+        currency: tx.userPaidCurrency ?? tx.currency,
+        userPaidAmount: Number(tx.userPaidAmount ?? tx.amount ?? 0),
+        userPaidCurrency: tx.userPaidCurrency ?? tx.currency,
+        systemReceivedAmount: Number(tx.systemReceivedAmount ?? tx.amount ?? 0),
+        systemReceivedCurrency: tx.systemReceivedCurrency ?? tx.currency,
         provider: tx.provider,
         status: tx.status,
         planName: planName,
@@ -402,10 +439,18 @@ export class PaymentsService {
         userId: tx.userId,
         username: tx.user?.username,
         planName: planName,
-        amount: Number(tx.amount),
+        amount: Number(tx.userPaidAmount ?? tx.amount ?? 0),
+        currency: tx.userPaidCurrency ?? tx.currency,
+        userPaidAmount: Number(tx.userPaidAmount ?? tx.amount ?? 0),
+        userPaidCurrency: tx.userPaidCurrency ?? tx.currency,
+        systemReceivedAmount: Number(tx.systemReceivedAmount ?? 0),
+        systemReceivedCurrency: tx.systemReceivedCurrency ?? tx.currency,
+        systemReceivedAmountVnd: Number(tx.systemReceivedAmountVnd ?? 0),
+        systemReceivedAmountUsd: Number(tx.systemReceivedAmountUsd ?? 0),
+        planPriceVnd: Number(tx.planPriceVnd ?? 0),
+        planPriceUsd: Number(tx.planPriceUsd ?? 0),
         basePriceSnapshot: Number(tx.basePriceSnapshot),
         totalFeePercentage: Number(tx.totalFeePercentage),
-        currency: tx.currency,
         provider: tx.provider,
         status: tx.status,
         paymentDate: tx.paymentDate || tx.createdAt,
@@ -487,6 +532,24 @@ export class PaymentsService {
       return Number((((current - previous) / previous) * 100).toFixed(1));
     };
 
+    const displayCurrency =
+      String(lang) === String(Language.EN)
+        ? CurrencyCode.USD
+        : CurrencyCode.VND;
+    const usdRateToVnd = await this.getUsdRateToVnd();
+    const convertFromVnd = (value: number): number => {
+      if (displayCurrency === CurrencyCode.USD) {
+        return Math.round((value / usdRateToVnd) * 100) / 100;
+      }
+      return Math.round(value * 100) / 100;
+    };
+
+    const displayTotalRevenue = convertFromVnd(totalRevenue);
+    const displayRevenueByMonth = revenueByMonth.map((item) => ({
+      ...item,
+      amount: convertFromVnd(item.amount),
+    }));
+
     const revenueGrowth = calculateGrowth(totalRevenue, previousTotalRevenue);
     const subscriberGrowth = calculateGrowth(
       activeSubscribers,
@@ -494,14 +557,39 @@ export class PaymentsService {
     );
 
     return {
-      totalRevenue,
+      totalRevenue: displayTotalRevenue,
       activeSubscribers,
       revenueGrowth,
       subscriberGrowth,
       churnRate,
-      revenueByMonth,
+      revenueByMonth: displayRevenueByMonth,
       subscriptionsByPlan,
+      displayCurrency,
     };
+  }
+
+  private getPaymentCurrency(paymentMethod: PaymentMethodEnum): string {
+    switch (paymentMethod) {
+      case PaymentMethodEnum.VNPAY:
+      default:
+        return String(CurrencyCode.VND);
+    }
+  }
+
+  private async getUsdRateToVnd(): Promise<number> {
+    const currencies = await this.currencyService.getActiveCurrencies();
+    const usd = currencies.find(
+      (currency) => currency.code === String(CurrencyCode.USD),
+    );
+    return Number(usd?.rateToVnd || 1);
+  }
+
+  private async getGatewayFeePercentage(): Promise<number> {
+    const fees = await this.feeConfigService.getActiveFees();
+    const gatewayFee = fees.find(
+      (fee) => fee.code === String(FeeConfigCode.GATEWAY_FEE),
+    );
+    return Number(gatewayFee?.value || 0);
   }
 
   private async getTotalRevenue(
@@ -510,7 +598,7 @@ export class PaymentsService {
   ): Promise<number> {
     const query = this.transactionRepo
       .createQueryBuilder('pt')
-      .select('SUM(pt.amount)', 'totalRevenue')
+      .select('SUM(pt.systemReceivedAmountVnd)', 'totalRevenue')
       .where('pt.status = :status', { status: PaymentStatus.SUCCESS });
 
     if (startDate) {
@@ -631,7 +719,7 @@ export class PaymentsService {
         `TO_CHAR(pt.paymentDate AT TIME ZONE 'UTC', '${dateFormat}')`,
         'period',
       )
-      .addSelect('SUM(pt.amount)', 'amount')
+      .addSelect('SUM(pt.systemReceivedAmountVnd)', 'amount')
       .where('pt.status = :status', { status: PaymentStatus.SUCCESS })
       .andWhere('pt.paymentDate >= :chartStartDate', { chartStartDate })
       .andWhere('pt.paymentDate <= :chartEndDate', { chartEndDate })
