@@ -72,13 +72,18 @@ export class ProblemReportsService {
   async findAll(
     page: number = 1,
     limit: number = 10,
-    filter?: { status?: string; type?: string },
+    filter?: {
+      status?: string;
+      type?: string;
+      search?: string;
+      sortBy?: string;
+      sortOrder?: 'ASC' | 'DESC';
+    },
   ) {
     const queryBuilder = this.problemReportsRepository
       .createQueryBuilder('report')
       .leftJoinAndSelect('report.user', 'user')
-      .leftJoinAndSelect('report.problem', 'problem')
-      .orderBy('report.createdAt', 'DESC');
+      .leftJoinAndSelect('report.problem', 'problem');
 
     if (filter?.status) {
       queryBuilder.andWhere('report.status = :status', {
@@ -89,6 +94,23 @@ export class ProblemReportsService {
     if (filter?.type) {
       queryBuilder.andWhere('report.type = :type', { type: filter.type });
     }
+
+    if (filter?.search) {
+      queryBuilder.andWhere(
+        '(report.description ILIKE :search OR user.username ILIKE :search OR user.email ILIKE :search OR problem.title ILIKE :search)',
+        { search: `%${filter.search}%` },
+      );
+    }
+
+    const allowedSortFields = ['createdAt', 'updatedAt', 'status', 'type'];
+
+    const sortField =
+      filter?.sortBy && allowedSortFields.includes(filter.sortBy)
+        ? `report.${filter.sortBy}`
+        : 'report.createdAt';
+    const sortOrder = filter?.sortOrder === 'ASC' ? 'ASC' : 'DESC';
+
+    queryBuilder.orderBy(sortField, sortOrder);
 
     const [items, total] = await queryBuilder
       .skip((page - 1) * limit)

@@ -11,6 +11,7 @@ import { Problem } from '../problems/entities/problem.entity';
 import { Tag } from '../problems/entities/tag.entity';
 import { ProgrammingLanguage } from '../programming-language';
 import { StorageService } from '../storage/storage.service';
+import { SortOrder } from '../../common/dto/pagination-query.dto';
 import {
   CreateSolutionDto,
   FilterSolutionDto,
@@ -148,10 +149,12 @@ export class SolutionsService {
     }
 
     // Sort
+    const sortOrder = query.sortOrder === SortOrder.ASC ? 'ASC' : 'DESC';
+
     if (query.sortBy === SolutionSortBy.MOST_VOTED) {
-      qb.orderBy('solution.upvoteCount', 'DESC');
+      qb.orderBy('solution.upvoteCount', sortOrder);
     } else {
-      qb.orderBy('solution.createdAt', 'DESC');
+      qb.orderBy('solution.createdAt', sortOrder);
     }
 
     // Pagination

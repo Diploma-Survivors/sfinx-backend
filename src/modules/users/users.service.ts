@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { plainToInstance } from 'class-transformer';
 import { Repository } from 'typeorm';
 import { PaginatedResultDto } from '../../common/dto/paginated-result.dto';
+import { SortOrder } from '../../common/dto/pagination-query.dto';
 import { DEFAULT_AVATAR_URL } from '../auth/constants/avatar.constants';
 import { UserProfileResponseDto } from '../auth/dto/user-profile-response.dto';
 import { User } from '../auth/entities/user.entity';
@@ -162,6 +163,8 @@ export class UsersService {
       isPremium,
       emailVerified,
       status,
+      sortBy,
+      sortOrder,
     } = query;
     const skip = (page - 1) * limit;
 
@@ -202,10 +205,30 @@ export class UsersService {
       });
     }
 
+    const allowedSortFields = [
+      'id',
+      'username',
+      'email',
+      'fullName',
+      'createdAt',
+      'updatedAt',
+      'lastLoginAt',
+      'lastActiveAt',
+      'isPremium',
+      'isActive',
+      'isBanned',
+    ];
+    let sortByField = 'user.id';
+    if (sortBy && allowedSortFields.includes(sortBy)) {
+      sortByField = `user.${sortBy}`;
+    }
+
+    const sortDirection = sortOrder === SortOrder.ASC ? 'ASC' : 'DESC';
+
     const [users, total] = await queryBuilder
       .skip(skip)
       .take(limit)
-      .orderBy('user.id', 'DESC')
+      .orderBy(sortByField, sortDirection)
       .getManyAndCount();
 
     const usersWithAvatar = users.map((user) => {

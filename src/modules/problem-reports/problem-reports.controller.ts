@@ -46,16 +46,22 @@ export class ProblemReportsController {
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'status', required: false, type: String })
   @ApiQuery({ name: 'type', required: false, type: String })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'sortBy', required: false, type: String })
+  @ApiQuery({ name: 'sortOrder', required: false, enum: ['ASC', 'DESC'] })
   findAll(
     @Query('page') page?: number,
     @Query('limit') limit?: number,
     @Query('status') status?: string,
     @Query('type') type?: string,
+    @Query('search') search?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: 'ASC' | 'DESC',
   ) {
     return this.problemReportsService.findAll(
       page ? +page : 1,
       limit ? +limit : 10,
-      { status, type },
+      { status, type, search, sortBy, sortOrder },
     );
   }
 
