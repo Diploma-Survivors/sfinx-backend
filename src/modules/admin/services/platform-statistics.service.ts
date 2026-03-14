@@ -20,6 +20,9 @@ import {
   TimeSeriesMetricsDto,
   TimeSeriesDataPointDto,
 } from '../dto/platform-statistics.dto';
+import { Language } from '../../auth/enums';
+import { CurrencyCode } from '../../payments/enums/currency-code.enum';
+import { CurrencyService } from '../../payments/services/currency.service';
 
 const ACTIVE_USER_THRESHOLD_DAYS = 30;
 
@@ -38,20 +41,24 @@ export class PlatformStatisticsService {
     private readonly submissionRepository: Repository<Submission>,
     @InjectRepository(PaymentTransaction)
     private readonly paymentRepository: Repository<PaymentTransaction>,
+    private readonly currencyService: CurrencyService,
   ) {}
 
   @Cacheable({
-    key: () => 'platform:statistics',
+    key: (lang: unknown) => {
+      const normalizedLang = (lang as Language) || Language.EN;
+      return `platform:statistics:${normalizedLang}`;
+    },
     ttl: CACHE_TTL.FIVE_MINUTES,
   })
-  async getPlatformStatistics(): Promise<PlatformStatisticsDto> {
+  async getPlatformStatistics(lang?: Language): Promise<PlatformStatisticsDto> {
     this.logger.log('Fetching platform-wide statistics');
 
     const [platform, growth, engagement, revenue] = await Promise.all([
       this.getPlatformMetrics(),
       this.getGrowthMetrics(),
       this.getEngagementMetrics(),
-      this.getRevenueMetrics(),
+      this.getRevenueMetrics(lang),
     ]);
 
     return {
@@ -211,7 +218,7 @@ export class PlatformStatisticsService {
     };
   }
 
-  private async getRevenueMetrics(): Promise<RevenueMetricsDto> {
+  private async getRevenueMetrics(lang?: Language): Promise<RevenueMetricsDto> {
     const results = await Promise.all([
       // Total premium users (active subscriptions)
       this.userRepository.count({
@@ -229,14 +236,14 @@ export class PlatformStatisticsService {
       // Total revenue (all successful payments)
       this.paymentRepository
         .createQueryBuilder('payment')
-        .select('COALESCE(SUM(payment.amount), 0)', 'total')
+        .select('COALESCE(SUM(payment.systemReceivedAmountVnd), 0)', 'total')
         .where('payment.status = :status', { status: PaymentStatus.SUCCESS })
         .getRawOne(),
 
       // Revenue today
       this.paymentRepository
         .createQueryBuilder('payment')
-        .select('COALESCE(SUM(payment.amount), 0)', 'total')
+        .select('COALESCE(SUM(payment.systemReceivedAmountVnd), 0)', 'total')
         .where('payment.status = :status', { status: PaymentStatus.SUCCESS })
         .andWhere('payment.paymentDate >= CURRENT_DATE')
         .getRawOne(),
@@ -244,7 +251,7 @@ export class PlatformStatisticsService {
       // Revenue this week
       this.paymentRepository
         .createQueryBuilder('payment')
-        .select('COALESCE(SUM(payment.amount), 0)', 'total')
+        .select('COALESCE(SUM(payment.systemReceivedAmountVnd), 0)', 'total')
         .where('payment.status = :status', { status: PaymentStatus.SUCCESS })
         .andWhere("payment.paymentDate >= NOW() - INTERVAL '7 days'")
         .getRawOne(),
@@ -252,7 +259,7 @@ export class PlatformStatisticsService {
       // Revenue this month
       this.paymentRepository
         .createQueryBuilder('payment')
-        .select('COALESCE(SUM(payment.amount), 0)', 'total')
+        .select('COALESCE(SUM(payment.systemReceivedAmountVnd), 0)', 'total')
         .where('payment.status = :status', { status: PaymentStatus.SUCCESS })
         .andWhere("payment.paymentDate >= NOW() - INTERVAL '30 days'")
         .getRawOne(),
@@ -325,17 +332,33 @@ export class PlatformStatisticsService {
     const averageRevenuePerUser =
       totalPremiumUsers > 0 ? totalRevenue / totalPremiumUsers : 0;
 
+    // Determine display currency and convert if needed
+    const displayCurrency = this.getDisplayCurrency(lang);
+    const convertedMetrics = await this.convertRevenueMetrics(
+      {
+        totalRevenue,
+        revenueToday,
+        revenueThisWeek,
+        revenueThisMonth,
+        averageRevenuePerUser,
+      },
+      displayCurrency,
+    );
+
     return {
+      displayCurrency,
       totalPremiumUsers,
       premiumConversionRate: Math.round(premiumConversionRate * 100) / 100,
-      totalRevenue: Math.round(totalRevenue * 100) / 100,
-      revenueToday: Math.round(revenueToday * 100) / 100,
-      revenueThisWeek: Math.round(revenueThisWeek * 100) / 100,
-      revenueThisMonth: Math.round(revenueThisMonth * 100) / 100,
+      totalRevenue: Math.round(convertedMetrics.totalRevenue * 100) / 100,
+      revenueToday: Math.round(convertedMetrics.revenueToday * 100) / 100,
+      revenueThisWeek: Math.round(convertedMetrics.revenueThisWeek * 100) / 100,
+      revenueThisMonth:
+        Math.round(convertedMetrics.revenueThisMonth * 100) / 100,
       newPremiumToday,
       newPremiumThisWeek,
       newPremiumThisMonth,
-      averageRevenuePerUser: Math.round(averageRevenuePerUser * 100) / 100,
+      averageRevenuePerUser:
+        Math.round(convertedMetrics.averageRevenuePerUser * 100) / 100,
     };
   }
 
@@ -343,19 +366,21 @@ export class PlatformStatisticsService {
    * Get time series metrics for the specified date range (default: last 30 days)
    */
   @Cacheable({
-    key: (from: unknown, to: unknown) => {
+    key: (from: unknown, to: unknown, lang: unknown) => {
       const fmt = (d: Date) => d.toISOString().split('T')[0];
       const endDate = to ? new Date(to as string | number | Date) : new Date();
       const startDate = from
         ? new Date(from as string | number | Date)
         : new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
-      return `platform:timeseries:${fmt(startDate)}:${fmt(endDate)}`;
+      const normalizedLang = (lang as Language) || Language.EN;
+      return `platform:timeseries:${fmt(startDate)}:${fmt(endDate)}:${normalizedLang}`;
     },
     ttl: CACHE_TTL.FIVE_MINUTES,
   })
   async getTimeSeriesMetrics(
     from?: Date,
     to?: Date,
+    lang?: Language,
   ): Promise<TimeSeriesMetricsDto> {
     this.logger.log(
       `Fetching time series metrics from ${String(from)} to ${String(to)}`,
@@ -381,11 +406,21 @@ export class PlatformStatisticsService {
       this.getDailyAcceptedSubmissions(startDate, endDate),
     ]);
 
+    // Determine display currency
+    const displayCurrency = this.getDisplayCurrency(lang);
+
+    // Convert daily revenue if needed
+    const convertedDailyRevenue = await this.convertRevenueTimeSeries(
+      dailyRevenue,
+      displayCurrency,
+    );
+
     return {
+      displayCurrency,
       dailyNewUsers,
       dailySubmissions,
       dailyActiveUsers,
-      dailyRevenue,
+      dailyRevenue: convertedDailyRevenue,
       dailyAcceptedSubmissions,
     };
   }
@@ -459,7 +494,7 @@ export class PlatformStatisticsService {
     const results = await this.paymentRepository
       .createQueryBuilder('payment')
       .select("DATE(payment.paymentDate AT TIME ZONE 'UTC')", 'date')
-      .addSelect('COALESCE(SUM(payment.amount), 0)', 'value')
+      .addSelect('COALESCE(SUM(payment.systemReceivedAmountVnd), 0)', 'value')
       .where('payment.paymentDate BETWEEN :from AND :to', { from, to })
       .andWhere('payment.status = :status', { status: PaymentStatus.SUCCESS })
       .groupBy("DATE(payment.paymentDate AT TIME ZONE 'UTC')")
@@ -487,6 +522,80 @@ export class PlatformStatisticsService {
       .getRawMany<{ date: string; value: string }>();
 
     return this.fillMissingDates(results, from, to);
+  }
+
+  /**
+   * Get display currency based on language
+   */
+  private getDisplayCurrency(lang?: Language): string {
+    const normalizedLang = lang || Language.EN;
+    return String(normalizedLang) === String(Language.EN)
+      ? CurrencyCode.USD
+      : CurrencyCode.VND;
+  }
+
+  /**
+   * Get USD to VND conversion rate
+   */
+  private async getUsdRateToVnd(): Promise<number> {
+    const currencies = await this.currencyService.getActiveCurrencies();
+    const usdCurrency = currencies.find(
+      (c) => c.code === String(CurrencyCode.USD),
+    );
+    if (!usdCurrency) {
+      this.logger.warn('USD currency not found, defaulting to 23500');
+      return 23500;
+    }
+    return Number(usdCurrency.rateToVnd);
+  }
+
+  /**
+   * Convert revenue metrics to display currency
+   */
+  private async convertRevenueMetrics(
+    metrics: {
+      totalRevenue: number;
+      revenueToday: number;
+      revenueThisWeek: number;
+      revenueThisMonth: number;
+      averageRevenuePerUser: number;
+    },
+    displayCurrency: string,
+  ): Promise<typeof metrics> {
+    // If display currency is VND, no conversion needed
+    if (displayCurrency === String(CurrencyCode.VND)) {
+      return metrics;
+    }
+
+    // Convert to USD
+    const usdRate = await this.getUsdRateToVnd();
+    return {
+      totalRevenue: metrics.totalRevenue / usdRate,
+      revenueToday: metrics.revenueToday / usdRate,
+      revenueThisWeek: metrics.revenueThisWeek / usdRate,
+      revenueThisMonth: metrics.revenueThisMonth / usdRate,
+      averageRevenuePerUser: metrics.averageRevenuePerUser / usdRate,
+    };
+  }
+
+  /**
+   * Convert daily revenue time series to display currency
+   */
+  private async convertRevenueTimeSeries(
+    timeSeriesData: TimeSeriesDataPointDto[],
+    displayCurrency: string,
+  ): Promise<TimeSeriesDataPointDto[]> {
+    // If display currency is VND, no conversion needed
+    if (displayCurrency === String(CurrencyCode.VND)) {
+      return timeSeriesData;
+    }
+
+    // Convert to USD
+    const usdRate = await this.getUsdRateToVnd();
+    return timeSeriesData.map((point) => ({
+      ...point,
+      value: point.value / usdRate,
+    }));
   }
 
   /**

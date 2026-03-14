@@ -14,6 +14,7 @@ import {
   TimeSeriesMetricsDto,
 } from '../dto/platform-statistics.dto';
 import { CaslGuard } from '../../auth/guards/casl.guard';
+import { Language } from '../../auth/enums';
 
 @ApiTags('Admin Dashboard')
 @Controller('admin/dashboard')
@@ -37,8 +38,10 @@ export class AdminDashboardController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
-  async getPlatformStatistics(): Promise<PlatformStatisticsDto> {
-    return this.platformStatisticsService.getPlatformStatistics();
+  async getPlatformStatistics(
+    @Query('lang') lang?: Language,
+  ): Promise<PlatformStatisticsDto> {
+    return this.platformStatisticsService.getPlatformStatistics(lang);
   }
 
   @Get('time-series')
@@ -58,7 +61,8 @@ export class AdminDashboardController {
   async getTimeSeriesMetrics(
     @Query('from', new ParseDatePipe({ optional: true })) from?: Date,
     @Query('to', new ParseDatePipe({ optional: true })) to?: Date,
+    @Query('lang') lang?: Language,
   ): Promise<TimeSeriesMetricsDto> {
-    return this.platformStatisticsService.getTimeSeriesMetrics(from, to);
+    return this.platformStatisticsService.getTimeSeriesMetrics(from, to, lang);
   }
 }

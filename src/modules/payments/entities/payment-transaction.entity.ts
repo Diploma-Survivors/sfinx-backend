@@ -10,6 +10,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { SubscriptionPlan } from './subscription-plan.entity';
+import { PaymentMethodEnum } from '../enums/payment-method.enum';
 
 export enum PaymentStatus {
   PENDING = 'PENDING',
@@ -64,11 +65,124 @@ export class PaymentTransaction {
   totalFeePercentage: number;
 
   @ApiProperty({ description: 'Currency code', example: 'VND' })
-  @Column({ length: 3, default: 'VND' })
+  @Column({ type: 'varchar', length: 3, default: 'VND' })
   currency: string;
 
+  @ApiProperty({
+    description: 'Final plan price snapshot in VND at payment creation',
+    example: 323000,
+    required: false,
+  })
+  @Column({
+    name: 'plan_price_vnd',
+    type: 'decimal',
+    precision: 15,
+    scale: 2,
+    nullable: true,
+  })
+  planPriceVnd: number | null;
+
+  @ApiProperty({
+    description: 'Final plan price snapshot in USD at payment creation',
+    example: 12.67,
+    required: false,
+  })
+  @Column({
+    name: 'plan_price_usd',
+    type: 'decimal',
+    precision: 15,
+    scale: 2,
+    nullable: true,
+  })
+  planPriceUsd: number | null;
+
+  @ApiProperty({
+    description: 'Amount paid by user to gateway in payment currency',
+    example: 323000,
+    required: false,
+  })
+  @Column({
+    name: 'user_paid_amount',
+    type: 'decimal',
+    precision: 15,
+    scale: 2,
+    nullable: true,
+  })
+  userPaidAmount: number | null;
+
+  @ApiProperty({
+    description: 'Currency user paid with at gateway',
+    example: 'VND',
+    required: false,
+  })
+  @Column({
+    name: 'user_paid_currency',
+    type: 'varchar',
+    length: 3,
+    nullable: true,
+  })
+  userPaidCurrency: string | null;
+
+  @ApiProperty({
+    description: 'Estimated amount system actually receives',
+    example: 318155,
+    required: false,
+  })
+  @Column({
+    name: 'system_received_amount',
+    type: 'decimal',
+    precision: 15,
+    scale: 2,
+    nullable: true,
+  })
+  systemReceivedAmount: number | null;
+
+  @ApiProperty({
+    description: 'Currency of estimated received amount',
+    example: 'VND',
+    required: false,
+  })
+  @Column({
+    name: 'system_received_currency',
+    type: 'varchar',
+    length: 3,
+    nullable: true,
+  })
+  systemReceivedCurrency: string | null;
+
+  @ApiProperty({
+    description: 'Estimated received amount normalized to VND',
+    example: 318155,
+    required: false,
+  })
+  @Column({
+    name: 'system_received_amount_vnd',
+    type: 'decimal',
+    precision: 15,
+    scale: 2,
+    nullable: true,
+  })
+  systemReceivedAmountVnd: number | null;
+
+  @ApiProperty({
+    description: 'Estimated received amount in USD',
+    example: 12.48,
+    required: false,
+  })
+  @Column({
+    name: 'system_received_amount_usd',
+    type: 'decimal',
+    precision: 15,
+    scale: 2,
+    nullable: true,
+  })
+  systemReceivedAmountUsd: number | null;
+
   @ApiProperty({ description: 'Payment provider', example: 'VNPAY' })
-  @Column({ length: 20, default: 'VNPAY' })
+  @Column({
+    length: 20,
+    default: PaymentMethodEnum[PaymentMethodEnum.VNPAY],
+  })
   provider: string;
 
   @ApiProperty({
