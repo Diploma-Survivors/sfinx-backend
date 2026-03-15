@@ -85,6 +85,9 @@ export class Interview {
   })
   personality: InterviewerPersonality;
 
+  @Column({ name: 'scheduled_end_at', type: 'timestamptz', nullable: true })
+  scheduledEndAt: Date;
+
   @CreateDateColumn({ name: 'started_at', type: 'timestamptz' })
   startedAt: Date;
 

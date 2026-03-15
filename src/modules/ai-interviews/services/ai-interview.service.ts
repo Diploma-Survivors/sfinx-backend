@@ -25,6 +25,7 @@ import { ProblemsService } from '../../problems/problems.service';
 import { Judge0PayloadBuilderService } from '../../submissions/services/judge0-payload-builder.service';
 import { SubmissionTrackerService } from '../../submissions/services/submission-tracker.service';
 import { Judge0Response } from '../../judge0/interfaces';
+import { InterviewTimeoutService } from '../interview-timeout-queue/interview-timeout.service';
 
 interface Judge0EvaluationContext {
   passedTestcases: number;
@@ -69,6 +70,7 @@ export class AiInterviewService {
     private readonly problemsService: ProblemsService,
     private readonly payloadBuilder: Judge0PayloadBuilderService,
     private readonly submissionTracker: SubmissionTrackerService,
+    private readonly timeoutService: InterviewTimeoutService,
   ) {}
 
   async startInterview(user: User, dto: StartInterviewDto) {
@@ -95,6 +97,15 @@ export class AiInterviewService {
       personality: dto.personality || InterviewerPersonality.EASY_GOING,
       status: InterviewStatus.ACTIVE,
     });
+    await this.interviewRepo.save(interview);
+
+    // Schedule timeout job based on mode
+    const scheduledEndAt = await this.timeoutService.scheduleTimeout(
+      interview.id,
+      interview.mode,
+    );
+
+    interview.scheduledEndAt = scheduledEndAt;
     await this.interviewRepo.save(interview);
 
     return interview;
@@ -295,6 +306,9 @@ export class AiInterviewService {
     if (interview.status === InterviewStatus.COMPLETED) {
       return interview.evaluation;
     }
+
+    // Cancel scheduled timeout job (idempotent - safe even if no job exists)
+    await this.timeoutService.cancelTimeout(id);
 
     // 1. Update Status
     interview.status = InterviewStatus.COMPLETED;
