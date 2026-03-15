@@ -2,7 +2,18 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { InterviewTimeoutService } from './interview-timeout.service';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { Interview } from '../entities/interview.entity';
+import { InterviewEvaluation } from '../entities/interview-evaluation.entity';
+import { InterviewMessage } from '../entities/interview-message.entity';
 import { InterviewMode } from '../enums';
+import { ProgrammingLanguageService } from '../../programming-language/programming-language.service';
+import { Judge0Service } from '../../judge0/judge0.service';
+import { ProblemsService } from '../../problems/problems.service';
+import { Judge0PayloadBuilderService } from '../../submissions/services/judge0-payload-builder.service';
+import { SubmissionTrackerService } from '../../submissions/services/submission-tracker.service';
+import { LangChainService } from '../../ai/langchain.service';
+import { PromptService } from '../../ai/prompt.service';
 
 describe('InterviewTimeoutService', () => {
   let service: InterviewTimeoutService;
@@ -13,6 +24,26 @@ describe('InterviewTimeoutService', () => {
     getJob: jest.fn(),
   };
 
+  const mockInterviewRepo = {
+    findOne: jest.fn(),
+    save: jest.fn(),
+  };
+
+  const mockEvaluationRepo = {
+    create: jest.fn(),
+    save: jest.fn(),
+  };
+
+  const mockMessageRepo = {};
+
+  const mockLanguagesService = {};
+  const mockJudge0Service = {};
+  const mockProblemsService = {};
+  const mockPayloadBuilder = {};
+  const mockSubmissionTracker = {};
+  const mockLangChainService = {};
+  const mockPromptService = {};
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -20,6 +51,46 @@ describe('InterviewTimeoutService', () => {
         {
           provide: getQueueToken('interview-timeout'),
           useValue: mockQueue,
+        },
+        {
+          provide: getRepositoryToken(Interview),
+          useValue: mockInterviewRepo,
+        },
+        {
+          provide: getRepositoryToken(InterviewEvaluation),
+          useValue: mockEvaluationRepo,
+        },
+        {
+          provide: getRepositoryToken(InterviewMessage),
+          useValue: mockMessageRepo,
+        },
+        {
+          provide: ProgrammingLanguageService,
+          useValue: mockLanguagesService,
+        },
+        {
+          provide: Judge0Service,
+          useValue: mockJudge0Service,
+        },
+        {
+          provide: ProblemsService,
+          useValue: mockProblemsService,
+        },
+        {
+          provide: Judge0PayloadBuilderService,
+          useValue: mockPayloadBuilder,
+        },
+        {
+          provide: SubmissionTrackerService,
+          useValue: mockSubmissionTracker,
+        },
+        {
+          provide: LangChainService,
+          useValue: mockLangChainService,
+        },
+        {
+          provide: PromptService,
+          useValue: mockPromptService,
         },
       ],
     }).compile();
