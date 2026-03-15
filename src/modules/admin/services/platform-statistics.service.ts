@@ -219,6 +219,13 @@ export class PlatformStatisticsService {
   }
 
   private async getRevenueMetrics(lang?: Language): Promise<RevenueMetricsDto> {
+    // Determine display currency based on language
+    const displayCurrency = this.getDisplayCurrency(lang);
+    const amountColumn =
+      displayCurrency === String(CurrencyCode.USD)
+        ? 'systemReceivedAmountUsd'
+        : 'systemReceivedAmountVnd';
+
     const results = await Promise.all([
       // Total premium users (active subscriptions)
       this.userRepository.count({
@@ -236,14 +243,20 @@ export class PlatformStatisticsService {
       // Total revenue (all successful payments)
       this.paymentRepository
         .createQueryBuilder('payment')
-        .select('COALESCE(SUM(payment.systemReceivedAmountVnd), 0)', 'total')
+        .select(
+          `COALESCE(SUM(COALESCE(payment.${amountColumn}, 0)), 0)`,
+          'total',
+        )
         .where('payment.status = :status', { status: PaymentStatus.SUCCESS })
         .getRawOne(),
 
       // Revenue today
       this.paymentRepository
         .createQueryBuilder('payment')
-        .select('COALESCE(SUM(payment.systemReceivedAmountVnd), 0)', 'total')
+        .select(
+          `COALESCE(SUM(COALESCE(payment.${amountColumn}, 0)), 0)`,
+          'total',
+        )
         .where('payment.status = :status', { status: PaymentStatus.SUCCESS })
         .andWhere('payment.paymentDate >= CURRENT_DATE')
         .getRawOne(),
@@ -251,7 +264,10 @@ export class PlatformStatisticsService {
       // Revenue this week
       this.paymentRepository
         .createQueryBuilder('payment')
-        .select('COALESCE(SUM(payment.systemReceivedAmountVnd), 0)', 'total')
+        .select(
+          `COALESCE(SUM(COALESCE(payment.${amountColumn}, 0)), 0)`,
+          'total',
+        )
         .where('payment.status = :status', { status: PaymentStatus.SUCCESS })
         .andWhere("payment.paymentDate >= NOW() - INTERVAL '7 days'")
         .getRawOne(),
@@ -259,7 +275,10 @@ export class PlatformStatisticsService {
       // Revenue this month
       this.paymentRepository
         .createQueryBuilder('payment')
-        .select('COALESCE(SUM(payment.systemReceivedAmountVnd), 0)', 'total')
+        .select(
+          `COALESCE(SUM(COALESCE(payment.${amountColumn}, 0)), 0)`,
+          'total',
+        )
         .where('payment.status = :status', { status: PaymentStatus.SUCCESS })
         .andWhere("payment.paymentDate >= NOW() - INTERVAL '30 days'")
         .getRawOne(),
@@ -299,30 +318,18 @@ export class PlatformStatisticsService {
     const newPremiumThisWeek = results[7];
     const newPremiumThisMonth = results[8];
 
-    const totalRevenue =
-      (totalRevenueResult as { total: string } | undefined)?.total !== null &&
-      (totalRevenueResult as { total: string } | undefined)?.total !== undefined
-        ? parseFloat((totalRevenueResult as { total: string }).total)
-        : 0;
-    const revenueToday =
-      (revenueTodayResult as { total: string } | undefined)?.total !== null &&
-      (revenueTodayResult as { total: string } | undefined)?.total !== undefined
-        ? parseFloat((revenueTodayResult as { total: string }).total)
-        : 0;
-    const revenueThisWeek =
-      (revenueThisWeekResult as { total: string } | undefined)?.total !==
-        null &&
-      (revenueThisWeekResult as { total: string } | undefined)?.total !==
-        undefined
-        ? parseFloat((revenueThisWeekResult as { total: string }).total)
-        : 0;
-    const revenueThisMonth =
-      (revenueThisMonthResult as { total: string } | undefined)?.total !==
-        null &&
-      (revenueThisMonthResult as { total: string } | undefined)?.total !==
-        undefined
-        ? parseFloat((revenueThisMonthResult as { total: string }).total)
-        : 0;
+    const totalRevenue = parseFloat(
+      (totalRevenueResult as { total: string })?.total || '0',
+    );
+    const revenueToday = parseFloat(
+      (revenueTodayResult as { total: string })?.total || '0',
+    );
+    const revenueThisWeek = parseFloat(
+      (revenueThisWeekResult as { total: string })?.total || '0',
+    );
+    const revenueThisMonth = parseFloat(
+      (revenueThisMonthResult as { total: string })?.total || '0',
+    );
 
     // Calculate conversion rate
     const premiumConversionRate =
@@ -332,33 +339,18 @@ export class PlatformStatisticsService {
     const averageRevenuePerUser =
       totalPremiumUsers > 0 ? totalRevenue / totalPremiumUsers : 0;
 
-    // Determine display currency and convert if needed
-    const displayCurrency = this.getDisplayCurrency(lang);
-    const convertedMetrics = await this.convertRevenueMetrics(
-      {
-        totalRevenue,
-        revenueToday,
-        revenueThisWeek,
-        revenueThisMonth,
-        averageRevenuePerUser,
-      },
-      displayCurrency,
-    );
-
     return {
       displayCurrency,
       totalPremiumUsers,
       premiumConversionRate: Math.round(premiumConversionRate * 100) / 100,
-      totalRevenue: Math.round(convertedMetrics.totalRevenue * 100) / 100,
-      revenueToday: Math.round(convertedMetrics.revenueToday * 100) / 100,
-      revenueThisWeek: Math.round(convertedMetrics.revenueThisWeek * 100) / 100,
-      revenueThisMonth:
-        Math.round(convertedMetrics.revenueThisMonth * 100) / 100,
+      totalRevenue: Math.round(totalRevenue * 100) / 100,
+      revenueToday: Math.round(revenueToday * 100) / 100,
+      revenueThisWeek: Math.round(revenueThisWeek * 100) / 100,
+      revenueThisMonth: Math.round(revenueThisMonth * 100) / 100,
       newPremiumToday,
       newPremiumThisWeek,
       newPremiumThisMonth,
-      averageRevenuePerUser:
-        Math.round(convertedMetrics.averageRevenuePerUser * 100) / 100,
+      averageRevenuePerUser: Math.round(averageRevenuePerUser * 100) / 100,
     };
   }
 
@@ -392,6 +384,9 @@ export class PlatformStatisticsService {
       ? new Date(from)
       : new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
 
+    // Determine display currency
+    const displayCurrency = this.getDisplayCurrency(lang);
+
     const [
       dailyNewUsers,
       dailySubmissions,
@@ -402,25 +397,16 @@ export class PlatformStatisticsService {
       this.getDailyNewUsers(startDate, endDate),
       this.getDailySubmissions(startDate, endDate),
       this.getDailyActiveUsers(startDate, endDate),
-      this.getDailyRevenue(startDate, endDate),
+      this.getDailyRevenue(startDate, endDate, displayCurrency),
       this.getDailyAcceptedSubmissions(startDate, endDate),
     ]);
-
-    // Determine display currency
-    const displayCurrency = this.getDisplayCurrency(lang);
-
-    // Convert daily revenue if needed
-    const convertedDailyRevenue = await this.convertRevenueTimeSeries(
-      dailyRevenue,
-      displayCurrency,
-    );
 
     return {
       displayCurrency,
       dailyNewUsers,
       dailySubmissions,
       dailyActiveUsers,
-      dailyRevenue: convertedDailyRevenue,
+      dailyRevenue,
       dailyAcceptedSubmissions,
     };
   }
@@ -490,11 +476,20 @@ export class PlatformStatisticsService {
   private async getDailyRevenue(
     from: Date,
     to: Date,
+    currency: string = String(CurrencyCode.VND),
   ): Promise<TimeSeriesDataPointDto[]> {
+    const amountColumn =
+      currency === String(CurrencyCode.USD)
+        ? 'systemReceivedAmountUsd'
+        : 'systemReceivedAmountVnd';
+
     const results = await this.paymentRepository
       .createQueryBuilder('payment')
       .select("DATE(payment.paymentDate AT TIME ZONE 'UTC')", 'date')
-      .addSelect('COALESCE(SUM(payment.systemReceivedAmountVnd), 0)', 'value')
+      .addSelect(
+        `COALESCE(SUM(COALESCE(payment.${amountColumn}, 0)), 0)`,
+        'value',
+      )
       .where('payment.paymentDate BETWEEN :from AND :to', { from, to })
       .andWhere('payment.status = :status', { status: PaymentStatus.SUCCESS })
       .groupBy("DATE(payment.paymentDate AT TIME ZONE 'UTC')")
@@ -547,55 +542,6 @@ export class PlatformStatisticsService {
       return 23500;
     }
     return Number(usdCurrency.rateToVnd);
-  }
-
-  /**
-   * Convert revenue metrics to display currency
-   */
-  private async convertRevenueMetrics(
-    metrics: {
-      totalRevenue: number;
-      revenueToday: number;
-      revenueThisWeek: number;
-      revenueThisMonth: number;
-      averageRevenuePerUser: number;
-    },
-    displayCurrency: string,
-  ): Promise<typeof metrics> {
-    // If display currency is VND, no conversion needed
-    if (displayCurrency === String(CurrencyCode.VND)) {
-      return metrics;
-    }
-
-    // Convert to USD
-    const usdRate = await this.getUsdRateToVnd();
-    return {
-      totalRevenue: metrics.totalRevenue / usdRate,
-      revenueToday: metrics.revenueToday / usdRate,
-      revenueThisWeek: metrics.revenueThisWeek / usdRate,
-      revenueThisMonth: metrics.revenueThisMonth / usdRate,
-      averageRevenuePerUser: metrics.averageRevenuePerUser / usdRate,
-    };
-  }
-
-  /**
-   * Convert daily revenue time series to display currency
-   */
-  private async convertRevenueTimeSeries(
-    timeSeriesData: TimeSeriesDataPointDto[],
-    displayCurrency: string,
-  ): Promise<TimeSeriesDataPointDto[]> {
-    // If display currency is VND, no conversion needed
-    if (displayCurrency === String(CurrencyCode.VND)) {
-      return timeSeriesData;
-    }
-
-    // Convert to USD
-    const usdRate = await this.getUsdRateToVnd();
-    return timeSeriesData.map((point) => ({
-      ...point,
-      value: point.value / usdRate,
-    }));
   }
 
   /**
