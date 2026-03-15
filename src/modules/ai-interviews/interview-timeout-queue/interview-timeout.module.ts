@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { InterviewTimeoutProcessor } from './interview-timeout.processor';
 import { InterviewTimeoutService } from './interview-timeout.service';
@@ -14,8 +15,16 @@ import { AiModule } from '../../ai/ai.module';
 
 @Module({
   imports: [
-    BullModule.registerQueue({
+    BullModule.registerQueueAsync({
       name: 'interview-timeout',
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        connection: {
+          host: configService.get<string>('redis.host'),
+          port: configService.get<number>('redis.port'),
+          password: configService.get<string>('redis.password'),
+        },
+      }),
     }),
     TypeOrmModule.forFeature([
       Interview,
