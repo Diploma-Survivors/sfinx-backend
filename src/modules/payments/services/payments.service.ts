@@ -87,12 +87,10 @@ export class PaymentsService {
     const provider = this.paymentProviderFactory.getProvider(paymentMethod);
 
     // Compute final prices at payment creation time
-    const [totalFeePercentage, usdRateToVnd, gatewayFeePercentage] =
-      await Promise.all([
-        this.feeConfigService.getTotalFeePercentage(),
-        this.getUsdRateToVnd(),
-        this.getGatewayFeePercentage(),
-      ]);
+    const [totalFeePercentage, usdRateToVnd] = await Promise.all([
+      this.feeConfigService.getTotalFeePercentage(),
+      this.getUsdRateToVnd(),
+    ]);
     const basePrice = Number(plan.basePrice);
     const finalVnd = Math.ceil(basePrice * (1 + totalFeePercentage));
     const finalUsd = Math.round((finalVnd / usdRateToVnd) * 100) / 100;
@@ -101,20 +99,7 @@ export class PaymentsService {
     const userPaidAmount =
       userPaidCurrency === String(CurrencyCode.USD) ? finalUsd : finalVnd;
 
-    const systemReceivedAmount =
-      Math.round(userPaidAmount * (1 - gatewayFeePercentage) * 100) / 100;
-
-    // Calculate both VND and USD amounts based on which currency the user paid
-    const systemReceivedAmountUsd =
-      userPaidCurrency === String(CurrencyCode.USD)
-        ? systemReceivedAmount
-        : Math.round((systemReceivedAmount / usdRateToVnd) * 100) / 100;
-
-    const systemReceivedAmountVnd =
-      userPaidCurrency === String(CurrencyCode.USD)
-        ? Math.round(systemReceivedAmount * usdRateToVnd * 100) / 100
-        : systemReceivedAmount;
-
+    // System received amounts will be calculated when payment is successful
     const transaction = this.transactionRepo.create({
       user,
       plan,
@@ -128,10 +113,6 @@ export class PaymentsService {
       planPriceUsd: finalUsd,
       userPaidAmount,
       userPaidCurrency,
-      systemReceivedAmount,
-      systemReceivedCurrency: userPaidCurrency,
-      systemReceivedAmountVnd,
-      systemReceivedAmountUsd,
       provider: PaymentMethodEnum[paymentMethod],
       status: PaymentStatus.PENDING,
       description: `Payment for ${plan.type} subscription`,
@@ -181,6 +162,38 @@ export class PaymentsService {
       transaction.status = PaymentStatus.SUCCESS;
       transaction.transactionId = (query['vnp_TransactionNo'] as string) || ''; // Gateway's ID
       transaction.paymentDate = new Date();
+
+      // Calculate system received amounts now that payment is successful
+      const [gatewayFeePercentage, usdRateToVnd] = await Promise.all([
+        this.getGatewayFeePercentage(),
+        this.getUsdRateToVnd(),
+      ]);
+
+      const userPaidAmount = Number(
+        transaction.userPaidAmount ?? transaction.amount ?? 0,
+      );
+      const userPaidCurrency =
+        transaction.userPaidCurrency ?? transaction.currency;
+
+      const systemReceivedAmount =
+        Math.round(userPaidAmount * (1 - gatewayFeePercentage) * 100) / 100;
+
+      // Calculate both VND and USD amounts based on which currency the user paid
+      const systemReceivedAmountUsd =
+        userPaidCurrency === String(CurrencyCode.USD)
+          ? systemReceivedAmount
+          : Math.round((systemReceivedAmount / usdRateToVnd) * 100) / 100;
+
+      const systemReceivedAmountVnd =
+        userPaidCurrency === String(CurrencyCode.USD)
+          ? Math.round(systemReceivedAmount * usdRateToVnd * 100) / 100
+          : systemReceivedAmount;
+
+      transaction.systemReceivedAmount = systemReceivedAmount;
+      transaction.systemReceivedCurrency = userPaidCurrency;
+      transaction.systemReceivedAmountUsd = systemReceivedAmountUsd;
+      transaction.systemReceivedAmountVnd = systemReceivedAmountVnd;
+
       await this.transactionRepo.save(transaction);
 
       // Upgrade User
@@ -479,12 +492,17 @@ export class PaymentsService {
     let { endDate } = query;
 
     // Ensure endDate includes the full day (23:59:59.999) if provided
-    // This fixes the issue where transactions on the last day are excluded because the default time is 00:00:00
     if (endDate) {
       const d = new Date(endDate);
       d.setUTCHours(23, 59, 59, 999);
       endDate = d.toISOString();
     }
+
+    // Determine display currency based on language
+    const displayCurrency =
+      String(lang) === String(Language.EN)
+        ? CurrencyCode.USD
+        : CurrencyCode.VND;
 
     const [
       totalRevenue,
@@ -493,16 +511,14 @@ export class PaymentsService {
       revenueByMonth,
       churnRate,
     ] = await Promise.all([
-      this.getTotalRevenue(startDate, endDate),
+      this.getTotalRevenue(startDate, endDate, displayCurrency),
       this.getActiveSubscribers(startDate, endDate),
       this.getSubscriptionsByPlan(startDate, endDate, lang),
-      this.getRevenueChart(startDate, endDate, groupBy),
+      this.getRevenueChart(startDate, endDate, groupBy, displayCurrency),
       this.getChurnRate(startDate, endDate),
     ]);
 
     // Calculate previous period for growth metrics
-    // Handle undefined dates by defaulting to last 30 days if not provided (matching typical default)
-    // Or use the revenueByMonth range if available
     const effectiveEndDate = endDate ? new Date(endDate) : new Date();
     const effectiveStartDate = startDate
       ? new Date(startDate)
@@ -519,6 +535,7 @@ export class PaymentsService {
         this.getTotalRevenue(
           previousStartDate.toISOString(),
           previousEndDate.toISOString(),
+          displayCurrency,
         ),
         this.getActiveSubscribers(
           previousStartDate.toISOString(),
@@ -532,24 +549,6 @@ export class PaymentsService {
       return Number((((current - previous) / previous) * 100).toFixed(1));
     };
 
-    const displayCurrency =
-      String(lang) === String(Language.EN)
-        ? CurrencyCode.USD
-        : CurrencyCode.VND;
-    const usdRateToVnd = await this.getUsdRateToVnd();
-    const convertFromVnd = (value: number): number => {
-      if (displayCurrency === CurrencyCode.USD) {
-        return Math.round((value / usdRateToVnd) * 100) / 100;
-      }
-      return Math.round(value * 100) / 100;
-    };
-
-    const displayTotalRevenue = convertFromVnd(totalRevenue);
-    const displayRevenueByMonth = revenueByMonth.map((item) => ({
-      ...item,
-      amount: convertFromVnd(item.amount),
-    }));
-
     const revenueGrowth = calculateGrowth(totalRevenue, previousTotalRevenue);
     const subscriberGrowth = calculateGrowth(
       activeSubscribers,
@@ -557,12 +556,12 @@ export class PaymentsService {
     );
 
     return {
-      totalRevenue: displayTotalRevenue,
+      totalRevenue,
       activeSubscribers,
       revenueGrowth,
       subscriberGrowth,
       churnRate,
-      revenueByMonth: displayRevenueByMonth,
+      revenueByMonth,
       subscriptionsByPlan,
       displayCurrency,
     };
@@ -595,10 +594,16 @@ export class PaymentsService {
   private async getTotalRevenue(
     startDate?: string,
     endDate?: string,
+    currency: string = String(CurrencyCode.VND),
   ): Promise<number> {
+    const amountColumn =
+      currency === String(CurrencyCode.USD)
+        ? 'systemReceivedAmountUsd'
+        : 'systemReceivedAmountVnd';
+
     const query = this.transactionRepo
       .createQueryBuilder('pt')
-      .select('SUM(pt.systemReceivedAmountVnd)', 'totalRevenue')
+      .select(`COALESCE(SUM(pt.${amountColumn}), 0)`, 'totalRevenue')
       .where('pt.status = :status', { status: PaymentStatus.SUCCESS });
 
     if (startDate) {
@@ -692,7 +697,13 @@ export class PaymentsService {
     startDate?: string,
     endDate?: string,
     groupBy: 'day' | 'week' | 'month' | 'year' = 'month',
+    currency: string = String(CurrencyCode.VND),
   ): Promise<RevenueChartItemDto[]> {
+    const amountColumn =
+      currency === String(CurrencyCode.USD)
+        ? 'systemReceivedAmountUsd'
+        : 'systemReceivedAmountVnd';
+
     let chartStartDate = startDate ? new Date(startDate) : new Date(0);
     if (!startDate && !endDate) {
       chartStartDate = new Date();
@@ -719,7 +730,7 @@ export class PaymentsService {
         `TO_CHAR(pt.paymentDate AT TIME ZONE 'UTC', '${dateFormat}')`,
         'period',
       )
-      .addSelect('SUM(pt.systemReceivedAmountVnd)', 'amount')
+      .addSelect(`COALESCE(SUM(COALESCE(pt.${amountColumn}, 0)), 0)`, 'amount')
       .where('pt.status = :status', { status: PaymentStatus.SUCCESS })
       .andWhere('pt.paymentDate >= :chartStartDate', { chartStartDate })
       .andWhere('pt.paymentDate <= :chartEndDate', { chartEndDate })
