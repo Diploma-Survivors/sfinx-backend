@@ -6,6 +6,11 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Interview, InterviewStatus } from '../entities/interview.entity';
+import {
+  InterviewMode,
+  InterviewDifficulty,
+  InterviewerPersonality,
+} from '../enums';
 import { InterviewMessage } from '../entities/interview-message.entity';
 import { InterviewEvaluation } from '../entities/interview-evaluation.entity';
 import { LangChainService } from '../../ai/langchain.service';
@@ -85,6 +90,9 @@ export class AiInterviewService {
         sampleTestcases: problem.sampleTestcases,
       },
       language: dto.language || 'en',
+      mode: dto.mode || InterviewMode.STANDARD,
+      difficulty: dto.difficulty || InterviewDifficulty.ENTRY,
+      personality: dto.personality || InterviewerPersonality.EASY_GOING,
       status: InterviewStatus.ACTIVE,
     });
     await this.interviewRepo.save(interview);

@@ -12,6 +12,7 @@ import {
 } from '../entities/interview-message.entity';
 import { LangChainService } from '../../ai/langchain.service';
 import { PromptService, PromptFeature } from '../../ai/prompt.service';
+import { PromptInjectionService } from './prompt-injection.service';
 import {
   HumanMessage,
   AIMessage,
@@ -29,6 +30,7 @@ export class AiChatService {
     private readonly messageRepo: Repository<InterviewMessage>,
     private readonly langChainService: LangChainService,
     private readonly promptService: PromptService,
+    private readonly promptInjectionService: PromptInjectionService,
   ) {}
 
   // ─── Private Helpers ────────────────────────────────────────────────────────
@@ -90,12 +92,25 @@ export class AiChatService {
     );
 
     const problemContext = JSON.stringify(interview.problemSnapshot);
+
+    // Fetch customization variables from Langfuse
+    const customizationVars =
+      await this.promptInjectionService.getPromptVariables(
+        interview.mode,
+        interview.difficulty,
+        interview.personality,
+      );
+
     const prompts = await Promise.all([
       this.promptService
-        .getCompiledPrompt(interviewerFeature, { problemContext })
+        .getCompiledPrompt(interviewerFeature, {
+          problemContext,
+          ...customizationVars,
+        })
         .catch(() =>
           this.promptService.getCompiledPrompt(PromptFeature.INTERVIEWER, {
             problemContext,
+            ...customizationVars,
           }),
         ),
       channel === 'voice'

@@ -11,6 +11,11 @@ import {
 import { User } from '../../auth/entities/user.entity';
 import { InterviewMessage } from './interview-message.entity';
 import { InterviewEvaluation } from './interview-evaluation.entity';
+import {
+  InterviewMode,
+  InterviewDifficulty,
+  InterviewerPersonality,
+} from '../enums';
 
 export enum InterviewStatus {
   ACTIVE = 'active',
@@ -55,6 +60,30 @@ export class Interview {
     default: InterviewStatus.ACTIVE,
   })
   status: InterviewStatus;
+
+  @Column({
+    type: 'enum',
+    enum: InterviewMode,
+    default: InterviewMode.STANDARD,
+    name: 'interview_mode',
+  })
+  mode: InterviewMode;
+
+  @Column({
+    type: 'enum',
+    enum: InterviewDifficulty,
+    default: InterviewDifficulty.ENTRY,
+    name: 'interview_difficulty',
+  })
+  difficulty: InterviewDifficulty;
+
+  @Column({
+    type: 'enum',
+    enum: InterviewerPersonality,
+    default: InterviewerPersonality.EASY_GOING,
+    name: 'interviewer_personality',
+  })
+  personality: InterviewerPersonality;
 
   @CreateDateColumn({ name: 'started_at', type: 'timestamptz' })
   startedAt: Date;
