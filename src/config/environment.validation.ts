@@ -151,4 +151,20 @@ export const environmentValidation = Joi.object({
     .uri()
     .optional()
     .default('https://api.smith.langchain.com'),
+
+  // Provider Cost Tracking (all optional — feature degrades gracefully per provider)
+  DEEPGRAM_API_KEY: Joi.string().optional().allow(''),
+  DEEPGRAM_PROJECT_ID: Joi.string().optional().allow(''),
+  DEEPGRAM_API_URL: Joi.string()
+    .uri()
+    .optional()
+    .default('https://api.deepgram.com/v1'),
+  ELEVEN_API_KEY: Joi.string().optional().allow(''),
+  ELEVEN_API_URL: Joi.string()
+    .uri()
+    .optional()
+    .default('https://api.elevenlabs.io/v1'),
+
+  // Provider Costs Job
+  PROVIDER_COSTS_CRON_SCHEDULE: Joi.string().default('5 0 * * *'), // 00:05 UTC daily
 });
