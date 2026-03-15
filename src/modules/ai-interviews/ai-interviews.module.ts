@@ -14,6 +14,7 @@ import { Judge0Module } from '../judge0/judge0.module';
 import { ProgrammingLanguageModule } from '../programming-language/programming-language.module';
 import { ProblemsModule } from '../problems/problems.module';
 import { SubmissionsModule } from '../submissions/submissions.module';
+import { InterviewTimeoutModule } from './interview-timeout-queue/interview-timeout.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { SubmissionsModule } from '../submissions/submissions.module';
     ProgrammingLanguageModule,
     ProblemsModule,
     SubmissionsModule,
+    InterviewTimeoutModule,
   ],
   controllers: [AiInterviewController, AiInterviewsInternalController],
   providers: [AiInterviewService, AiChatService, PromptInjectionService],
