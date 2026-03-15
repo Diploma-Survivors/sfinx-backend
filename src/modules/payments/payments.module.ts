@@ -69,6 +69,6 @@ import { FeeConfigService } from './services/fee-config.service';
     FeeConfigService,
   ],
 
-  exports: [PaymentsService],
+  exports: [PaymentsService, CurrencyService],
 })
 export class PaymentsModule {}

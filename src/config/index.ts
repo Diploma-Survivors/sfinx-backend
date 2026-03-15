@@ -12,3 +12,4 @@ export * from './submission.config';
 export * from './vnpay.config';
 export * from './payment.config';
 export * from './livekit.config';
+export * from './provider-costs.config';

@@ -39,6 +39,7 @@ import {
   jwtConfig,
   livekitConfig,
   paymentConfig,
+  providerCostsConfig,
   redisConfig,
   submissionConfig,
   vnpayConfig,
@@ -63,6 +64,7 @@ import { StudyPlansModule } from './modules/study-plans/study-plans.module';
 import { SubmissionsModule } from './modules/submissions/submissions.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
 import { UsersModule } from './modules/users/users.module';
+import { ProviderCostsModule } from './modules/provider-costs/provider-costs.module';
 
 @Module({
   imports: [
@@ -82,6 +84,7 @@ import { UsersModule } from './modules/users/users.module';
         vnpayConfig,
         paymentConfig,
         livekitConfig,
+        providerCostsConfig,
       ],
       validationSchema: environmentValidation,
       envFilePath: '.env',
@@ -153,6 +156,7 @@ import { UsersModule } from './modules/users/users.module';
     NotificationsModule,
     ProblemReportsModule,
     StudyPlansModule,
+    ProviderCostsModule,
   ],
   controllers: [AppController],
   providers: [
