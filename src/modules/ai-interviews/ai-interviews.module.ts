@@ -8,6 +8,7 @@ import { AiInterviewController } from './controllers/ai-interviews.controller';
 import { AiInterviewsInternalController } from './controllers/ai-interviews-internal.controller';
 import { AiInterviewService } from './services/ai-interview.service';
 import { AiChatService } from './services/ai-chat.service';
+import { PromptInjectionService } from './services/prompt-injection.service';
 import { AiModule } from '../ai/ai.module';
 import { Judge0Module } from '../judge0/judge0.module';
 import { ProgrammingLanguageModule } from '../programming-language/programming-language.module';
@@ -29,7 +30,7 @@ import { SubmissionsModule } from '../submissions/submissions.module';
     SubmissionsModule,
   ],
   controllers: [AiInterviewController, AiInterviewsInternalController],
-  providers: [AiInterviewService, AiChatService],
-  exports: [AiInterviewService],
+  providers: [AiInterviewService, AiChatService, PromptInjectionService],
+  exports: [AiInterviewService, PromptInjectionService],
 })
 export class AiInterviewsModule {}

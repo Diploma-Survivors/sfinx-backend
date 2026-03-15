@@ -37,6 +37,61 @@ const PROMPT_CONFIGS = [
     langfusePromptName: 'voice-adaptation-vi',
     langfuseLabel: 'production',
   },
+  // Interview customization prompts
+  {
+    featureName: 'personality-easy-going',
+    description: 'Easy going interviewer personality',
+    langfusePromptName: 'personality-easy-going',
+    langfuseLabel: 'production',
+  },
+  {
+    featureName: 'personality-strict',
+    description: 'Strict interviewer personality',
+    langfusePromptName: 'personality-strict',
+    langfuseLabel: 'production',
+  },
+  {
+    featureName: 'personality-jackass',
+    description: 'Jackass interviewer personality',
+    langfusePromptName: 'personality-jackass',
+    langfuseLabel: 'production',
+  },
+  {
+    featureName: 'difficulty-entry',
+    description: 'Entry level difficulty expectations',
+    langfusePromptName: 'difficulty-entry',
+    langfuseLabel: 'production',
+  },
+  {
+    featureName: 'difficulty-experienced',
+    description: 'Experienced level difficulty expectations',
+    langfusePromptName: 'difficulty-experienced',
+    langfuseLabel: 'production',
+  },
+  {
+    featureName: 'difficulty-senior',
+    description: 'Senior level difficulty expectations',
+    langfusePromptName: 'difficulty-senior',
+    langfuseLabel: 'production',
+  },
+  {
+    featureName: 'time-30min',
+    description: '30 minute interview time constraint',
+    langfusePromptName: 'time-30min',
+    langfuseLabel: 'production',
+  },
+  {
+    featureName: 'time-45min',
+    description: '45 minute interview time constraint',
+    langfusePromptName: 'time-45min',
+    langfuseLabel: 'production',
+  },
+  {
+    featureName: 'time-60min',
+    description: '60 minute interview time constraint',
+    langfusePromptName: 'time-60min',
+    langfuseLabel: 'production',
+  },
 ];
 
 export async function seedPromptConfigs(dataSource: DataSource) {
