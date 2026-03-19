@@ -20,6 +20,9 @@ jobs:
 
   deploy:
     needs: migrate
+    permissions:
+      contents: read
+      id-token: write
     uses: TQTuyen/ci-cd-toolkit/.github/workflows/cd-deploy-cloud-run.yml@main
     with:
       service: sfinx-backend
