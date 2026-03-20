@@ -3,8 +3,30 @@ name: CI
 on:
   pull_request:
     branches: ['**']
+    paths:
+      - 'src/**'
+      - 'test/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig*.json'
+      - 'nest-cli.json'
+      - 'eslint.config.mjs'
+      - '.prettierrc'
+      - 'Dockerfile'
+      - '.github/workflows/ci.yml'
   push:
     branches: ['**']
+    paths:
+      - 'src/**'
+      - 'test/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig*.json'
+      - 'nest-cli.json'
+      - 'eslint.config.mjs'
+      - '.prettierrc'
+      - 'Dockerfile'
+      - '.github/workflows/ci.yml'
 
 jobs:
   lint:
