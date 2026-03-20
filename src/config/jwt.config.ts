@@ -15,29 +15,8 @@ export interface JwtConfig {
 }
 
 export const jwtConfig = registerAs('jwt', (): JwtConfig => {
-  if (!process.env.JWT_PRIVATE_KEY_PATH || !process.env.JWT_PUBLIC_KEY_PATH) {
-    throw new Error('Missing JWT environment variables');
-  }
-
-  let privateKey: string;
-  let publicKey: string;
-
-  try {
-    privateKey = readFileSync(
-      resolve(process.env.JWT_PRIVATE_KEY_PATH),
-      'utf-8',
-    );
-    publicKey = readFileSync(resolve(process.env.JWT_PUBLIC_KEY_PATH), 'utf-8');
-
-    if (!privateKey?.trim() || !publicKey?.trim()) {
-      throw new Error('Key files are empty');
-    }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `Failed to load JWT keys. Generate them using: npm run generate:keypair. Error: ${errorMessage}`,
-    );
-  }
+  const privateKey = loadKey('JWT_PRIVATE_KEY', 'JWT_PRIVATE_KEY_PATH');
+  const publicKey = loadKey('JWT_PUBLIC_KEY', 'JWT_PUBLIC_KEY_PATH');
 
   return {
     privateKey,
@@ -55,3 +34,31 @@ export const jwtConfig = registerAs('jwt', (): JwtConfig => {
     algorithm: (process.env.JWT_ALGORITHM || 'ES256') as Algorithm,
   };
 });
+
+function loadKey(envVar: string, pathVar: string): string {
+  // Prefer inline env var (for Cloud Run / Secret Manager)
+  if (process.env[envVar]?.trim()) {
+    return process.env[envVar];
+  }
+
+  // Fall back to file path (for local development)
+  const filePath = process.env[pathVar];
+  if (!filePath) {
+    throw new Error(
+      `Missing JWT key: set ${envVar} (inline) or ${pathVar} (file path)`,
+    );
+  }
+
+  try {
+    const key = readFileSync(resolve(filePath), 'utf-8');
+    if (!key?.trim()) {
+      throw new Error('Key file is empty');
+    }
+    return key;
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Failed to load JWT key from ${pathVar}. Generate keys: npm run generate:keypair. Error: ${msg}`,
+    );
+  }
+}

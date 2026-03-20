@@ -21,18 +21,45 @@ export const environmentValidation = Joi.object({
   ENABLE_SWAGGER: Joi.boolean().default(true),
   SWAGGER_PATH: Joi.string().default('/api/docs'),
 
-  // Database Configuration
-  DB_HOST: Joi.string().required(),
+  // Database Configuration (DATABASE_URL or individual DB_* vars)
+  DATABASE_URL: Joi.string().uri().optional(),
+  DB_HOST: Joi.string().when('DATABASE_URL', {
+    is: Joi.exist(),
+    then: Joi.optional(),
+    otherwise: Joi.required(),
+  }),
   DB_PORT: Joi.number().default(5432),
-  DB_USERNAME: Joi.string().required(),
-  DB_PASSWORD: Joi.string().required(),
-  DB_NAME: Joi.string().required(),
+  DB_USERNAME: Joi.string().when('DATABASE_URL', {
+    is: Joi.exist(),
+    then: Joi.optional(),
+    otherwise: Joi.required(),
+  }),
+  DB_PASSWORD: Joi.string().when('DATABASE_URL', {
+    is: Joi.exist(),
+    then: Joi.optional(),
+    otherwise: Joi.required(),
+  }),
+  DB_NAME: Joi.string().when('DATABASE_URL', {
+    is: Joi.exist(),
+    then: Joi.optional(),
+    otherwise: Joi.required(),
+  }),
   DB_SYNCHRONIZE: Joi.boolean().default(false),
   DB_LOGGING: Joi.boolean().default(false),
 
-  // JWT configuration
-  JWT_PRIVATE_KEY_PATH: Joi.string().required(),
-  JWT_PUBLIC_KEY_PATH: Joi.string().required(),
+  // JWT configuration (inline env vars or file paths)
+  JWT_PRIVATE_KEY: Joi.string().optional(),
+  JWT_PUBLIC_KEY: Joi.string().optional(),
+  JWT_PRIVATE_KEY_PATH: Joi.string().when('JWT_PRIVATE_KEY', {
+    is: Joi.exist(),
+    then: Joi.optional(),
+    otherwise: Joi.required(),
+  }),
+  JWT_PUBLIC_KEY_PATH: Joi.string().when('JWT_PUBLIC_KEY', {
+    is: Joi.exist(),
+    then: Joi.optional(),
+    otherwise: Joi.required(),
+  }),
   JWT_ACCESS_EXPIRES_IN_MS: Joi.number().default(900000), // 15 minutes in milliseconds
   JWT_REFRESH_EXPIRES_IN_MS: Joi.number().default(604800000), // 7 days in milliseconds
   JWT_ALGORITHM: Joi.string().default('ES256'),

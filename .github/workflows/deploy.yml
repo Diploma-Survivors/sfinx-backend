@@ -26,7 +26,7 @@ jobs:
     uses: TQTuyen/ci-cd-toolkit/.github/workflows/cd-deploy-cloud-run.yml@main
     with:
       service: sfinx-backend
-      image: asia-southeast1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/sfinx/sfinx-backend:latest
+      image: asia-southeast1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/sfinx/sfinx-backend:main
       region: asia-southeast1
       project-id: ${{ vars.GCP_PROJECT_ID }}
       flags: --allow-unauthenticated
