@@ -1,6 +1,6 @@
 # SfinX Backend
 
-> A LeetCode-style competitive programming platform — NestJS · PostgreSQL · Redis · Judge0
+> A competitive programming platform — NestJS · PostgreSQL · Redis · Judge0
 
 **API**: `http://localhost:3000/api` | **Swagger**: `http://localhost:3000/api/docs`
 
